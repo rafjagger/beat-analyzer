@@ -49,6 +49,18 @@ bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
     return sendMessage(msg.toOscMessage());
 }
 
+bool OscSender::sendFloat(const std::string& path, float value) {
+#ifdef HAS_LIBLO
+    if (!m_connected || !m_address) return false;
+    
+    lo_address addr = static_cast<lo_address>(m_address);
+    int result = lo_send(addr, path.c_str(), "f", value);
+    return result >= 0;
+#else
+    return false;
+#endif
+}
+
 bool OscSender::sendMessage(const OscMessage& msg) {
 #ifdef HAS_LIBLO
     if (!m_connected || !m_address) return false;

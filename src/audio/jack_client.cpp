@@ -82,6 +82,10 @@ void JackClient::setProcessCallback(ProcessCallback callback) {
     m_processCallback = callback;
 }
 
+void JackClient::setStereoProcessCallback(StereoProcessCallback callback) {
+    m_stereoProcessCallback = callback;
+}
+
 SampleRate JackClient::getSampleRate() const {
     if (!m_client) return SampleRate(44100);
     return SampleRate(jack_get_sample_rate(m_client));
@@ -146,6 +150,15 @@ int JackClient::m_processInternal(int frameCount) {
     for (size_t i = 0; i < m_inputPorts.size(); ++i) {
         buffers[i] = static_cast<CSAMPLE*>(
             jack_port_get_buffer(m_inputPorts[i], frameCount));
+    }
+    
+    // Call stereo callback if set (4 stereo pairs)
+    if (m_stereoProcessCallback) {
+        std::vector<const CSAMPLE*> stereoBuffers;
+        for (size_t i = 0; i < buffers.size(); ++i) {
+            stereoBuffers.push_back(buffers[i]);
+        }
+        m_stereoProcessCallback(stereoBuffers, frameCount);
     }
     
     // Downmix to mono for beat detection

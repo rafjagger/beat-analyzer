@@ -35,6 +35,7 @@ set(BEAT_ANALYZER_SOURCES
     src/audio/audio_buffer.cpp
     src/analysis/beat_detection.cpp
     src/analysis/beat_tracker.cpp
+    src/analysis/vu_meter.cpp
     src/osc/osc_sender.cpp
     src/osc/osc_messages.cpp
     src/config/config_loader.cpp
@@ -48,6 +49,7 @@ set(BEAT_ANALYZER_HEADERS
     include/analysis/beat_detection.h
     include/analysis/beat_tracker.h
     include/analysis/beat_info.h
+    include/analysis/vu_meter.h
     include/osc/osc_sender.h
     include/osc/osc_messages.h
     include/config/config_loader.h

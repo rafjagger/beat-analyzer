@@ -18,6 +18,8 @@ namespace Audio {
 class JackClient {
 public:
     using ProcessCallback = std::function<void(const CSAMPLE*, int)>;
+    // Callback für separate Stereo-Kanäle: stereoBuffers[4][frameCount*2]
+    using StereoProcessCallback = std::function<void(const std::vector<const CSAMPLE*>&, int)>;
     
     JackClient(const std::string& clientName = "beat-analyzer");
     ~JackClient();
@@ -37,6 +39,9 @@ public:
     
     // Register callback for audio processing
     void setProcessCallback(ProcessCallback callback);
+    
+    // Register callback for stereo channel processing
+    void setStereoProcessCallback(StereoProcessCallback callback);
     
     // Get available JACK ports
     std::vector<std::string> getAvailablePorts(
@@ -60,6 +65,7 @@ private:
     std::vector<jack_port_t*> m_inputPorts;
     std::vector<CSAMPLE*> m_portBuffers;
     ProcessCallback m_processCallback;
+    StereoProcessCallback m_stereoProcessCallback;
     bool m_connected;
     
     int m_processInternal(int frameCount);

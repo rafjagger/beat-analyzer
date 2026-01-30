@@ -27,6 +27,9 @@ public:
     // Send beat clock message
     bool sendBeatClock(const BeatClockMessage& msg);
     
+    // Send single float value to path
+    bool sendFloat(const std::string& path, float value);
+    
     // Send raw OSC message
     bool sendMessage(const OscMessage& msg);
     

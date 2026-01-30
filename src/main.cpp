@@ -11,6 +11,7 @@
 
 #include "audio/jack_client.h"
 #include "analysis/beat_detection.h"
+#include "analysis/vu_meter.h"
 #include "osc/osc_sender.h"
 #include "config/config_loader.h"
 #include "util/logging.h"
@@ -52,6 +53,10 @@ public:
         : m_frameCount(0),
           m_lastBeatFrame(0),
           m_beatNumber(0) {
+        // VU-Meter für jeden Stereo-Kanal initialisieren
+        for (int i = 0; i < 4; ++i) {
+            m_vuMeters.push_back(std::make_unique<VuMeter>());
+        }
     }
     
     bool initialize(const std::string& configPath) {
@@ -112,6 +117,12 @@ public:
         m_jackClient->setProcessCallback([this](const CSAMPLE* samples, int frames) {
             this->processAudio(samples, frames);
         });
+        
+        // Stereo-Callback für VU-Meter setzen
+        m_jackClient->setStereoProcessCallback(
+            [this](const std::vector<const CSAMPLE*>& stereoBuffers, int frames) {
+                this->processStereoAudio(stereoBuffers, frames);
+            });
         
         // JACK aktivieren
         if (!m_jackClient->activate()) {
@@ -235,6 +246,49 @@ private:
         }
     }
     
+    void processStereoAudio(const std::vector<const CSAMPLE*>& stereoBuffers, int frameCount) {
+        // stereoBuffers enthält 8 Mono-Kanäle (4 Stereo-Paare)
+        // Wir verarbeiten sie als Stereo-Paare: 0+1, 2+3, 4+5, 6+7
+        
+        for (int track = 0; track < 4 && track < static_cast<int>(m_vuMeters.size()); ++track) {
+            int leftIdx = track * 2;
+            int rightIdx = track * 2 + 1;
+            
+            if (leftIdx < static_cast<int>(stereoBuffers.size()) && 
+                rightIdx < static_cast<int>(stereoBuffers.size())) {
+                
+                // Interleaved Stereo-Buffer erstellen für VuMeter
+                std::vector<float> interleavedStereo(frameCount * 2);
+                for (int i = 0; i < frameCount; ++i) {
+                    interleavedStereo[i * 2] = stereoBuffers[leftIdx][i];
+                    interleavedStereo[i * 2 + 1] = stereoBuffers[rightIdx][i];
+                }
+                
+                m_vuMeters[track]->process(interleavedStereo.data(), frameCount);
+            }
+        }
+        
+        // VU-Meter OSC senden
+        sendVuMeterOsc();
+    }
+    
+    void sendVuMeterOsc() {
+        if (!m_oscSender || !m_oscSender->isConnected()) return;
+        
+        for (int track = 0; track < 4 && track < static_cast<int>(m_vuMeters.size()); ++track) {
+            float rmsDb = m_vuMeters[track]->getRmsDb();
+            float peakDb = m_vuMeters[track]->getPeakDb();
+            
+            // RMS senden: /rms/1, /rms/2, /rms/3, /rms/4
+            std::string rmsPath = "/rms/" + std::to_string(track + 1);
+            m_oscSender->sendFloat(rmsPath, rmsDb);
+            
+            // Peak senden: /peak/1, /peak/2, /peak/3, /peak/4
+            std::string peakPath = "/peak/" + std::to_string(track + 1);
+            m_oscSender->sendFloat(peakPath, peakDb);
+        }
+    }
+    
     void printStatus() {
         std::lock_guard<std::mutex> lock(m_mutex);
         
@@ -264,6 +318,9 @@ private:
     
     // Beat Detection (4 Tracker für 4 Stereo-Kanäle)
     std::vector<std::unique_ptr<RealTimeBeatTracker>> m_beatTrackers;
+    
+    // VU-Meter (4x für 4 Stereo-Kanäle)
+    std::vector<std::unique_ptr<VuMeter>> m_vuMeters;
     
     // OSC
     std::shared_ptr<OscSender> m_oscSender;
