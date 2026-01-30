@@ -6,7 +6,9 @@
 
 - **Audio Input**: JACK/PipeWire (4x Stereo = 8 Kanäle)
 - **Beat Detection**: Eigene Implementierung (keine externen Abhängigkeiten)
-- **OSC Output**: Beat Clock für 4 Tracks (Pro Tools kompatibel)
+- **VU-Meter**: RMS und Peak Level pro Stereo-Track
+- **OSC Output**: Beat Clock + VU-Meter für 4 Tracks
+- **Konfiguration**: Einfache `.env` Datei
 - **Platform**: Debian Linux
 
 ## 📋 Voraussetzungen
@@ -97,50 +99,74 @@ Die Beat-Erkennung basiert auf bewährten DSP-Konzepten:
 
 ## 📡 OSC Protokoll
 
-### Beat Clock Message
+### Beat Clock Messages
 
 ```
-Address: /beatclock
+Address: /beatclock/1 - /beatclock/4
 Arguments:
-  [0] track_id      (int 0-3)     Track-Nummer
-  [1] frame_pos     (int64)       Absolute Frame-Position
-  [2] bpm           (float)       BPM
-  [3] beat_number   (int 0-3)     Beat im Takt (4/4)
-  [4] beat_strength (float 0-1)   Gewichtung
+  [0] frame_pos     (int64)       Absolute Frame-Position
+  [1] bpm           (float)       BPM
+  [2] beat_number   (int 0-3)     Beat im Takt (4/4)
+  [3] beat_strength (float 0-1)   Gewichtung
+```
+
+### VU-Meter Messages
+
+```
+Address: /rms/1 - /rms/4
+Arguments:
+  [0] level_db      (float)       RMS Level in dB (0 = max)
+
+Address: /peak/1 - /peak/4  
+Arguments:
+  [0] level_db      (float)       Peak Level in dB (0 = max)
 ```
 
 **Beispiel:**
 ```
-/beatclock 0 44100 120.0 2 0.95
+/beatclock/1 44100 120.0 2 0.95
+/rms/1 -12.5
+/peak/1 -6.2
 ```
 
 ## ⚙️ Konfiguration
 
-`config/config.yaml`:
+Kopiere `.env.example` nach `.env` und passe die Werte an:
 
-```yaml
-[audio]
-sample_rate: 44100
-frames_per_buffer: 512
-channels: 8
+```bash
+cp .env.example .env
+```
 
-[jack]
-client_name: beat-analyzer
-auto_connect: true
+`.env`:
 
-[analysis]
-beat_detection: true
-bpm_range_min: 60
-bpm_range_max: 200
+```bash
+# OSC Ziel
+OSC_HOST=127.0.0.1
+OSC_PORT=9000
 
-[osc]
-enabled: true
-host: 127.0.0.1
-port: 9000
+# JACK Client Name
+JACK_CLIENT_NAME=beat-analyzer
 
-[logging]
-level: 1
-console: true
+# BPM Range
+BPM_MIN=60
+BPM_MAX=200
+
+# Log Level (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR)
+LOG_LEVEL=1
+```
+
+### Niedrige Latenz (Buffer Size)
+
+Für minimale Latenz die PipeWire Buffer-Size anpassen:
+
+```bash
+# Temporär (64 Frames = ~1.5ms @ 44.1kHz)
+pw-metadata -n settings 0 clock.force-quantum 64
+
+# Permanent in ~/.config/pipewire/pipewire.conf:
+context.properties = {
+    default.clock.quantum = 64
+}
 ```
 
 ## 📁 Projektstruktur
@@ -170,7 +196,7 @@ make test
 
 ## 📈 Performance
 
-- **Latenz**: ~23ms @ 44.1kHz (512 Samples)
+- **Latenz**: ~1.5ms @ 44.1kHz (64 Samples)
 - **CPU**: ~5-10% (single core)
 - **RAM**: ~20MB
 
