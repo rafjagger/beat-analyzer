@@ -4,8 +4,8 @@
 
 ## 🎯 Features
 
-- **Audio Input**: JACK/PipeWire (4x Stereo = 8 Kanäle)
-- **Beat Detection**: Eigene Implementierung (keine externen Abhängigkeiten)
+- **Audio Input**: JACK/PipeWire
+- **Beat Detection**: Beat / Beatclock
 - **VU-Meter**: RMS und Peak Level pro Stereo-Track
 - **OSC Output**: Beat Clock + VU-Meter für 4 Tracks
 - **Konfiguration**: Einfache `.env` Datei
