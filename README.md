@@ -6,7 +6,7 @@
 
 - **Audio Input**: JACK/PipeWire
 - **Beat Detection**: Beat / Beatclock
-- **VU-Meter**: RMS und Peak Level pro Stereo-Track
+- **VU-Meter**: RMS und Peak Level
 - **OSC Output**: Beat Clock + VU-Meter für 4 Tracks
 - **Konfiguration**: Einfache `.env` Datei
 - **Platform**: Debian Linux
