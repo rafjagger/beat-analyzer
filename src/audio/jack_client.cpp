@@ -30,7 +30,9 @@ bool JackClient::initialize() {
     
     // Create 8 input ports (4 stereo = 8 mono)
     for (int i = 0; i < 8; ++i) {
-        std::string portName = "input_" + std::to_string(i);
+        int stereoNum = (i / 2) + 1;
+        std::string channel = (i % 2 == 0) ? "L" : "R";
+        std::string portName = "stereo" + std::to_string(stereoNum) + "_" + channel;
         jack_port_t* port = jack_port_register(
             m_client,
             portName.c_str(),
