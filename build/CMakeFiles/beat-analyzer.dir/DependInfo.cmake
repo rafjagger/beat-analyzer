@@ -10,6 +10,7 @@ set(CMAKE_DEPENDS_LANGUAGES
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/ra/beat-analyzer/src/analysis/beat_detection.cpp" "CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o.d"
   "/home/ra/beat-analyzer/src/analysis/beat_tracker.cpp" "CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o.d"
+  "/home/ra/beat-analyzer/src/analysis/vu_meter.cpp" "CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o.d"
   "/home/ra/beat-analyzer/src/audio/audio_buffer.cpp" "CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o.d"
   "/home/ra/beat-analyzer/src/audio/jack_client.cpp" "CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o.d"
   "/home/ra/beat-analyzer/src/config/config_loader.cpp" "CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o.d"

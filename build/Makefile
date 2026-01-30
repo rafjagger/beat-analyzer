@@ -245,6 +245,30 @@ src/analysis/beat_tracker.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.s
 .PHONY : src/analysis/beat_tracker.cpp.s
 
+src/analysis/vu_meter.o: src/analysis/vu_meter.cpp.o
+.PHONY : src/analysis/vu_meter.o
+
+# target to build an object file
+src/analysis/vu_meter.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o
+.PHONY : src/analysis/vu_meter.cpp.o
+
+src/analysis/vu_meter.i: src/analysis/vu_meter.cpp.i
+.PHONY : src/analysis/vu_meter.i
+
+# target to preprocess a source file
+src/analysis/vu_meter.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.i
+.PHONY : src/analysis/vu_meter.cpp.i
+
+src/analysis/vu_meter.s: src/analysis/vu_meter.cpp.s
+.PHONY : src/analysis/vu_meter.s
+
+# target to generate assembly for a file
+src/analysis/vu_meter.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.s
+.PHONY : src/analysis/vu_meter.cpp.s
+
 src/audio/audio_buffer.o: src/audio/audio_buffer.cpp.o
 .PHONY : src/audio/audio_buffer.o
 
@@ -434,6 +458,9 @@ help:
 	@echo "... src/analysis/beat_tracker.o"
 	@echo "... src/analysis/beat_tracker.i"
 	@echo "... src/analysis/beat_tracker.s"
+	@echo "... src/analysis/vu_meter.o"
+	@echo "... src/analysis/vu_meter.i"
+	@echo "... src/analysis/vu_meter.s"
 	@echo "... src/audio/audio_buffer.o"
 	@echo "... src/audio/audio_buffer.i"
 	@echo "... src/audio/audio_buffer.s"

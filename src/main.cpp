@@ -14,6 +14,7 @@
 #include "analysis/vu_meter.h"
 #include "osc/osc_sender.h"
 #include "config/config_loader.h"
+#include "config/env_config.h"
 #include "util/logging.h"
 
 #include <iostream>
@@ -62,23 +63,29 @@ public:
     bool initialize(const std::string& configPath) {
         LOG_INFO("Beat Analyzer wird initialisiert...");
         
-        // Konfiguration laden
-        m_config = std::make_shared<ConfigLoader>(configPath);
-        if (!m_config->load()) {
-            LOG_WARN("Konfigurationsdatei nicht gefunden, nutze Standardwerte");
+        // .env Konfiguration laden
+        auto& env = EnvConfig::instance();
+        if (env.load(".env")) {
+            LOG_INFO(".env Konfiguration geladen");
+        } else if (env.load(".env.example")) {
+            LOG_INFO(".env.example als Fallback geladen");
         }
         
         // Log-Level setzen
-        int logLevel = m_config->getInt("logging.level", 1);
+        int logLevel = env.getInt("LOG_LEVEL", 1);
         Logger::setLogLevel(static_cast<LogLevel>(logLevel));
+        
+        // Buffer Size
+        m_bufferSize = env.getInt("BUFFER_SIZE", 64);
+        LOG_INFO("Buffer Size: " + std::to_string(m_bufferSize) + " Frames");
         
         // Beat Detector Konfiguration
         BeatDetectorConfig beatConfig;
-        beatConfig.sampleRate = m_config->getInt("audio.sample_rate", 44100);
+        beatConfig.sampleRate = 44100;
         beatConfig.frameSize = 1024;
         beatConfig.hopSize = 512;
-        beatConfig.minBpm = m_config->getFloat("analysis.bpm_range_min", 60.0f);
-        beatConfig.maxBpm = m_config->getFloat("analysis.bpm_range_max", 200.0f);
+        beatConfig.minBpm = env.getFloat("BPM_MIN", 60.0f);
+        beatConfig.maxBpm = env.getFloat("BPM_MAX", 200.0f);
         beatConfig.defaultBpm = 120.0;
         
         // Beat Tracker für jeden Stereo-Kanal (4x)
@@ -94,7 +101,7 @@ public:
         LOG_INFO("4 Beat Tracker initialisiert (je Stereo-Kanal)");
         
         // JACK Client initialisieren
-        std::string jackName = m_config->getString("jack.client_name", "beat-analyzer");
+        std::string jackName = env.getString("JACK_CLIENT_NAME", "beat-analyzer");
         m_jackClient = std::make_shared<JackClient>(jackName);
         
         if (!m_jackClient->initialize()) {
@@ -103,8 +110,8 @@ public:
         }
         
         // OSC Sender initialisieren
-        std::string oscHost = m_config->getString("osc.host", "127.0.0.1");
-        int oscPort = m_config->getInt("osc.port", 9000);
+        std::string oscHost = env.getString("OSC_HOST", "127.0.0.1");
+        int oscPort = env.getInt("OSC_PORT", 9000);
         
         m_oscSender = std::make_shared<OscSender>(oscHost, oscPort);
         if (!m_oscSender->initialize()) {
@@ -310,11 +317,9 @@ private:
         LOG_INFO(status);
     }
     
-    // Konfiguration
-    std::shared_ptr<ConfigLoader> m_config;
-    
     // Audio
     std::shared_ptr<JackClient> m_jackClient;
+    int m_bufferSize = 64;
     
     // Beat Detection (4 Tracker für 4 Stereo-Kanäle)
     std::vector<std::unique_ptr<RealTimeBeatTracker>> m_beatTrackers;

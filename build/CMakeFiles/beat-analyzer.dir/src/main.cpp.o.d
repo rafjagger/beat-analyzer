@@ -230,9 +230,15 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/c++/15/bits/ostream.h /usr/include/c++/15/bits/ostream.tcc \
  /usr/include/c++/15/bits/istream.tcc \
  /usr/include/c++/15/bits/sstream.tcc \
+ /home/ra/beat-analyzer/include/analysis/vu_meter.h \
  /home/ra/beat-analyzer/include/osc/osc_sender.h \
  /home/ra/beat-analyzer/include/osc/osc_messages.h \
  /home/ra/beat-analyzer/include/config/config_loader.h \
+ /home/ra/beat-analyzer/include/config/env_config.h \
+ /usr/include/c++/15/fstream /usr/include/c++/15/bits/codecvt.h \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/basic_file.h \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
+ /usr/include/c++/15/bits/fstream.tcc \
  /home/ra/beat-analyzer/include/util/logging.h \
  /usr/include/c++/15/iostream /usr/include/c++/15/thread \
  /usr/include/c++/15/bits/std_thread.h \
