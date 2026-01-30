@@ -35,11 +35,8 @@ make -j$(nproc)
 ## 🚀 Verwendung
 
 ```bash
-# Mit Standard-Konfiguration
-./beat-analyzer
-
-# Hilfe anzeigen
-./beat-analyzer --help
+# Mit Standard-Konfiguration (.env)
+buid/./beat-analyzer
 ```
 
 ### JACK-Verbindung
@@ -60,7 +57,7 @@ jack_connect system:capture_2 beat-analyzer:input_1
 │              BEAT ANALYZER                   │
 ├─────────────────────────────────────────────┤
 │                                              │
-│   JACK Client (8 Kanäle)                    │
+│   JACK Client                    │
 │           ↓                                  │
 │   Onset Detector (Spectral Difference)      │
 │           ↓                                  │
@@ -128,29 +125,7 @@ Arguments:
 
 ## ⚙️ Konfiguration
 
-Kopiere `.env.example` nach `.env` und passe die Werte an:
-
-```bash
-cp .env.example .env
-```
-
-`.env`:
-
-```bash
-# OSC Ziel
-OSC_HOST=127.0.0.1
-OSC_PORT=9000
-
-# JACK Client Name
-JACK_CLIENT_NAME=beat-analyzer
-
-# BPM Range
-BPM_MIN=60
-BPM_MAX=200
-
-# Log Level (0=DEBUG, 1=INFO, 2=WARN, 3=ERROR)
-LOG_LEVEL=1
-```
+Kopiere `.env.example` nach `.env` und passe die Werte an.
 
 ### Niedrige Latenz (Buffer Size)
 
