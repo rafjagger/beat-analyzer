@@ -79,6 +79,15 @@ public:
         m_bufferSize = env.getInt("BUFFER_SIZE", 64);
         LOG_INFO("Buffer Size: " + std::to_string(m_bufferSize) + " Frames");
         
+        
+        // Feature Toggles
+        m_enableBeatclock = env.getInt("ENABLE_BEATCLOCK", 1) != 0;
+        m_enableVuRms = env.getInt("ENABLE_VU_RMS", 1) != 0;
+        m_enableVuPeak = env.getInt("ENABLE_VU_PEAK", 1) != 0;
+        
+        LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
+                 " RMS=" + std::string(m_enableVuRms ? "ON" : "OFF") +
+                 " Peak=" + std::string(m_enableVuPeak ? "ON" : "OFF"));
         // Beat Detector Konfiguration
         BeatDetectorConfig beatConfig;
         beatConfig.sampleRate = 44100;
@@ -238,6 +247,7 @@ private:
     }
     
     void sendBeatClock() {
+        if (!m_enableBeatclock) return;
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
         // Sende Beat Clock für alle 4 Tracks
@@ -287,12 +297,16 @@ private:
             float peakDb = m_vuMeters[track]->getPeakDb();
             
             // RMS senden: /rms/1, /rms/2, /rms/3, /rms/4
+            if (m_enableVuRms) {
             std::string rmsPath = "/rms/" + std::to_string(track + 1);
             m_oscSender->sendFloat(rmsPath, rmsDb);
+            }
             
             // Peak senden: /peak/1, /peak/2, /peak/3, /peak/4
+            if (m_enableVuPeak) {
             std::string peakPath = "/peak/" + std::to_string(track + 1);
             m_oscSender->sendFloat(peakPath, peakDb);
+            }
         }
     }
     
@@ -336,6 +350,11 @@ private:
     int64_t m_lastBeatFrame;
     int m_beatNumber;
     double m_currentBpm = 0.0;
+    
+    // Feature Toggles
+    bool m_enableBeatclock = true;
+    bool m_enableVuRms = true;
+    bool m_enableVuPeak = true;
 };
 
 // ============================================================================
