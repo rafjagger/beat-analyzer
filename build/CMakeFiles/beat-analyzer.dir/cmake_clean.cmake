@@ -1,0 +1,28 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/beat-analyzer.dir/link.d"
+  "CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/main.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/main.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o.d"
+  "beat-analyzer"
+  "beat-analyzer.pdb"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/beat-analyzer.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

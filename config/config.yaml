@@ -1,0 +1,30 @@
+# Beat Analyzer Configuration
+# YAML-like format
+
+[audio]
+sample_rate: 44100
+frames_per_buffer: 512
+channels: 8
+device: default
+
+[jack]
+client_name: beat-analyzer
+auto_connect: true
+input_ports: 4
+
+[analysis]
+beat_detection: true
+bpm_range_min: 60
+bpm_range_max: 200
+confidence_threshold: 0.7
+
+[osc]
+enabled: true
+host: 127.0.0.1
+port: 9000
+broadcast_interval_ms: 50
+
+[logging]
+level: 1
+file: /var/log/beat-analyzer.log
+console: true

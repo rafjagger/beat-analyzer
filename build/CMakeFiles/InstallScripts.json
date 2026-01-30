@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/ra/beat-analyzer/build/cmake_install.cmake",
+		"/home/ra/beat-analyzer/build/tests/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
