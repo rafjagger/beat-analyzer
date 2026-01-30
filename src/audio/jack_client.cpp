@@ -6,8 +6,9 @@
 namespace BeatAnalyzer {
 namespace Audio {
 
-JackClient::JackClient(const std::string& clientName)
+JackClient::JackClient(const std::string& clientName, int numChannels)
     : m_clientName(clientName),
+      m_numChannels(std::max(1, std::min(8, numChannels))),
       m_client(nullptr),
       m_connected(false) {
 }
@@ -28,11 +29,9 @@ bool JackClient::initialize() {
         return false;
     }
     
-    // Create 8 input ports (4 stereo = 8 mono)
-    for (int i = 0; i < 8; ++i) {
-        int stereoNum = (i / 2) + 1;
-        std::string channel = (i % 2 == 0) ? "L" : "R";
-        std::string portName = "stereo" + std::to_string(stereoNum) + "_" + channel;
+    // Create mono input ports
+    for (int i = 0; i < m_numChannels; ++i) {
+        std::string portName = "in_" + std::to_string(i + 1);
         jack_port_t* port = jack_port_register(
             m_client,
             portName.c_str(),
@@ -52,7 +51,7 @@ bool JackClient::initialize() {
     jack_on_shutdown(m_client, shutdownCallback, this);
     
     m_connected = true;
-    LOG_INFO("JACK client initialized");
+    LOG_INFO("JACK client initialized with " + std::to_string(m_numChannels) + " mono channels");
     return true;
 }
 
@@ -80,12 +79,8 @@ bool JackClient::deactivate() {
     return true;
 }
 
-void JackClient::setProcessCallback(ProcessCallback callback) {
-    m_processCallback = callback;
-}
-
-void JackClient::setStereoProcessCallback(StereoProcessCallback callback) {
-    m_stereoProcessCallback = callback;
+void JackClient::setMonoProcessCallback(MonoProcessCallback callback) {
+    m_monoProcessCallback = callback;
 }
 
 SampleRate JackClient::getSampleRate() const {
@@ -124,7 +119,7 @@ bool JackClient::connectPort(int channelIndex, const std::string& portName) {
         return false;
     }
     
-    std::string ourPort = m_clientName + ":input_" + std::to_string(channelIndex);
+    std::string ourPort = m_clientName + ":in_" + std::to_string(channelIndex + 1);
     
     if (jack_connect(m_client, portName.c_str(), ourPort.c_str())) {
         LOG_ERROR("Failed to connect port: " + portName);
@@ -147,34 +142,17 @@ void JackClient::shutdownCallback(void* arg) {
 }
 
 int JackClient::m_processInternal(int frameCount) {
-    // Get audio buffers from ports
-    std::vector<CSAMPLE*> buffers(m_inputPorts.size());
+    // Get audio buffers from all mono ports
+    std::vector<const CSAMPLE*> monoBuffers;
     for (size_t i = 0; i < m_inputPorts.size(); ++i) {
-        buffers[i] = static_cast<CSAMPLE*>(
+        CSAMPLE* buf = static_cast<CSAMPLE*>(
             jack_port_get_buffer(m_inputPorts[i], frameCount));
+        monoBuffers.push_back(buf);
     }
     
-    // Call stereo callback if set (4 stereo pairs)
-    if (m_stereoProcessCallback) {
-        std::vector<const CSAMPLE*> stereoBuffers;
-        for (size_t i = 0; i < buffers.size(); ++i) {
-            stereoBuffers.push_back(buffers[i]);
-        }
-        m_stereoProcessCallback(stereoBuffers, frameCount);
-    }
-    
-    // Downmix to mono for beat detection
-    std::vector<CSAMPLE> monoBuffer(frameCount, 0.0f);
-    for (int frame = 0; frame < frameCount; ++frame) {
-        for (const auto& buf : buffers) {
-            monoBuffer[frame] += buf[frame];
-        }
-        monoBuffer[frame] /= buffers.size();
-    }
-    
-    // Call callback
-    if (m_processCallback) {
-        m_processCallback(monoBuffer.data(), frameCount);
+    // Call mono callback
+    if (m_monoProcessCallback) {
+        m_monoProcessCallback(monoBuffers, frameCount);
     }
     
     return 0;

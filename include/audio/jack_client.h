@@ -12,16 +12,16 @@ namespace BeatAnalyzer {
 namespace Audio {
 
 /**
- * JACK audio client for capturing multi-channel audio.
- * Supports 4 stereo channels (8 mono channels total).
+ * JACK audio client for capturing multi-channel mono audio.
+ * Supports configurable number of mono channels (1-8).
  */
 class JackClient {
 public:
     using ProcessCallback = std::function<void(const CSAMPLE*, int)>;
-    // Callback für separate Stereo-Kanäle: stereoBuffers[4][frameCount*2]
-    using StereoProcessCallback = std::function<void(const std::vector<const CSAMPLE*>&, int)>;
+    // Callback für separate Mono-Kanäle
+    using MonoProcessCallback = std::function<void(const std::vector<const CSAMPLE*>&, int)>;
     
-    JackClient(const std::string& clientName = "beat-analyzer");
+    JackClient(const std::string& clientName = "beat-analyzer", int numChannels = 4);
     ~JackClient();
     
     // Non-copyable
@@ -37,11 +37,8 @@ public:
     // Deactivate JACK client
     bool deactivate();
     
-    // Register callback for audio processing
-    void setProcessCallback(ProcessCallback callback);
-    
-    // Register callback for stereo channel processing
-    void setStereoProcessCallback(StereoProcessCallback callback);
+    // Register callback for mono channel processing
+    void setMonoProcessCallback(MonoProcessCallback callback);
     
     // Get available JACK ports
     std::vector<std::string> getAvailablePorts(
@@ -53,6 +50,7 @@ public:
     // Properties
     SampleRate getSampleRate() const;
     int getBufferSize() const;
+    int getNumChannels() const { return m_numChannels; }
     bool isConnected() const { return m_connected; }
     
     // Static JACK callbacks
@@ -61,11 +59,10 @@ public:
     
 private:
     std::string m_clientName;
+    int m_numChannels;
     jack_client_t* m_client;
     std::vector<jack_port_t*> m_inputPorts;
-    std::vector<CSAMPLE*> m_portBuffers;
-    ProcessCallback m_processCallback;
-    StereoProcessCallback m_stereoProcessCallback;
+    MonoProcessCallback m_monoProcessCallback;
     bool m_connected;
     
     int m_processInternal(int frameCount);
