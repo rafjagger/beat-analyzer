@@ -24,6 +24,8 @@
 #include <atomic>
 #include <csignal>
 #include <mutex>
+#include <array>
+#include <cmath>
 
 using namespace BeatAnalyzer;
 using namespace BeatAnalyzer::Audio;
@@ -51,16 +53,14 @@ void signalHandler(int signal) {
 class BeatAnalyzerApp {
 public:
     BeatAnalyzerApp() 
-        : m_frameCount(0),
-          m_lastBeatFrame(0),
-          m_beatNumber(0) {
+        : m_frameCount(0) {
         // VU-Meter für jeden Stereo-Kanal initialisieren
         for (int i = 0; i < 4; ++i) {
             m_vuMeters.push_back(std::make_unique<VuMeter>());
         }
     }
     
-    bool initialize(const std::string& configPath) {
+    bool initialize(const std::string&) {
         LOG_INFO("Beat Analyzer wird initialisiert...");
         
         // .env Konfiguration laden
@@ -75,11 +75,6 @@ public:
         int logLevel = env.getInt("LOG_LEVEL", 1);
         Logger::setLogLevel(static_cast<LogLevel>(logLevel));
         
-        // Buffer Size
-        m_bufferSize = env.getInt("BUFFER_SIZE", 64);
-        LOG_INFO("Buffer Size: " + std::to_string(m_bufferSize) + " Frames");
-        
-        
         // Feature Toggles
         m_enableBeatclock = env.getInt("ENABLE_BEATCLOCK", 1) != 0;
         m_enableVuRms = env.getInt("ENABLE_VU_RMS", 1) != 0;
@@ -88,6 +83,7 @@ public:
         LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
                  " RMS=" + std::string(m_enableVuRms ? "ON" : "OFF") +
                  " Peak=" + std::string(m_enableVuPeak ? "ON" : "OFF"));
+        
         // Beat Detector Konfiguration
         BeatDetectorConfig beatConfig;
         beatConfig.sampleRate = 44100;
@@ -129,12 +125,7 @@ public:
             LOG_INFO("OSC Sender aktiv: " + oscHost + ":" + std::to_string(oscPort));
         }
         
-        // JACK Process Callback setzen
-        m_jackClient->setProcessCallback([this](const CSAMPLE* samples, int frames) {
-            this->processAudio(samples, frames);
-        });
-        
-        // Stereo-Callback für VU-Meter setzen
+        // Nur Stereo-Callback setzen (processStereoAudio macht alles)
         m_jackClient->setStereoProcessCallback(
             [this](const std::vector<const CSAMPLE*>& stereoBuffers, int frames) {
                 this->processStereoAudio(stereoBuffers, frames);
@@ -187,7 +178,7 @@ public:
         for (size_t i = 0; i < m_beatTrackers.size(); ++i) {
             BeatInfo info = m_beatTrackers[i]->finalize();
             if (info.valid) {
-                LOG_INFO("Track " + std::to_string(i) + " - BPM: " + 
+                LOG_INFO("Track " + std::to_string(i+1) + " - BPM: " + 
                         std::to_string(info.bpm) + " (" + 
                         std::to_string(info.beatFrames.size()) + " Beats erkannt)");
             }
@@ -201,111 +192,127 @@ public:
     }
     
 private:
-    void processAudio(const CSAMPLE* samples, int frameCount) {
+    // Track-Status für jeden der 4 Stereo-Kanäle
+    struct TrackState {
+        int64_t lastBeatFrame = 0;
+        int beatNumber = 0;
+        double currentBpm = 0.0;
+        bool hasSignal = false;
+    };
+    
+    void processStereoAudio(const std::vector<const CSAMPLE*>& stereoBuffers, int frameCount) {
         std::lock_guard<std::mutex> lock(m_mutex);
         
         m_frameCount += frameCount;
+        int sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
         
-        // Audio wird bereits als Mono geliefert vom JackClient
-        // Hier verarbeiten wir es für jeden Track
-        
-        // Erstelle Stereo-Buffer aus Mono (für die Tracker API)
-        std::vector<Sample> stereoBuffer(frameCount * 2);
-        for (int i = 0; i < frameCount; ++i) {
-            stereoBuffer[i * 2] = samples[i];
-            stereoBuffer[i * 2 + 1] = samples[i];
-        }
-        
-        // Verarbeite mit erstem Beat Tracker (alle 4 Tracker bekommen das gleiche Signal)
-        // In einer echten Anwendung würden separate Kanäle genutzt
-        if (!m_beatTrackers.empty()) {
-            m_beatTrackers[0]->processAudio(stereoBuffer.data(), frameCount);
-            
-            double currentBpm = m_beatTrackers[0]->getCurrentBpm();
-            if (currentBpm > 0) {
-                m_currentBpm = currentBpm;
-            }
-        }
-        
-        // Echtzeit Beat-Clock berechnen
-        if (m_currentBpm > 0) {
-            // Frames pro Beat berechnen
-            int sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
-            double framesPerBeat = (60.0 / m_currentBpm) * sampleRate;
-            
-            // Prüfen ob wir einen Beat überschritten haben
-            int64_t beatsSinceLast = (m_frameCount - m_lastBeatFrame) / static_cast<int64_t>(framesPerBeat);
-            
-            if (beatsSinceLast > 0) {
-                m_beatNumber = (m_beatNumber + beatsSinceLast) % 4;
-                m_lastBeatFrame = m_frameCount;
-                
-                // OSC senden
-                sendBeatClock();
-            }
-        }
-    }
-    
-    void sendBeatClock() {
-        if (!m_enableBeatclock) return;
-        if (!m_oscSender || !m_oscSender->isConnected()) return;
-        
-        // Sende Beat Clock für alle 4 Tracks
-        for (int track = 0; track < 4; ++track) {
-            BeatClockMessage msg;
-            msg.track_id = track;
-            msg.frame_position = m_frameCount;
-            msg.bpm = static_cast<float>(m_currentBpm);
-            msg.beat_number = m_beatNumber;
-            msg.beat_strength = 1.0f;
-            
-            m_oscSender->sendBeatClock(msg);
-        }
-    }
-    
-    void processStereoAudio(const std::vector<const CSAMPLE*>& stereoBuffers, int frameCount) {
         // stereoBuffers enthält 8 Mono-Kanäle (4 Stereo-Paare)
         // Wir verarbeiten sie als Stereo-Paare: 0+1, 2+3, 4+5, 6+7
         
-        for (int track = 0; track < 4 && track < static_cast<int>(m_vuMeters.size()); ++track) {
+        for (int track = 0; track < 4; ++track) {
             int leftIdx = track * 2;
             int rightIdx = track * 2 + 1;
             
-            if (leftIdx < static_cast<int>(stereoBuffers.size()) && 
-                rightIdx < static_cast<int>(stereoBuffers.size())) {
-                
-                // Interleaved Stereo-Buffer erstellen für VuMeter
+            if (leftIdx >= static_cast<int>(stereoBuffers.size()) || 
+                rightIdx >= static_cast<int>(stereoBuffers.size())) {
+                continue;
+            }
+            
+            // Stereo zu Mono mixen und RMS berechnen für Signal-Check
+            std::vector<float> monoBuffer(frameCount);
+            float sumSquares = 0.0f;
+            
+            for (int i = 0; i < frameCount; ++i) {
+                float left = stereoBuffers[leftIdx][i];
+                float right = stereoBuffers[rightIdx][i];
+                monoBuffer[i] = (left + right) * 0.5f;
+                sumSquares += monoBuffer[i] * monoBuffer[i];
+            }
+            
+            // Signal vorhanden? (RMS > -60dB)
+            float rms = std::sqrt(sumSquares / frameCount);
+            m_trackStates[track].hasSignal = (rms > 0.001f);  // ~-60dB
+            
+            // VU-Meter verarbeiten (Interleaved Stereo)
+            if (track < static_cast<int>(m_vuMeters.size())) {
                 std::vector<float> interleavedStereo(frameCount * 2);
                 for (int i = 0; i < frameCount; ++i) {
                     interleavedStereo[i * 2] = stereoBuffers[leftIdx][i];
                     interleavedStereo[i * 2 + 1] = stereoBuffers[rightIdx][i];
                 }
-                
                 m_vuMeters[track]->process(interleavedStereo.data(), frameCount);
+            }
+            
+            // Beat Detection nur wenn Signal vorhanden
+            if (m_trackStates[track].hasSignal && track < static_cast<int>(m_beatTrackers.size())) {
+                // Stereo-Buffer für Tracker (erwartet interleaved)
+                std::vector<float> stereoForTracker(frameCount * 2);
+                for (int i = 0; i < frameCount; ++i) {
+                    stereoForTracker[i * 2] = monoBuffer[i];
+                    stereoForTracker[i * 2 + 1] = monoBuffer[i];
+                }
+                
+                m_beatTrackers[track]->processAudio(stereoForTracker.data(), frameCount);
+                
+                double bpm = m_beatTrackers[track]->getCurrentBpm();
+                if (bpm > 0) {
+                    m_trackStates[track].currentBpm = bpm;
+                }
+                
+                // Beat Clock senden wenn Beat erkannt
+                if (m_trackStates[track].currentBpm > 0) {
+                    double framesPerBeat = (60.0 / m_trackStates[track].currentBpm) * sampleRate;
+                    int64_t beatsSinceLast = (m_frameCount - m_trackStates[track].lastBeatFrame) 
+                                             / static_cast<int64_t>(framesPerBeat);
+                    
+                    if (beatsSinceLast > 0) {
+                        m_trackStates[track].beatNumber = (m_trackStates[track].beatNumber + beatsSinceLast) % 4;
+                        m_trackStates[track].lastBeatFrame = m_frameCount;
+                        
+                        // Beat Clock für diesen Track senden
+                        sendBeatClockForTrack(track);
+                    }
+                }
             }
         }
         
-        // VU-Meter OSC senden
+        // VU-Meter OSC senden (nur für Tracks mit Signal)
         sendVuMeterOsc();
+    }
+    
+    void sendBeatClockForTrack(int track) {
+        if (!m_enableBeatclock) return;
+        if (!m_oscSender || !m_oscSender->isConnected()) return;
+        if (!m_trackStates[track].hasSignal) return;
+        
+        BeatClockMessage msg;
+        msg.track_id = track;
+        msg.frame_position = m_frameCount;
+        msg.bpm = static_cast<float>(m_trackStates[track].currentBpm);
+        msg.beat_number = m_trackStates[track].beatNumber;
+        msg.beat_strength = 1.0f;
+        
+        m_oscSender->sendBeatClock(msg);
     }
     
     void sendVuMeterOsc() {
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
         for (int track = 0; track < 4 && track < static_cast<int>(m_vuMeters.size()); ++track) {
+            // Nur senden wenn Signal vorhanden
+            if (!m_trackStates[track].hasSignal) continue;
+            
             float rmsDb = m_vuMeters[track]->getRmsDb();
             float peakDb = m_vuMeters[track]->getPeakDb();
             
-            // RMS senden: /rms/1, /rms/2, /rms/3, /rms/4
             if (m_enableVuRms) {
-            std::string rmsPath = "/rms/" + std::to_string(track + 1);
-            m_oscSender->sendFloat(rmsPath, rmsDb);
+                std::string rmsPath = "/rms/" + std::to_string(track + 1);
+                m_oscSender->sendFloat(rmsPath, rmsDb);
             }
             
-            // Peak senden: /peak/1, /peak/2, /peak/3, /peak/4
             if (m_enableVuPeak) {
-            std::string peakPath = "/peak/" + std::to_string(track + 1);
-            m_oscSender->sendFloat(peakPath, peakDb);
+                std::string peakPath = "/peak/" + std::to_string(track + 1);
+                m_oscSender->sendFloat(peakPath, peakDb);
             }
         }
     }
@@ -314,14 +321,20 @@ private:
         std::lock_guard<std::mutex> lock(m_mutex);
         
         double seconds = static_cast<double>(m_frameCount) / 44100.0;
-        
         std::string status = "Status: " + std::to_string(static_cast<int>(seconds)) + "s";
         
-        if (m_currentBpm > 0) {
-            status += " | BPM: " + std::to_string(static_cast<int>(m_currentBpm));
-            status += " | Beat: " + std::to_string(m_beatNumber + 1) + "/4";
-        } else {
-            status += " | Analysiere...";
+        // Zeige BPM für jeden aktiven Track
+        bool anyActive = false;
+        for (int t = 0; t < 4; ++t) {
+            if (m_trackStates[t].hasSignal && m_trackStates[t].currentBpm > 0) {
+                status += " | T" + std::to_string(t+1) + ": " + 
+                         std::to_string(static_cast<int>(m_trackStates[t].currentBpm)) + "BPM";
+                anyActive = true;
+            }
+        }
+        
+        if (!anyActive) {
+            status += " | Kein Signal";
         }
         
         if (m_oscSender && m_oscSender->isConnected()) {
@@ -333,7 +346,6 @@ private:
     
     // Audio
     std::shared_ptr<JackClient> m_jackClient;
-    int m_bufferSize = 64;
     
     // Beat Detection (4 Tracker für 4 Stereo-Kanäle)
     std::vector<std::unique_ptr<RealTimeBeatTracker>> m_beatTrackers;
@@ -341,15 +353,15 @@ private:
     // VU-Meter (4x für 4 Stereo-Kanäle)
     std::vector<std::unique_ptr<VuMeter>> m_vuMeters;
     
+    // Track-Status
+    std::array<TrackState, 4> m_trackStates;
+    
     // OSC
     std::shared_ptr<OscSender> m_oscSender;
     
     // Status
     std::mutex m_mutex;
     int64_t m_frameCount;
-    int64_t m_lastBeatFrame;
-    int m_beatNumber;
-    double m_currentBpm = 0.0;
     
     // Feature Toggles
     bool m_enableBeatclock = true;
@@ -364,36 +376,24 @@ private:
 void printUsage(const char* programName) {
     std::cout << "\nBeat Analyzer - Echtzeit Beat Detection mit OSC Output\n\n";
     std::cout << "Verwendung: " << programName << " [config_file]\n\n";
-    std::cout << "Optionen:\n";
-    std::cout << "  config_file    Pfad zur Konfigurationsdatei (Standard: config/config.yaml)\n";
-    std::cout << "\n";
     std::cout << "Features:\n";
     std::cout << "  - Audio Input: JACK (4x Stereo = 8 Kanäle)\n";
-    std::cout << "  - Beat Detection: Onset Detection + Tempo Tracking\n";
-    std::cout << "  - OSC Output: Beat Clock an Pro Tools (4 Tracks)\n";
+    std::cout << "  - Beat Detection: Onset Detection + Tempo Tracking pro Track\n";
+    std::cout << "  - OSC Output: Beat Clock + VU-Meter (nur bei Signal)\n";
     std::cout << "\n";
-    std::cout << "OSC Message Format:\n";
-    std::cout << "  /beatclock [track_id] [frame_pos] [bpm] [beat_number] [strength]\n";
+    std::cout << "OSC Adressen:\n";
+    std::cout << "  /beatclock/1-4  Beat Clock pro Track\n";
+    std::cout << "  /rms/1-4        RMS Level pro Track\n";
+    std::cout << "  /peak/1-4       Peak Level pro Track\n";
     std::cout << "\n";
 }
 
 int main(int argc, char* argv[]) {
-    // Signal Handler registrieren
+    // Signal-Handler registrieren
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
     
-    // Konfigurationspfad
-    std::string configPath = "config/config.yaml";
-    
-    if (argc > 1) {
-        std::string arg = argv[1];
-        if (arg == "-h" || arg == "--help") {
-            printUsage(argv[0]);
-            return 0;
-        }
-        configPath = arg;
-    }
-    
+    // Banner
     std::cout << "\n";
     std::cout << "╔═══════════════════════════════════════════╗\n";
     std::cout << "║          BEAT ANALYZER v1.0.0             ║\n";
@@ -401,6 +401,16 @@ int main(int argc, char* argv[]) {
     std::cout << "╚═══════════════════════════════════════════╝\n";
     std::cout << "\n";
     
+    // Hilfe anzeigen?
+    if (argc > 1 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
+        printUsage(argv[0]);
+        return 0;
+    }
+    
+    // Konfigurationspfad
+    std::string configPath = (argc > 1) ? argv[1] : "config/config.yaml";
+    
+    // Anwendung starten
     BeatAnalyzerApp app;
     
     if (!app.initialize(configPath)) {
@@ -409,7 +419,7 @@ int main(int argc, char* argv[]) {
     }
     
     if (!app.run()) {
-        LOG_ERROR("Laufzeitfehler");
+        LOG_ERROR("Ausführung fehlgeschlagen");
         return 1;
     }
     
