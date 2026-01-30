@@ -38,9 +38,6 @@ make -j$(nproc)
 # Mit Standard-Konfiguration
 ./beat-analyzer
 
-# Mit eigener Konfiguration
-./beat-analyzer /path/to/config.yaml
-
 # Hilfe anzeigen
 ./beat-analyzer --help
 ```
