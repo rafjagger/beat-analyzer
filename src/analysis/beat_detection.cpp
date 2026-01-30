@@ -569,8 +569,8 @@ RealTimeBeatTracker::RealTimeBeatTracker(const BeatDetectorConfig& config)
 
 bool RealTimeBeatTracker::initialize() {
     m_onsetDetector = std::make_unique<OnsetDetector>(m_config);
-    m_tempoTracker = std::make_unique<TempoTracker>(m_config.sampleRate, 
-                                                    m_config.hopSize);
+    m_tempoTracker = std::make_unique<TempoTracker>(m_config.sampleRate, m_config.hopSize);
+    m_beatEventDetector = std::make_unique<BeatEventDetector>(m_config.sampleRate);
     
     m_monoBuffer.resize(m_config.frameSize, 0.0);
     m_frameBuffer.resize(m_config.frameSize, 0.0);
@@ -589,6 +589,7 @@ void RealTimeBeatTracker::downmixToMono(const Sample* stereo,
 }
 
 void RealTimeBeatTracker::processAudio(const Sample* stereoInput, int frameCount) {
+    m_beatOccurred = false;  // Reset am Anfang jedes Blocks
     std::vector<double> monoInput(frameCount);
     downmixToMono(stereoInput, monoInput.data(), frameCount);
     
@@ -612,6 +613,11 @@ void RealTimeBeatTracker::processAudio(const Sample* stereoInput, int frameCount
             // Onset Detection
             double onset = m_onsetDetector->process(m_frameBuffer.data());
             m_detectionFunction.push_back(onset);
+            
+            // Beat Event Detection
+            if (m_beatEventDetector->process(onset)) {
+                m_beatOccurred = true;
+            }
             
             // Echtzeit BPM-Schätzung alle 2 Sekunden (ca. 172 Frames bei 512 hop)
             if (m_detectionFunction.size() >= 100 && 
@@ -717,6 +723,58 @@ void RealTimeBeatTracker::reset() {
     m_bufferWritePos = 0;
     m_totalFramesProcessed = 0;
     m_currentBpm = 0.0;
+}
+
+
+// ============================================================================
+// BeatEventDetector Implementation
+// ============================================================================
+
+BeatEventDetector::BeatEventDetector(int sampleRate)
+    : m_sampleRate(sampleRate) {
+    // Minimum 200ms zwischen Beats (= max 300 BPM)
+    m_minBeatInterval = sampleRate * 0.2 / 512;  // In Analyse-Frames (hop=512)
+    reset();
+}
+
+bool BeatEventDetector::process(double onsetValue) {
+    m_framesSinceLastBeat++;
+    
+    // Adaptive Threshold aktualisieren
+    if (onsetValue > m_adaptiveThreshold) {
+        m_adaptiveThreshold = onsetValue;
+    } else {
+        m_adaptiveThreshold *= THRESHOLD_DECAY;
+    }
+    
+    // Threshold ist 30% des adaptiven Maximums
+    m_threshold = m_adaptiveThreshold * 0.3;
+    
+    // Peak Detection: prevOnset muss größer sein als Nachbarn UND über Threshold
+    bool isPeak = (m_prevOnset > m_prevPrevOnset) && 
+                  (m_prevOnset > onsetValue) &&
+                  (m_prevOnset > m_threshold);
+    
+    // Minimum Interval zwischen Beats
+    bool beatDetected = isPeak && (m_framesSinceLastBeat >= m_minBeatInterval);
+    
+    if (beatDetected) {
+        m_framesSinceLastBeat = 0;
+    }
+    
+    // History aktualisieren
+    m_prevPrevOnset = m_prevOnset;
+    m_prevOnset = onsetValue;
+    
+    return beatDetected;
+}
+
+void BeatEventDetector::reset() {
+    m_threshold = 0.0;
+    m_adaptiveThreshold = 0.0;
+    m_prevOnset = 0.0;
+    m_prevPrevOnset = 0.0;
+    m_framesSinceLastBeat = m_minBeatInterval;  // Erlaube sofort Beat
 }
 
 } // namespace BeatAnalyzer

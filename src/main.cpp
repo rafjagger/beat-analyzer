@@ -77,10 +77,12 @@ public:
         m_enableBeatclock = env.getInt("ENABLE_BEATCLOCK", 1) != 0;
         m_enableVuRms = env.getInt("ENABLE_VU_RMS", 1) != 0;
         m_enableVuPeak = env.getInt("ENABLE_VU_PEAK", 1) != 0;
+        m_enableBeat = env.getInt("ENABLE_BEAT", 1) != 0;
         
         LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
                  " RMS=" + std::string(m_enableVuRms ? "ON" : "OFF") +
-                 " Peak=" + std::string(m_enableVuPeak ? "ON" : "OFF"));
+                 " Peak=" + std::string(m_enableVuPeak ? "ON" : "OFF") +
+                 " Beat=" + std::string(m_enableBeat ? "ON" : "OFF"));
         
         // Beat Detector Konfiguration
         BeatDetectorConfig beatConfig;
@@ -229,6 +231,11 @@ private:
             if (m_trackStates[ch].hasSignal) {
                 m_beatTrackers[ch]->processAudio(stereoBuffer.data(), frameCount);
                 
+                // Echter Beat erkannt?
+                if (m_beatTrackers[ch]->hasBeatOccurred()) {
+                    sendBeatForChannel(ch);
+                }
+                
                 double bpm = m_beatTrackers[ch]->getCurrentBpm();
                 if (bpm > 0) {
                     m_trackStates[ch].currentBpm = bpm;
@@ -266,6 +273,17 @@ private:
         msg.beat_strength = 1.0f;
         
         m_oscSender->sendBeatClock(msg);
+    }
+    
+    void sendBeatForChannel(int ch) {
+        if (!m_enableBeat) return;
+        if (!m_oscSender || !m_oscSender->isConnected()) return;
+        if (!m_trackStates[ch].hasSignal) return;
+        
+        // Sende echten erkannten Beat: /beat/1, /beat/2, etc.
+        std::string path = "/beat/" + std::to_string(ch + 1);
+        float bpm = static_cast<float>(m_trackStates[ch].currentBpm);
+        m_oscSender->sendFloat(path, bpm);
     }
     
     void sendVuMeterOsc() {
@@ -339,6 +357,7 @@ private:
     bool m_enableBeatclock = true;
     bool m_enableVuRms = true;
     bool m_enableVuPeak = true;
+    bool m_enableBeat = true;
 };
 
 // ============================================================================

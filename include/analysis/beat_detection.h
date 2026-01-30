@@ -170,6 +170,37 @@ private:
     void adaptiveThreshold(std::vector<double>& data);
 };
 
+// ============================================================================
+// Beat Event Detector - erkennt echte Beats aus Onset-Funktion
+// ============================================================================
+
+class BeatEventDetector {
+public:
+    explicit BeatEventDetector(int sampleRate = 44100);
+    
+    // Verarbeite neuen Onset-Wert, gibt true zurück wenn Beat erkannt
+    bool process(double onsetValue);
+    
+    // Reset
+    void reset();
+    
+private:
+    // Adaptive Threshold
+    double m_threshold = 0.0;
+    double m_adaptiveThreshold = 0.0;
+    static constexpr double THRESHOLD_DECAY = 0.9;
+    static constexpr double THRESHOLD_RISE = 1.5;
+    
+    // Peak Detection
+    double m_prevOnset = 0.0;
+    double m_prevPrevOnset = 0.0;
+    
+    // Minimum Zeit zwischen Beats (verhindert Doppel-Trigger)
+    int m_sampleRate;
+    int m_minBeatInterval;  // Frames
+    int m_framesSinceLastBeat = 0;
+};
+
 /**
  * Real-Time Beat Tracker
  * Kombiniert Onset Detection + Tempo Tracking für Echtzeit-Analyse
@@ -190,6 +221,9 @@ public:
     // Aktuelle BPM Schätzung (für Echtzeit-Display)
     double getCurrentBpm() const { return m_currentBpm; }
     
+    // Wurde im letzten processAudio() ein Beat erkannt?
+    bool hasBeatOccurred() const { return m_beatOccurred; }
+    
     // Reset
     void reset();
     
@@ -197,6 +231,8 @@ private:
     BeatDetectorConfig m_config;
     std::unique_ptr<OnsetDetector> m_onsetDetector;
     std::unique_ptr<TempoTracker> m_tempoTracker;
+    std::unique_ptr<BeatEventDetector> m_beatEventDetector;
+    bool m_beatOccurred = false;
     
     // Buffering
     std::vector<double> m_monoBuffer;
