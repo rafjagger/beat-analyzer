@@ -44,6 +44,9 @@ public:
     // Send single float value to path (all targets)
     bool sendFloat(const std::string& path, float value);
     
+    // Send two float values to path (all targets) - for VU meter (peak, rms)
+    bool sendFloats(const std::string& path, float value1, float value2);
+    
     // Send raw OSC message to all targets
     bool sendMessage(const OscMessage& msg);
     

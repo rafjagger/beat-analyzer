@@ -101,13 +101,13 @@ public:
         
         // Feature Toggles
         m_enableBeatclock = env.getInt("ENABLE_BEATCLOCK", 1) != 0;
-        m_enableVuRms = env.getInt("ENABLE_VU_RMS", 1) != 0;
-        m_enableVuPeak = env.getInt("ENABLE_VU_PEAK", 1) != 0;
+        m_enableVu = env.getInt("ENABLE_VU", 1) != 0;
+        
         m_enableBeat = env.getInt("ENABLE_BEAT", 1) != 0;
         
         LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
-                 " RMS=" + std::string(m_enableVuRms ? "ON" : "OFF") +
-                 " Peak=" + std::string(m_enableVuPeak ? "ON" : "OFF") +
+                 " VU=" + std::string(m_enableVu ? "ON" : "OFF") +
+                 
                  " Beat=" + std::string(m_enableBeat ? "ON" : "OFF"));
         
         // Beat Detector Konfiguration
@@ -368,6 +368,8 @@ private:
     }
     
     void sendVuMeterOsc() {
+        if (!m_enableVu) return;
+        // Sendet /vu/1-N mit [peak, rms]
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
         for (int ch = 0; ch < m_numVuChannels; ++ch) {
@@ -376,15 +378,9 @@ private:
             float rmsDb = m_vuMeters[ch]->getRmsDb();
             float peakDb = m_vuMeters[ch]->getPeakDb();
             
-            if (m_enableVuRms) {
-                std::string rmsPath = "/rms/" + std::to_string(ch + 1);
-                m_oscSender->sendFloat(rmsPath, rmsDb);
-            }
-            
-            if (m_enableVuPeak) {
-                std::string peakPath = "/peak/" + std::to_string(ch + 1);
-                m_oscSender->sendFloat(peakPath, peakDb);
-            }
+            // Sende /vu/1, /vu/2, etc. mit [peak, rms]
+            std::string vuPath = "/vu/" + std::to_string(ch + 1);
+            m_oscSender->sendFloats(vuPath, peakDb, rmsDb);
         }
     }
     
@@ -445,8 +441,8 @@ private:
     
     // Feature Toggles
     bool m_enableBeatclock = true;
-    bool m_enableVuRms = true;
-    bool m_enableVuPeak = true;
+    bool m_enableVu = true;
+    
     bool m_enableBeat = true;
 };
 

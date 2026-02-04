@@ -85,6 +85,24 @@ bool OscSender::sendFloat(const std::string& path, float value) {
 #endif
 }
 
+bool OscSender::sendFloats(const std::string& path, float value1, float value2) {
+#ifdef HAS_LIBLO
+    if (!m_connected) return false;
+    
+    bool allSuccess = true;
+    for (const auto& target : m_targets) {
+        if (!target.address) continue;
+        
+        lo_address addr = static_cast<lo_address>(target.address);
+        int result = lo_send(addr, path.c_str(), "ff", value1, value2);
+        if (result < 0) allSuccess = false;
+    }
+    return allSuccess;
+#else
+    return false;
+#endif
+}
+
 bool OscSender::sendMessage(const OscMessage& msg) {
 #ifdef HAS_LIBLO
     if (!m_connected) return false;
