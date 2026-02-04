@@ -5,6 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
+#include <algorithm>
 
 namespace BeatAnalyzer {
 
@@ -71,6 +73,23 @@ public:
         } catch (...) {
             return defaultValue;
         }
+    }
+    
+    // Finde alle Keys die mit einem Prefix beginnen, sortiert
+    std::vector<std::string> getKeysWithPrefix(const std::string& prefix) const {
+        std::vector<std::string> keys;
+        for (const auto& pair : m_values) {
+            if (pair.first.rfind(prefix, 0) == 0) {  // starts with prefix
+                keys.push_back(pair.first);
+            }
+        }
+        std::sort(keys.begin(), keys.end());
+        return keys;
+    }
+    
+    // Alle geladenen Werte
+    const std::unordered_map<std::string, std::string>& getAll() const {
+        return m_values;
     }
 
 private:

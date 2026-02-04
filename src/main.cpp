@@ -26,6 +26,7 @@
 #include <mutex>
 #include <vector>
 #include <cmath>
+#include <regex>
 
 using namespace BeatAnalyzer;
 using namespace BeatAnalyzer::Audio;
@@ -47,6 +48,28 @@ void signalHandler(int signal) {
 }
 
 // ============================================================================
+// Helper: Parse host:port string
+// ============================================================================
+
+bool parseHostPort(const std::string& value, std::string& host, int& port) {
+    // Format: "host:port" or just "host" (default port 9000)
+    auto colonPos = value.rfind(':');
+    if (colonPos != std::string::npos) {
+        host = value.substr(0, colonPos);
+        try {
+            port = std::stoi(value.substr(colonPos + 1));
+            return true;
+        } catch (...) {
+            return false;
+        }
+    } else {
+        host = value;
+        port = 9000;
+        return true;
+    }
+}
+
+// ============================================================================
 // Beat Analyzer Anwendung
 // ============================================================================
 
@@ -59,7 +82,7 @@ public:
         
         // .env Konfiguration laden
         auto& env = EnvConfig::instance();
-        if (env.load(".env")) {
+        if (env.load(".env") || env.load("../.env")) {
             LOG_INFO(".env Konfiguration geladen");
         } else if (env.load(".env.example")) {
             LOG_INFO(".env.example als Fallback geladen");
@@ -125,15 +148,35 @@ public:
             return false;
         }
         
-        // OSC Sender initialisieren
-        std::string oscHost = env.getString("OSC_HOST", "127.0.0.1");
-        int oscPort = env.getInt("OSC_PORT", 9000);
+        // OSC Sender initialisieren - suche nach OSC_HOST_* Einträgen
+        m_oscSender = std::make_shared<OscSender>();
         
-        m_oscSender = std::make_shared<OscSender>(oscHost, oscPort);
+        auto oscHostKeys = env.getKeysWithPrefix("OSC_HOST_");
+        if (!oscHostKeys.empty()) {
+            // Mehrere Hosts: OSC_HOST_1, OSC_HOST_2, etc.
+            for (const auto& key : oscHostKeys) {
+                std::string value = env.getString(key, "");
+                if (value.empty()) continue;
+                
+                std::string host;
+                int port;
+                if (parseHostPort(value, host, port)) {
+                    // Extrahiere Namen aus Key (OSC_HOST_Protokol -> Protokol)
+                    std::string name = key.substr(9);  // Nach "OSC_HOST_"
+                    m_oscSender->addTarget(name, host, port);
+                }
+            }
+        } else {
+            // Fallback: alte einzelne OSC_HOST/OSC_PORT Variablen
+            std::string oscHost = env.getString("OSC_HOST", "127.0.0.1");
+            int oscPort = env.getInt("OSC_PORT", 9000);
+            m_oscSender->addTarget("default", oscHost, oscPort);
+        }
+        
         if (!m_oscSender->initialize()) {
             LOG_WARN("OSC Sender konnte nicht initialisiert werden - OSC deaktiviert");
         } else {
-            LOG_INFO("OSC Sender aktiv: " + oscHost + ":" + std::to_string(oscPort));
+            LOG_INFO("OSC aktiv mit " + std::to_string(m_oscSender->getTargetCount()) + " Ziel(en)");
         }
         
         // Audio-Callback setzen
@@ -374,7 +417,7 @@ private:
         }
         
         if (m_oscSender && m_oscSender->isConnected()) {
-            status += " | OSC: aktiv";
+            status += " | OSC: " + std::to_string(m_oscSender->getTargetCount()) + " Ziel(e)";
         }
         
         LOG_INFO(status);
@@ -417,6 +460,9 @@ void printUsage(const char* programName) {
     std::cout << "Konfiguration via .env Datei:\n";
     std::cout << "  NUM_BPM_CHANNELS=4  Anzahl BPM-Eingänge (bpm_1 bis bpm_N)\n";
     std::cout << "  NUM_VU_CHANNELS=2   Anzahl VU-Eingänge (vu_1 bis vu_N)\n";
+    std::cout << "\nOSC Ziele (beliebig viele):\n";
+    std::cout << "  OSC_HOST_Name=host:port\n";
+    std::cout << "  Beispiel: OSC_HOST_Protokol=127.0.0.1:9000\n";
     std::cout << "\nOSC Adressen:\n";
     std::cout << "  /beatclock/1-N  Beat Clock (BPM Kanäle)\n";
     std::cout << "  /beat/1-N       Echte Beats (BPM Kanäle)\n";

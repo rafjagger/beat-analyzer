@@ -276,4 +276,24 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/sigthread.h \
  /usr/include/x86_64-linux-gnu/bits/signal_ext.h \
  /usr/include/c++/15/mutex /usr/include/c++/15/bits/std_mutex.h \
- /usr/include/c++/15/bits/unique_lock.h
+ /usr/include/c++/15/bits/unique_lock.h /usr/include/c++/15/regex \
+ /usr/include/c++/15/bitset /usr/include/c++/15/locale \
+ /usr/include/c++/15/bits/locale_facets_nonio.h \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h \
+ /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
+ /usr/include/libintl.h /usr/include/c++/15/bits/locale_facets_nonio.tcc \
+ /usr/include/c++/15/bits/locale_conv.h /usr/include/c++/15/stack \
+ /usr/include/c++/15/deque /usr/include/c++/15/bits/stl_deque.h \
+ /usr/include/c++/15/bits/deque.tcc /usr/include/c++/15/bits/stl_stack.h \
+ /usr/include/c++/15/bits/stl_tree.h /usr/include/c++/15/bits/stl_map.h \
+ /usr/include/c++/15/bits/regex_constants.h \
+ /usr/include/c++/15/bits/regex_error.h \
+ /usr/include/c++/15/bits/regex_automaton.h \
+ /usr/include/c++/15/bits/regex_automaton.tcc \
+ /usr/include/c++/15/bits/regex_scanner.h \
+ /usr/include/c++/15/bits/regex_scanner.tcc \
+ /usr/include/c++/15/bits/regex_compiler.h \
+ /usr/include/c++/15/bits/regex_compiler.tcc \
+ /usr/include/c++/15/bits/regex.h /usr/include/c++/15/bits/regex.tcc \
+ /usr/include/c++/15/bits/regex_executor.h \
+ /usr/include/c++/15/bits/regex_executor.tcc

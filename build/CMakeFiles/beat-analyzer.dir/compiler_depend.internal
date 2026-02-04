@@ -1396,6 +1396,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/c++/15/bits/cpp_type_traits.h
  /usr/include/c++/15/bits/cxxabi_forced.h
  /usr/include/c++/15/bits/cxxabi_init_exception.h
+ /usr/include/c++/15/bits/deque.tcc
  /usr/include/c++/15/bits/enable_special_members.h
  /usr/include/c++/15/bits/erase_if.h
  /usr/include/c++/15/bits/exception.h
@@ -1412,8 +1413,11 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/c++/15/bits/istream.tcc
  /usr/include/c++/15/bits/locale_classes.h
  /usr/include/c++/15/bits/locale_classes.tcc
+ /usr/include/c++/15/bits/locale_conv.h
  /usr/include/c++/15/bits/locale_facets.h
  /usr/include/c++/15/bits/locale_facets.tcc
+ /usr/include/c++/15/bits/locale_facets_nonio.h
+ /usr/include/c++/15/bits/locale_facets_nonio.tcc
  /usr/include/c++/15/bits/localefwd.h
  /usr/include/c++/15/bits/memory_resource.h
  /usr/include/c++/15/bits/memoryfwd.h
@@ -1430,6 +1434,18 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/c++/15/bits/ptr_traits.h
  /usr/include/c++/15/bits/range_access.h
  /usr/include/c++/15/bits/refwrap.h
+ /usr/include/c++/15/bits/regex.h
+ /usr/include/c++/15/bits/regex.tcc
+ /usr/include/c++/15/bits/regex_automaton.h
+ /usr/include/c++/15/bits/regex_automaton.tcc
+ /usr/include/c++/15/bits/regex_compiler.h
+ /usr/include/c++/15/bits/regex_compiler.tcc
+ /usr/include/c++/15/bits/regex_constants.h
+ /usr/include/c++/15/bits/regex_error.h
+ /usr/include/c++/15/bits/regex_executor.h
+ /usr/include/c++/15/bits/regex_executor.tcc
+ /usr/include/c++/15/bits/regex_scanner.h
+ /usr/include/c++/15/bits/regex_scanner.tcc
  /usr/include/c++/15/bits/requires_hosted.h
  /usr/include/c++/15/bits/shared_ptr.h
  /usr/include/c++/15/bits/shared_ptr_atomic.h
@@ -1444,15 +1460,19 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/c++/15/bits/stl_algobase.h
  /usr/include/c++/15/bits/stl_bvector.h
  /usr/include/c++/15/bits/stl_construct.h
+ /usr/include/c++/15/bits/stl_deque.h
  /usr/include/c++/15/bits/stl_function.h
  /usr/include/c++/15/bits/stl_heap.h
  /usr/include/c++/15/bits/stl_iterator.h
  /usr/include/c++/15/bits/stl_iterator_base_funcs.h
  /usr/include/c++/15/bits/stl_iterator_base_types.h
+ /usr/include/c++/15/bits/stl_map.h
  /usr/include/c++/15/bits/stl_numeric.h
  /usr/include/c++/15/bits/stl_pair.h
  /usr/include/c++/15/bits/stl_raw_storage_iter.h
+ /usr/include/c++/15/bits/stl_stack.h
  /usr/include/c++/15/bits/stl_tempbuf.h
+ /usr/include/c++/15/bits/stl_tree.h
  /usr/include/c++/15/bits/stl_uninitialized.h
  /usr/include/c++/15/bits/stl_vector.h
  /usr/include/c++/15/bits/streambuf.tcc
@@ -1469,6 +1489,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/c++/15/bits/utility.h
  /usr/include/c++/15/bits/vector.tcc
  /usr/include/c++/15/bits/version.h
+ /usr/include/c++/15/bitset
  /usr/include/c++/15/cctype
  /usr/include/c++/15/cerrno
  /usr/include/c++/15/chrono
@@ -1488,6 +1509,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/c++/15/cwctype
  /usr/include/c++/15/debug/assertions.h
  /usr/include/c++/15/debug/debug.h
+ /usr/include/c++/15/deque
  /usr/include/c++/15/exception
  /usr/include/c++/15/ext/aligned_buffer.h
  /usr/include/c++/15/ext/alloc_traits.h
@@ -1504,6 +1526,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/c++/15/iostream
  /usr/include/c++/15/istream
  /usr/include/c++/15/limits
+ /usr/include/c++/15/locale
  /usr/include/c++/15/memory
  /usr/include/c++/15/mutex
  /usr/include/c++/15/new
@@ -1515,7 +1538,9 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/c++/15/pstl/glue_numeric_defs.h
  /usr/include/c++/15/pstl/pstl_config.h
  /usr/include/c++/15/ratio
+ /usr/include/c++/15/regex
  /usr/include/c++/15/sstream
+ /usr/include/c++/15/stack
  /usr/include/c++/15/stdexcept
  /usr/include/c++/15/streambuf
  /usr/include/c++/15/string
@@ -1550,6 +1575,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/jack/transport.h
  /usr/include/jack/types.h
  /usr/include/jack/weakmacros.h
+ /usr/include/libintl.h
  /usr/include/linux/close_range.h
  /usr/include/linux/errno.h
  /usr/include/linux/posix_types.h
@@ -1682,7 +1708,9 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o
  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h
  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr-default.h
  /usr/include/x86_64-linux-gnu/c++/15/bits/gthr.h
+ /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h
  /usr/include/x86_64-linux-gnu/c++/15/bits/os_defines.h
+ /usr/include/x86_64-linux-gnu/c++/15/bits/time_members.h
  /usr/include/x86_64-linux-gnu/gnu/stubs-64.h
  /usr/include/x86_64-linux-gnu/gnu/stubs.h
  /usr/include/x86_64-linux-gnu/sys/cdefs.h

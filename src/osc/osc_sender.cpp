@@ -8,36 +8,54 @@
 namespace BeatAnalyzer {
 namespace OSC {
 
-OscSender::OscSender(const std::string& targetHost, int targetPort)
-    : m_targetHost(targetHost),
-      m_targetPort(targetPort),
-      m_address(nullptr),
-      m_connected(false) {
+OscSender::OscSender()
+    : m_connected(false) {
 }
 
 OscSender::~OscSender() {
 #ifdef HAS_LIBLO
-    if (m_address) {
-        lo_address_free(static_cast<lo_address>(m_address));
+    for (auto& target : m_targets) {
+        if (target.address) {
+            lo_address_free(static_cast<lo_address>(target.address));
+        }
     }
 #endif
 }
 
+void OscSender::addTarget(const std::string& name, const std::string& host, int port) {
+    OscTarget target;
+    target.name = name;
+    target.host = host;
+    target.port = port;
+    target.address = nullptr;
+    m_targets.push_back(target);
+}
+
 bool OscSender::initialize() {
 #ifdef HAS_LIBLO
-    m_address = lo_address_new(m_targetHost.c_str(), 
-                               std::to_string(m_targetPort).c_str());
-    
-    if (!m_address) {
-        LOG_ERROR("Failed to create OSC address: " + m_targetHost + ":" + 
-                  std::to_string(m_targetPort));
+    if (m_targets.empty()) {
+        LOG_WARN("No OSC targets configured");
         return false;
     }
     
-    m_connected = true;
-    LOG_INFO("OSC sender initialized: " + m_targetHost + ":" + 
-             std::to_string(m_targetPort));
-    return true;
+    bool anyConnected = false;
+    
+    for (auto& target : m_targets) {
+        target.address = lo_address_new(target.host.c_str(), 
+                                        std::to_string(target.port).c_str());
+        
+        if (!target.address) {
+            LOG_ERROR("Failed to create OSC address for " + target.name + ": " + 
+                      target.host + ":" + std::to_string(target.port));
+        } else {
+            LOG_INFO("OSC target added: " + target.name + " -> " + 
+                     target.host + ":" + std::to_string(target.port));
+            anyConnected = true;
+        }
+    }
+    
+    m_connected = anyConnected;
+    return anyConnected;
 #else
     LOG_WARN("liblo not available - OSC support disabled");
     m_connected = false;
@@ -51,11 +69,17 @@ bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
 
 bool OscSender::sendFloat(const std::string& path, float value) {
 #ifdef HAS_LIBLO
-    if (!m_connected || !m_address) return false;
+    if (!m_connected) return false;
     
-    lo_address addr = static_cast<lo_address>(m_address);
-    int result = lo_send(addr, path.c_str(), "f", value);
-    return result >= 0;
+    bool allSuccess = true;
+    for (const auto& target : m_targets) {
+        if (!target.address) continue;
+        
+        lo_address addr = static_cast<lo_address>(target.address);
+        int result = lo_send(addr, path.c_str(), "f", value);
+        if (result < 0) allSuccess = false;
+    }
+    return allSuccess;
 #else
     return false;
 #endif
@@ -63,32 +87,40 @@ bool OscSender::sendFloat(const std::string& path, float value) {
 
 bool OscSender::sendMessage(const OscMessage& msg) {
 #ifdef HAS_LIBLO
-    if (!m_connected || !m_address) return false;
+    if (!m_connected) return false;
     
-    lo_address addr = static_cast<lo_address>(m_address);
+    bool allSuccess = true;
     
-    // Build OSC message
-    lo_message lom = lo_message_new();
-    
-    for (const auto& arg : msg.args) {
-        // Try to determine type
-        try {
-            int intVal = std::stoi(arg);
-            lo_message_add_int32(lom, intVal);
-        } catch (...) {
+    for (const auto& target : m_targets) {
+        if (!target.address) continue;
+        
+        lo_address addr = static_cast<lo_address>(target.address);
+        
+        // Build OSC message
+        lo_message lom = lo_message_new();
+        
+        for (const auto& arg : msg.args) {
+            // Try to determine type
             try {
-                float floatVal = std::stof(arg);
-                lo_message_add_float(lom, floatVal);
+                int intVal = std::stoi(arg);
+                lo_message_add_int32(lom, intVal);
             } catch (...) {
-                lo_message_add_string(lom, arg.c_str());
+                try {
+                    float floatVal = std::stof(arg);
+                    lo_message_add_float(lom, floatVal);
+                } catch (...) {
+                    lo_message_add_string(lom, arg.c_str());
+                }
             }
         }
+        
+        int result = lo_send_message(addr, msg.path.c_str(), lom);
+        lo_message_free(lom);
+        
+        if (result < 0) allSuccess = false;
     }
     
-    int result = lo_send_message(addr, msg.path.c_str(), lom);
-    lo_message_free(lom);
-    
-    return result >= 0;
+    return allSuccess;
 #else
     return false;
 #endif
