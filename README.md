@@ -19,7 +19,8 @@ sudo apt-get install -y \
     build-essential \
     cmake \
     pkg-config \
-    libjack-dev \
+    jackd2 \
+    libjack-jackd2-dev \
     liblo-dev
 ```
 

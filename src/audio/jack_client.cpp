@@ -8,8 +8,8 @@ namespace Audio {
 
 JackClient::JackClient(const std::string& clientName, int numBpmChannels, int numVuChannels)
     : m_clientName(clientName),
-      m_numBpmChannels(std::max(0, std::min(8, numBpmChannels))),
-      m_numVuChannels(std::max(0, std::min(8, numVuChannels))),
+      m_numBpmChannels(std::max(0, numBpmChannels)),
+      m_numVuChannels(std::max(0, numVuChannels)),
       m_client(nullptr),
       m_connected(false) {
 }
@@ -21,7 +21,7 @@ JackClient::~JackClient() {
 }
 
 bool JackClient::initialize() {
-    jack_options_t options = JackNullOption;
+    jack_options_t options = JackNoStartServer;
     jack_status_t status;
     
     m_client = jack_client_open(m_clientName.c_str(), options, &status);

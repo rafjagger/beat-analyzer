@@ -92,9 +92,9 @@ public:
         int logLevel = env.getInt("LOG_LEVEL", 1);
         Logger::setLogLevel(static_cast<LogLevel>(logLevel));
         
-        // Anzahl Kanäle (0-8)
-        m_numBpmChannels = std::max(0, std::min(8, env.getInt("NUM_BPM_CHANNELS", 4)));
-        m_numVuChannels = std::max(0, std::min(8, env.getInt("NUM_VU_CHANNELS", 2)));
+        // Anzahl Kanäle
+        m_numBpmChannels = std::max(0, env.getInt("NUM_BPM_CHANNELS", 4));
+        m_numVuChannels = std::max(0, env.getInt("NUM_VU_CHANNELS", 2));
         
         LOG_INFO("BPM Kanäle: " + std::to_string(m_numBpmChannels) + 
                  ", VU Kanäle: " + std::to_string(m_numVuChannels));
@@ -369,18 +369,18 @@ private:
     
     void sendVuMeterOsc() {
         if (!m_enableVu) return;
-        // Sendet /vu/1-N mit [peak, rms]
+        // Sendet /vu/0-N mit [peak, rms] als lineare Werte (0.0-1.0) wie SuperCollider
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
         for (int ch = 0; ch < m_numVuChannels; ++ch) {
             if (!m_vuTrackStates[ch].hasSignal) continue;
             
-            float rmsDb = m_vuMeters[ch]->getRmsDb();
-            float peakDb = m_vuMeters[ch]->getPeakDb();
+            float rmsLinear = m_vuMeters[ch]->getRmsLinear();
+            float peakLinear = m_vuMeters[ch]->getPeakLinear();
             
-            // Sende /vu/1, /vu/2, etc. mit [peak, rms]
-            std::string vuPath = "/vu/" + std::to_string(ch + 1);
-            m_oscSender->sendFloats(vuPath, peakDb, rmsDb);
+            // Sende /vu/0, /vu/1, etc. mit [peak, rms] als lineare Werte (wie SuperCollider)
+            std::string vuPath = "/vu/" + std::to_string(ch);
+            m_oscSender->sendFloats(vuPath, peakLinear, rmsLinear);
         }
     }
     

@@ -20,30 +20,24 @@ events:
     names:
       - "uname"
     candidate_directories:
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/usr/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     searched_directories:
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/uname"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/uname"
+      - "/home/aaa/bin/uname"
       - "/usr/local/bin/uname"
     found: "/usr/bin/uname"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "message-v1"
@@ -51,7 +45,7 @@ events:
       - "/usr/share/cmake-4.2/Modules/CMakeDetermineSystem.cmake:212 (message)"
       - "CMakeLists.txt:2 (project)"
     message: |
-      The system is: Linux - 6.17.13+deb14-amd64 - x86_64
+      The system is: Linux - 6.17.13+deb14-rt-amd64 - x86_64
   -
     kind: "find-v1"
     backtrace:
@@ -73,30 +67,24 @@ events:
       - "make"
       - "smake"
     candidate_directories:
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/usr/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     searched_directories:
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/gmake"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/gmake"
+      - "/home/aaa/bin/gmake"
       - "/usr/local/bin/gmake"
     found: "/usr/bin/gmake"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -127,30 +115,24 @@ events:
       - "icx"
       - "clang++"
     candidate_directories:
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/usr/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     searched_directories:
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/c++"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/c++"
+      - "/home/aaa/bin/c++"
       - "/usr/local/bin/c++"
     found: "/usr/bin/c++"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -179,15 +161,12 @@ events:
     found: "/usr/share/cmake-4.2/Modules/CMakeCXXCompilerId.cpp.in"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "message-v1"
@@ -209,7 +188,7 @@ events:
       Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
       
       The CXX compiler identification is GNU, found in:
-        /home/ra/beat-analyzer/build/CMakeFiles/4.2.2/CompilerIdCXX/a.out
+        /home/aaa/beat-analyzer/build/CMakeFiles/4.2.2/CompilerIdCXX/a.out
       
   -
     kind: "find-v1"
@@ -232,25 +211,20 @@ events:
       - "ar"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/ar"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -273,25 +247,20 @@ events:
       - "ranlib"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/ranlib"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -314,25 +283,20 @@ events:
       - "strip"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/strip"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -355,25 +319,20 @@ events:
       - "ld"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/ld"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -396,25 +355,20 @@ events:
       - "nm"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/nm"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -437,25 +391,20 @@ events:
       - "objdump"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/objdump"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -478,25 +427,20 @@ events:
       - "objcopy"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/objcopy"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -519,25 +463,20 @@ events:
       - "readelf"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/readelf"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -560,34 +499,27 @@ events:
       - "dlltool"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     searched_directories:
       - "/usr/bin/dlltool"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/dlltool"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/dlltool"
+      - "/home/aaa/bin/dlltool"
       - "/usr/local/bin/dlltool"
       - "/bin/dlltool"
       - "/usr/local/games/dlltool"
       - "/usr/games/dlltool"
-      - "/home/ra/.local/bin/dlltool"
     found: false
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -610,25 +542,20 @@ events:
       - "addr2line"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     found: "/usr/bin/addr2line"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -651,34 +578,27 @@ events:
       - "tapi"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     searched_directories:
       - "/usr/bin/tapi"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/tapi"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/tapi"
+      - "/home/aaa/bin/tapi"
       - "/usr/local/bin/tapi"
       - "/bin/tapi"
       - "/usr/local/games/tapi"
       - "/usr/games/tapi"
-      - "/home/ra/.local/bin/tapi"
     found: false
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -704,34 +624,27 @@ events:
       - "gcc-ar"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     searched_directories:
       - "/usr/bin/gcc-ar-15.2"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/gcc-ar-15.2"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/gcc-ar-15.2"
+      - "/home/aaa/bin/gcc-ar-15.2"
       - "/usr/local/bin/gcc-ar-15.2"
       - "/bin/gcc-ar-15.2"
       - "/usr/local/games/gcc-ar-15.2"
       - "/usr/games/gcc-ar-15.2"
-      - "/home/ra/.local/bin/gcc-ar-15.2"
     found: "/usr/bin/gcc-ar-15"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "find-v1"
@@ -757,34 +670,27 @@ events:
       - "gcc-ranlib"
     candidate_directories:
       - "/usr/bin/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
     searched_directories:
       - "/usr/bin/gcc-ranlib-15.2"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/gcc-ranlib-15.2"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/gcc-ranlib-15.2"
+      - "/home/aaa/bin/gcc-ranlib-15.2"
       - "/usr/local/bin/gcc-ranlib-15.2"
       - "/bin/gcc-ranlib-15.2"
       - "/usr/local/games/gcc-ranlib-15.2"
       - "/usr/games/gcc-ranlib-15.2"
-      - "/home/ra/.local/bin/gcc-ranlib-15.2"
     found: "/usr/bin/gcc-ranlib-15"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
   -
     kind: "try_compile-v1"
@@ -795,8 +701,8 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "/home/ra/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-KdzMWC"
-      binary: "/home/ra/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-KdzMWC"
+      source: "/home/aaa/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-IvDubr"
+      binary: "/home/aaa/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-IvDubr"
     cmakeVariables:
       CMAKE_CXX_FLAGS: ""
       CMAKE_CXX_FLAGS_DEBUG: "-g"
@@ -806,13 +712,13 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: '/home/ra/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-KdzMWC'
+        Change Dir: '/home/aaa/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-IvDubr'
         
-        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_9f626/fast
-        /usr/bin/gmake  -f CMakeFiles/cmTC_9f626.dir/build.make CMakeFiles/cmTC_9f626.dir/build
-        gmake[1]: Entering directory '/home/ra/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-KdzMWC'
-        Building CXX object CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o
-        /usr/bin/c++   -v -o CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_be0e4/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_be0e4.dir/build.make CMakeFiles/cmTC_be0e4.dir/build
+        gmake[1]: Entering directory '/home/aaa/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-IvDubr'
+        Building CXX object CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o
+        /usr/bin/c++   -v -o CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp
         Using built-in specs.
         COLLECT_GCC=/usr/bin/c++
         OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
@@ -822,8 +728,8 @@ events:
         Thread model: posix
         Supported LTO compression algorithms: zlib zstd
         gcc version 15.2.0 (Debian 15.2.0-12) 
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_9f626.dir/'
-         /usr/libexec/gcc/x86_64-linux-gnu/15/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_9f626.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -o /tmp/cchlGoTP.s
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_be0e4.dir/'
+         /usr/libexec/gcc/x86_64-linux-gnu/15/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_be0e4.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -o /tmp/ccPWTQFN.s
         GNU C++17 (Debian 15.2.0-12) version 15.2.0 (x86_64-linux-gnu)
         	compiled by GNU C version 15.2.0, GMP version 6.3.0, MPFR version 4.2.2, MPC version 1.3.1, isl version isl-0.27-GMP
         
@@ -844,14 +750,14 @@ events:
          /usr/include
         End of search list.
         Compiler executable checksum: 29468db35871282898de3542d56981b0
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_9f626.dir/'
-         /usr/bin/x86_64-linux-gnu-as -v --64 -o CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o /tmp/cchlGoTP.s
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_be0e4.dir/'
+         /usr/bin/x86_64-linux-gnu-as -v --64 -o CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccPWTQFN.s
         GNU assembler version 2.45.50 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.45.50.20251209
         COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/15/:/usr/libexec/gcc/x86_64-linux-gnu/15/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/15/:/usr/lib/gcc/x86_64-linux-gnu/
         LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/15/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.'
-        Linking CXX executable cmTC_9f626
-        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9f626.dir/link.txt --verbose=1
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.'
+        Linking CXX executable cmTC_be0e4
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_be0e4.dir/link.txt --verbose=1
         Using built-in specs.
         COLLECT_GCC=/usr/bin/c++
         COLLECT_LTO_WRAPPER=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper
@@ -864,14 +770,14 @@ events:
         gcc version 15.2.0 (Debian 15.2.0-12) 
         COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/15/:/usr/libexec/gcc/x86_64-linux-gnu/15/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/15/:/usr/lib/gcc/x86_64-linux-gnu/
         LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/15/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_9f626' '-foffload-options=-l_GCC_stdc++' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_9f626.'
-         /usr/libexec/gcc/x86_64-linux-gnu/15/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper -plugin-opt=-fresolution=/tmp/cc2Lww74.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_9f626 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/15/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_be0e4' '-foffload-options=-l_GCC_stdc++' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_be0e4.'
+         /usr/libexec/gcc/x86_64-linux-gnu/15/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper -plugin-opt=-fresolution=/tmp/ccq3nToc.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_be0e4 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/15/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o
         collect2 version 15.2.0
-        /usr/bin/ld -plugin /usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper -plugin-opt=-fresolution=/tmp/cc2Lww74.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_9f626 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/15/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o
+        /usr/bin/ld -plugin /usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper -plugin-opt=-fresolution=/tmp/ccq3nToc.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_be0e4 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/15/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o
         GNU ld (GNU Binutils for Debian) 2.45.50.20251209
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_9f626' '-foffload-options=-l_GCC_stdc++' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_9f626.'
-        /usr/bin/c++  -v -Wl,-v CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_9f626
-        gmake[1]: Leaving directory '/home/ra/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-KdzMWC'
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_be0e4' '-foffload-options=-l_GCC_stdc++' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_be0e4.'
+        /usr/bin/c++  -v -Wl,-v CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_be0e4
+        gmake[1]: Leaving directory '/home/aaa/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-IvDubr'
         
       exitCode: 0
   -
@@ -912,13 +818,13 @@ events:
       Parsed CXX implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
         linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
-        ignore line: [Change Dir: '/home/ra/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-KdzMWC']
+        ignore line: [Change Dir: '/home/aaa/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-IvDubr']
         ignore line: []
-        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_9f626/fast]
-        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_9f626.dir/build.make CMakeFiles/cmTC_9f626.dir/build]
-        ignore line: [gmake[1]: Entering directory '/home/ra/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-KdzMWC']
-        ignore line: [Building CXX object CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o]
-        ignore line: [/usr/bin/c++   -v -o CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_be0e4/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_be0e4.dir/build.make CMakeFiles/cmTC_be0e4.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/aaa/beat-analyzer/build/CMakeFiles/CMakeScratch/TryCompile-IvDubr']
+        ignore line: [Building CXX object CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/usr/bin/c++   -v -o CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp]
         ignore line: [Using built-in specs.]
         ignore line: [COLLECT_GCC=/usr/bin/c++]
         ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
@@ -928,8 +834,8 @@ events:
         ignore line: [Thread model: posix]
         ignore line: [Supported LTO compression algorithms: zlib zstd]
         ignore line: [gcc version 15.2.0 (Debian 15.2.0-12) ]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_9f626.dir/']
-        ignore line: [ /usr/libexec/gcc/x86_64-linux-gnu/15/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_9f626.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -o /tmp/cchlGoTP.s]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_be0e4.dir/']
+        ignore line: [ /usr/libexec/gcc/x86_64-linux-gnu/15/cc1plus -quiet -v -imultiarch x86_64-linux-gnu -D_GNU_SOURCE /usr/share/cmake-4.2/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_be0e4.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -fasynchronous-unwind-tables -o /tmp/ccPWTQFN.s]
         ignore line: [GNU C++17 (Debian 15.2.0-12) version 15.2.0 (x86_64-linux-gnu)]
         ignore line: [	compiled by GNU C version 15.2.0  GMP version 6.3.0  MPFR version 4.2.2  MPC version 1.3.1  isl version isl-0.27-GMP]
         ignore line: []
@@ -950,14 +856,14 @@ events:
         ignore line: [ /usr/include]
         ignore line: [End of search list.]
         ignore line: [Compiler executable checksum: 29468db35871282898de3542d56981b0]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_9f626.dir/']
-        ignore line: [ /usr/bin/x86_64-linux-gnu-as -v --64 -o CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o /tmp/cchlGoTP.s]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_be0e4.dir/']
+        ignore line: [ /usr/bin/x86_64-linux-gnu-as -v --64 -o CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccPWTQFN.s]
         ignore line: [GNU assembler version 2.45.50 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.45.50.20251209]
         ignore line: [COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/15/:/usr/libexec/gcc/x86_64-linux-gnu/15/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/15/:/usr/lib/gcc/x86_64-linux-gnu/]
         ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/15/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.']
-        ignore line: [Linking CXX executable cmTC_9f626]
-        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9f626.dir/link.txt --verbose=1]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.']
+        ignore line: [Linking CXX executable cmTC_be0e4]
+        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_be0e4.dir/link.txt --verbose=1]
         ignore line: [Using built-in specs.]
         ignore line: [COLLECT_GCC=/usr/bin/c++]
         ignore line: [COLLECT_LTO_WRAPPER=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper]
@@ -970,13 +876,13 @@ events:
         ignore line: [gcc version 15.2.0 (Debian 15.2.0-12) ]
         ignore line: [COMPILER_PATH=/usr/libexec/gcc/x86_64-linux-gnu/15/:/usr/libexec/gcc/x86_64-linux-gnu/15/:/usr/libexec/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/15/:/usr/lib/gcc/x86_64-linux-gnu/]
         ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-linux-gnu/15/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/15/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_9f626' '-foffload-options=-l_GCC_stdc++' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_9f626.']
-        link line: [ /usr/libexec/gcc/x86_64-linux-gnu/15/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper -plugin-opt=-fresolution=/tmp/cc2Lww74.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_9f626 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/15/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_be0e4' '-foffload-options=-l_GCC_stdc++' '-foffload-options=-l_GCC_m' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_be0e4.']
+        link line: [ /usr/libexec/gcc/x86_64-linux-gnu/15/collect2 -plugin /usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper -plugin-opt=-fresolution=/tmp/ccq3nToc.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_be0e4 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/15/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o]
           arg [/usr/libexec/gcc/x86_64-linux-gnu/15/collect2] ==> ignore
           arg [-plugin] ==> ignore
           arg [/usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so] ==> ignore
           arg [-plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper] ==> ignore
-          arg [-plugin-opt=-fresolution=/tmp/cc2Lww74.res] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/ccq3nToc.res] ==> ignore
           arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
           arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
           arg [-plugin-opt=-pass-through=-lc] ==> ignore
@@ -992,7 +898,7 @@ events:
           arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
           arg [-pie] ==> ignore
           arg [-o] ==> ignore
-          arg [cmTC_9f626] ==> ignore
+          arg [cmTC_be0e4] ==> ignore
           arg [/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o]
           arg [/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o]
           arg [/usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o]
@@ -1007,7 +913,7 @@ events:
           arg [-L/lib] ==> dir [/lib]
           arg [-L/usr/lib] ==> dir [/usr/lib]
           arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
           arg [-lstdc++] ==> lib [stdc++]
           arg [-lm] ==> lib [m]
           arg [-lgcc_s] ==> lib [gcc_s]
@@ -1018,7 +924,7 @@ events:
           arg [/usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o]
           arg [/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o]
         ignore line: [collect2 version 15.2.0]
-        ignore line: [/usr/bin/ld -plugin /usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper -plugin-opt=-fresolution=/tmp/cc2Lww74.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_9f626 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/15/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_9f626.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o]
+        ignore line: [/usr/bin/ld -plugin /usr/libexec/gcc/x86_64-linux-gnu/15/liblto_plugin.so -plugin-opt=/usr/libexec/gcc/x86_64-linux-gnu/15/lto-wrapper -plugin-opt=-fresolution=/tmp/ccq3nToc.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_be0e4 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/15/crtbeginS.o -L/usr/lib/gcc/x86_64-linux-gnu/15 -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/15/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/15/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_be0e4.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o]
         linker tool for 'CXX': /usr/bin/ld
         collapse obj [/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/Scrt1.o] ==> [/usr/lib/x86_64-linux-gnu/Scrt1.o]
         collapse obj [/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crti.o] ==> [/usr/lib/x86_64-linux-gnu/crti.o]
@@ -1069,14 +975,12 @@ events:
       - "pkg-config"
       - "pkgconf"
     candidate_directories:
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/"
+      - "/home/aaa/bin/"
       - "/usr/local/bin/"
       - "/usr/bin/"
       - "/bin/"
       - "/usr/local/games/"
       - "/usr/games/"
-      - "/home/ra/.local/bin/"
       - "/usr/local/bin/"
       - "/usr/local/sbin/"
       - "/usr/local/"
@@ -1095,24 +999,19 @@ events:
       - "/opt/sbin/"
       - "/opt/"
     searched_directories:
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/pkg-config"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand/pkgconf"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/pkg-config"
-      - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli/pkgconf"
+      - "/home/aaa/bin/pkg-config"
+      - "/home/aaa/bin/pkgconf"
       - "/usr/local/bin/pkg-config"
       - "/usr/local/bin/pkgconf"
     found: "/usr/bin/pkg-config"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
       CMAKE_SYSTEM_PREFIX_PATH:
         - "/usr/local"
@@ -1149,15 +1048,12 @@ events:
     found: "/usr/lib/x86_64-linux-gnu/libjack.so"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
       CMAKE_SYSTEM_PREFIX_PATH:
         - "/usr/local"
@@ -1196,15 +1092,12 @@ events:
     found: "/usr/lib/x86_64-linux-gnu/libpthread.a"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
       CMAKE_SYSTEM_PREFIX_PATH:
         - "/usr/local"
@@ -1243,15 +1136,12 @@ events:
     found: "/usr/lib/x86_64-linux-gnu/liblo.so"
     search_context:
       ENV{PATH}:
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/debugCommand"
-        - "/home/ra/.config/Code/User/globalStorage/github.copilot-chat/copilotCli"
+        - "/home/aaa/bin"
         - "/usr/local/bin"
         - "/usr/bin"
         - "/bin"
         - "/usr/local/games"
         - "/usr/games"
-        - "/home/ra/.local/bin"
-        - "/home/ra/.local/bin"
       CMAKE_INSTALL_PREFIX: "/usr/local"
       CMAKE_SYSTEM_PREFIX_PATH:
         - "/usr/local"

@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = -DHAS_LIBLO=1
 
-CXX_INCLUDES = -I/home/ra/beat-analyzer/include -I/home/ra/beat-analyzer/src
+CXX_INCLUDES = -I/home/aaa/beat-analyzer/include -I/home/aaa/beat-analyzer/src
 
 CXX_FLAGS = -O3 -DNDEBUG -std=gnu++17 -fvisibility=hidden -Wall -Wextra -Wpedantic -O3 -march=native
 

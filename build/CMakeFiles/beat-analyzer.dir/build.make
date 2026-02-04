@@ -53,10 +53,10 @@ RM = /usr/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/ra/beat-analyzer
+CMAKE_SOURCE_DIR = /home/aaa/beat-analyzer
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/ra/beat-analyzer/build
+CMAKE_BINARY_DIR = /home/aaa/beat-analyzer/build
 
 # Include any dependencies generated for this target.
 include CMakeFiles/beat-analyzer.dir/depend.make
@@ -73,144 +73,144 @@ CMakeFiles/beat-analyzer.dir/codegen:
 .PHONY : CMakeFiles/beat-analyzer.dir/codegen
 
 CMakeFiles/beat-analyzer.dir/src/main.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/main.cpp.o: /home/ra/beat-analyzer/src/main.cpp
+CMakeFiles/beat-analyzer.dir/src/main.cpp.o: /home/aaa/beat-analyzer/src/main.cpp
 CMakeFiles/beat-analyzer.dir/src/main.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/beat-analyzer.dir/src/main.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/main.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/main.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/main.cpp.o -c /home/ra/beat-analyzer/src/main.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/beat-analyzer.dir/src/main.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/main.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/main.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/main.cpp.o -c /home/aaa/beat-analyzer/src/main.cpp
 
 CMakeFiles/beat-analyzer.dir/src/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/main.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/main.cpp > CMakeFiles/beat-analyzer.dir/src/main.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/main.cpp > CMakeFiles/beat-analyzer.dir/src/main.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/main.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/main.cpp -o CMakeFiles/beat-analyzer.dir/src/main.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/main.cpp -o CMakeFiles/beat-analyzer.dir/src/main.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o: /home/ra/beat-analyzer/src/audio/jack_client.cpp
+CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o: /home/aaa/beat-analyzer/src/audio/jack_client.cpp
 CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o -c /home/ra/beat-analyzer/src/audio/jack_client.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o -c /home/aaa/beat-analyzer/src/audio/jack_client.cpp
 
 CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/audio/jack_client.cpp > CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/audio/jack_client.cpp > CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/audio/jack_client.cpp -o CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/audio/jack_client.cpp -o CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o: /home/ra/beat-analyzer/src/audio/audio_buffer.cpp
+CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o: /home/aaa/beat-analyzer/src/audio/audio_buffer.cpp
 CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o -c /home/ra/beat-analyzer/src/audio/audio_buffer.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o -c /home/aaa/beat-analyzer/src/audio/audio_buffer.cpp
 
 CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/audio/audio_buffer.cpp > CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/audio/audio_buffer.cpp > CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/audio/audio_buffer.cpp -o CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/audio/audio_buffer.cpp -o CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o: /home/ra/beat-analyzer/src/analysis/beat_detection.cpp
+CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o: /home/aaa/beat-analyzer/src/analysis/beat_detection.cpp
 CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o -c /home/ra/beat-analyzer/src/analysis/beat_detection.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o -c /home/aaa/beat-analyzer/src/analysis/beat_detection.cpp
 
 CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/analysis/beat_detection.cpp > CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/analysis/beat_detection.cpp > CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/analysis/beat_detection.cpp -o CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/analysis/beat_detection.cpp -o CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o: /home/ra/beat-analyzer/src/analysis/beat_tracker.cpp
+CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o: /home/aaa/beat-analyzer/src/analysis/beat_tracker.cpp
 CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o -c /home/ra/beat-analyzer/src/analysis/beat_tracker.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o -c /home/aaa/beat-analyzer/src/analysis/beat_tracker.cpp
 
 CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/analysis/beat_tracker.cpp > CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/analysis/beat_tracker.cpp > CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/analysis/beat_tracker.cpp -o CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/analysis/beat_tracker.cpp -o CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o: /home/ra/beat-analyzer/src/analysis/vu_meter.cpp
+CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o: /home/aaa/beat-analyzer/src/analysis/vu_meter.cpp
 CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o -c /home/ra/beat-analyzer/src/analysis/vu_meter.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o -c /home/aaa/beat-analyzer/src/analysis/vu_meter.cpp
 
 CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/analysis/vu_meter.cpp > CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/analysis/vu_meter.cpp > CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/analysis/vu_meter.cpp -o CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/analysis/vu_meter.cpp -o CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/ra/beat-analyzer/src/osc/osc_sender.cpp
+CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/src/osc/osc_sender.cpp
 CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o -c /home/ra/beat-analyzer/src/osc/osc_sender.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o -c /home/aaa/beat-analyzer/src/osc/osc_sender.cpp
 
 CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/osc/osc_sender.cpp > CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/osc/osc_sender.cpp > CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/osc/osc_sender.cpp -o CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/osc/osc_sender.cpp -o CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o: /home/ra/beat-analyzer/src/osc/osc_messages.cpp
+CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o: /home/aaa/beat-analyzer/src/osc/osc_messages.cpp
 CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o -c /home/ra/beat-analyzer/src/osc/osc_messages.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o -c /home/aaa/beat-analyzer/src/osc/osc_messages.cpp
 
 CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/osc/osc_messages.cpp > CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/osc/osc_messages.cpp > CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/osc/osc_messages.cpp -o CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/osc/osc_messages.cpp -o CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o: /home/ra/beat-analyzer/src/config/config_loader.cpp
+CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o: /home/aaa/beat-analyzer/src/config/config_loader.cpp
 CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o -c /home/ra/beat-analyzer/src/config/config_loader.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o -c /home/aaa/beat-analyzer/src/config/config_loader.cpp
 
 CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/config/config_loader.cpp > CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/config/config_loader.cpp > CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/config/config_loader.cpp -o CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/config/config_loader.cpp -o CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.s
 
 CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o: CMakeFiles/beat-analyzer.dir/flags.make
-CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o: /home/ra/beat-analyzer/src/util/logging.cpp
+CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o: /home/aaa/beat-analyzer/src/util/logging.cpp
 CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o -c /home/ra/beat-analyzer/src/util/logging.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o -MF CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o.d -o CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o -c /home/aaa/beat-analyzer/src/util/logging.cpp
 
 CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/ra/beat-analyzer/src/util/logging.cpp > CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.i
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/aaa/beat-analyzer/src/util/logging.cpp > CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.i
 
 CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/ra/beat-analyzer/src/util/logging.cpp -o CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.s
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/aaa/beat-analyzer/src/util/logging.cpp -o CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.s
 
 # Object files for target beat-analyzer
 beat__analyzer_OBJECTS = \
@@ -241,7 +241,7 @@ beat-analyzer: CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o
 beat-analyzer: CMakeFiles/beat-analyzer.dir/build.make
 beat-analyzer: CMakeFiles/beat-analyzer.dir/compiler_depend.ts
 beat-analyzer: CMakeFiles/beat-analyzer.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/ra/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX executable beat-analyzer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Linking CXX executable beat-analyzer"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/beat-analyzer.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -253,6 +253,6 @@ CMakeFiles/beat-analyzer.dir/clean:
 .PHONY : CMakeFiles/beat-analyzer.dir/clean
 
 CMakeFiles/beat-analyzer.dir/depend:
-	cd /home/ra/beat-analyzer/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/ra/beat-analyzer /home/ra/beat-analyzer /home/ra/beat-analyzer/build /home/ra/beat-analyzer/build /home/ra/beat-analyzer/build/CMakeFiles/beat-analyzer.dir/DependInfo.cmake "--color=$(COLOR)" beat-analyzer
+	cd /home/aaa/beat-analyzer/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/aaa/beat-analyzer /home/aaa/beat-analyzer /home/aaa/beat-analyzer/build /home/aaa/beat-analyzer/build /home/aaa/beat-analyzer/build/CMakeFiles/beat-analyzer.dir/DependInfo.cmake "--color=$(COLOR)" beat-analyzer
 .PHONY : CMakeFiles/beat-analyzer.dir/depend
 

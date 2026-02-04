@@ -1,5 +1,5 @@
 tests/CMakeFiles/beat_detection_test.dir/beat_detection_test.cpp.o: \
- /home/ra/beat-analyzer/tests/beat_detection_test.cpp \
+ /home/aaa/beat-analyzer/tests/beat_detection_test.cpp \
  /usr/include/stdc-predef.h /usr/include/c++/15/iostream \
  /usr/include/c++/15/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/c++config.h \
@@ -190,7 +190,7 @@ tests/CMakeFiles/beat_detection_test.dir/beat_detection_test.cpp.o: \
  /usr/include/c++/15/bits/stl_vector.h \
  /usr/include/c++/15/bits/stl_bvector.h \
  /usr/include/c++/15/bits/vector.tcc \
- /home/ra/beat-analyzer/tests/../include/analysis/beat_detection.h \
+ /home/aaa/beat-analyzer/tests/../include/analysis/beat_detection.h \
  /usr/include/c++/15/algorithm /usr/include/c++/15/bits/stl_algo.h \
  /usr/include/c++/15/bits/algorithmfwd.h \
  /usr/include/c++/15/bits/stl_heap.h \

@@ -4,7 +4,7 @@
 # compile CXX with /usr/bin/c++
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/ra/beat-analyzer/include -I/home/ra/beat-analyzer/src -I/home/ra/beat-analyzer/tests/../include
+CXX_INCLUDES = -I/home/aaa/beat-analyzer/include -I/home/aaa/beat-analyzer/src -I/home/aaa/beat-analyzer/tests/../include
 
 CXX_FLAGS = -O3 -DNDEBUG -std=gnu++17 -fvisibility=hidden
 

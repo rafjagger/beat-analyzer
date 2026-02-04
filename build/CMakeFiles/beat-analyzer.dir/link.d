@@ -42,7 +42,6 @@ beat-analyzer: \
   /usr/lib/gcc/x86_64-linux-gnu/15/libgcc.a \
   /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o \
-  /usr/lib/i386-linux-gnu/libdb-5.3.so \
   /usr/lib/x86_64-linux-gnu/libdb-5.3.so \
   /lib64/ld-linux-x86-64.so.2
 
@@ -131,8 +130,6 @@ CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o:
 /usr/lib/gcc/x86_64-linux-gnu/15/crtendS.o:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/crtn.o:
-
-/usr/lib/i386-linux-gnu/libdb-5.3.so:
 
 /usr/lib/x86_64-linux-gnu/libdb-5.3.so:
 
