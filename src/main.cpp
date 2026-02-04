@@ -2,7 +2,7 @@
  * Beat Analyzer - Hauptanwendung
  * 
  * Eigenständige Anwendung für:
- * - Audio Input via JACK (konfigurierbare Mono-Kanäle)
+ * - Audio Input via JACK (separate BPM und VU Kanäle)
  * - Beat Detection (eigene Implementierung)
  * - OSC Output (Beat Clock + VU-Meter)
  * 
@@ -52,7 +52,7 @@ void signalHandler(int signal) {
 
 class BeatAnalyzerApp {
 public:
-    BeatAnalyzerApp() : m_frameCount(0), m_numChannels(4) {}
+    BeatAnalyzerApp() : m_numBpmChannels(4), m_numVuChannels(2), m_frameCount(0) {}
     
     bool initialize(const std::string&) {
         LOG_INFO("Beat Analyzer wird initialisiert...");
@@ -69,9 +69,12 @@ public:
         int logLevel = env.getInt("LOG_LEVEL", 1);
         Logger::setLogLevel(static_cast<LogLevel>(logLevel));
         
-        // Anzahl Kanäle (1-8)
-        m_numChannels = std::max(1, std::min(8, env.getInt("NUM_CHANNELS", 4)));
-        LOG_INFO("Anzahl Kanäle: " + std::to_string(m_numChannels));
+        // Anzahl Kanäle (0-8)
+        m_numBpmChannels = std::max(0, std::min(8, env.getInt("NUM_BPM_CHANNELS", 4)));
+        m_numVuChannels = std::max(0, std::min(8, env.getInt("NUM_VU_CHANNELS", 2)));
+        
+        LOG_INFO("BPM Kanäle: " + std::to_string(m_numBpmChannels) + 
+                 ", VU Kanäle: " + std::to_string(m_numVuChannels));
         
         // Feature Toggles
         m_enableBeatclock = env.getInt("ENABLE_BEATCLOCK", 1) != 0;
@@ -93,23 +96,29 @@ public:
         beatConfig.maxBpm = env.getFloat("BPM_MAX", 200.0f);
         beatConfig.defaultBpm = 120.0;
         
-        // Beat Tracker und VU-Meter für jeden Kanal
-        for (int i = 0; i < m_numChannels; ++i) {
+        // Beat Tracker für BPM Kanäle
+        for (int i = 0; i < m_numBpmChannels; ++i) {
             auto tracker = std::make_unique<RealTimeBeatTracker>(beatConfig);
             if (!tracker->initialize()) {
                 LOG_ERROR("Beat Tracker " + std::to_string(i+1) + " konnte nicht initialisiert werden");
                 return false;
             }
             m_beatTrackers.push_back(std::move(tracker));
-            m_vuMeters.push_back(std::make_unique<VuMeter>());
-            m_trackStates.push_back(TrackState{});
+            m_bpmTrackStates.push_back(BpmTrackState{});
         }
         
-        LOG_INFO(std::to_string(m_numChannels) + " Beat Tracker initialisiert");
+        // VU-Meter für VU Kanäle
+        for (int i = 0; i < m_numVuChannels; ++i) {
+            m_vuMeters.push_back(std::make_unique<VuMeter>());
+            m_vuTrackStates.push_back(VuTrackState{});
+        }
+        
+        LOG_INFO(std::to_string(m_numBpmChannels) + " Beat Tracker, " + 
+                 std::to_string(m_numVuChannels) + " VU-Meter initialisiert");
         
         // JACK Client initialisieren
         std::string jackName = env.getString("JACK_CLIENT_NAME", "beat-analyzer");
-        m_jackClient = std::make_shared<JackClient>(jackName, m_numChannels);
+        m_jackClient = std::make_shared<JackClient>(jackName, m_numBpmChannels, m_numVuChannels);
         
         if (!m_jackClient->initialize()) {
             LOG_ERROR("JACK Client konnte nicht initialisiert werden");
@@ -127,10 +136,12 @@ public:
             LOG_INFO("OSC Sender aktiv: " + oscHost + ":" + std::to_string(oscPort));
         }
         
-        // Mono-Callback setzen
+        // Audio-Callback setzen
         m_jackClient->setMonoProcessCallback(
-            [this](const std::vector<const CSAMPLE*>& monoBuffers, int frames) {
-                this->processMonoAudio(monoBuffers, frames);
+            [this](const std::vector<const CSAMPLE*>& bpmBuffers,
+                   const std::vector<const CSAMPLE*>& vuBuffers,
+                   int frames) {
+                this->processAudio(bpmBuffers, vuBuffers, frames);
             });
         
         // JACK aktivieren
@@ -177,10 +188,10 @@ public:
         LOG_INFO("Beat Analyzer wird beendet...");
         
         // Finale Beat-Info ausgeben
-        for (int i = 0; i < m_numChannels; ++i) {
+        for (int i = 0; i < m_numBpmChannels; ++i) {
             BeatInfo info = m_beatTrackers[i]->finalize();
             if (info.valid) {
-                LOG_INFO("Kanal " + std::to_string(i+1) + " - BPM: " + 
+                LOG_INFO("BPM Kanal " + std::to_string(i+1) + " - BPM: " + 
                         std::to_string(info.bpm) + " (" + 
                         std::to_string(info.beatFrames.size()) + " Beats erkannt)");
             }
@@ -194,22 +205,30 @@ public:
     }
     
 private:
-    // Track-Status für jeden Kanal
-    struct TrackState {
+    // Track-Status für BPM Kanäle
+    struct BpmTrackState {
         int64_t lastBeatFrame = 0;
         int beatNumber = 0;
         double currentBpm = 0.0;
         bool hasSignal = false;
     };
     
-    void processMonoAudio(const std::vector<const CSAMPLE*>& monoBuffers, int frameCount) {
+    // Track-Status für VU Kanäle
+    struct VuTrackState {
+        bool hasSignal = false;
+    };
+    
+    void processAudio(const std::vector<const CSAMPLE*>& bpmBuffers,
+                      const std::vector<const CSAMPLE*>& vuBuffers,
+                      int frameCount) {
         std::lock_guard<std::mutex> lock(m_mutex);
         
         m_frameCount += frameCount;
         int sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
         
-        for (int ch = 0; ch < m_numChannels && ch < static_cast<int>(monoBuffers.size()); ++ch) {
-            const CSAMPLE* buffer = monoBuffers[ch];
+        // BPM Kanäle verarbeiten
+        for (int ch = 0; ch < m_numBpmChannels && ch < static_cast<int>(bpmBuffers.size()); ++ch) {
+            const CSAMPLE* buffer = bpmBuffers[ch];
             
             // RMS berechnen für Signal-Check
             float sumSquares = 0.0f;
@@ -217,18 +236,16 @@ private:
                 sumSquares += buffer[i] * buffer[i];
             }
             float rms = std::sqrt(sumSquares / frameCount);
-            m_trackStates[ch].hasSignal = (rms > 0.001f);  // ~-60dB
-            
-            // VU-Meter (Mono als Fake-Stereo)
-            std::vector<float> stereoBuffer(frameCount * 2);
-            for (int i = 0; i < frameCount; ++i) {
-                stereoBuffer[i * 2] = buffer[i];
-                stereoBuffer[i * 2 + 1] = buffer[i];
-            }
-            m_vuMeters[ch]->process(stereoBuffer.data(), frameCount);
+            m_bpmTrackStates[ch].hasSignal = (rms > 0.001f);  // ~-60dB
             
             // Beat Detection nur wenn Signal vorhanden
-            if (m_trackStates[ch].hasSignal) {
+            if (m_bpmTrackStates[ch].hasSignal) {
+                // Mono als Fake-Stereo für Beat Tracker
+                std::vector<float> stereoBuffer(frameCount * 2);
+                for (int i = 0; i < frameCount; ++i) {
+                    stereoBuffer[i * 2] = buffer[i];
+                    stereoBuffer[i * 2 + 1] = buffer[i];
+                }
                 m_beatTrackers[ch]->processAudio(stereoBuffer.data(), frameCount);
                 
                 // Echter Beat erkannt?
@@ -238,22 +255,43 @@ private:
                 
                 double bpm = m_beatTrackers[ch]->getCurrentBpm();
                 if (bpm > 0) {
-                    m_trackStates[ch].currentBpm = bpm;
+                    m_bpmTrackStates[ch].currentBpm = bpm;
                 }
                 
-                // Beat Clock senden wenn Beat erkannt
-                if (m_trackStates[ch].currentBpm > 0) {
-                    double framesPerBeat = (60.0 / m_trackStates[ch].currentBpm) * sampleRate;
-                    int64_t beatsSinceLast = (m_frameCount - m_trackStates[ch].lastBeatFrame) 
-                                             / static_cast<int64_t>(framesPerBeat);
+                // Beat Clock senden
+                if (m_bpmTrackStates[ch].currentBpm > 0) {
+                    double framesPerBeat = (60.0 / m_bpmTrackStates[ch].currentBpm) * sampleRate;
+                    int64_t beatsSinceLast = (m_frameCount - m_bpmTrackStates[ch].lastBeatFrame)
+                                            / static_cast<int64_t>(framesPerBeat);
                     
                     if (beatsSinceLast > 0) {
-                        m_trackStates[ch].beatNumber = (m_trackStates[ch].beatNumber + beatsSinceLast) % 4;
-                        m_trackStates[ch].lastBeatFrame = m_frameCount;
+                        m_bpmTrackStates[ch].beatNumber = (m_bpmTrackStates[ch].beatNumber + beatsSinceLast) % 4;
+                        m_bpmTrackStates[ch].lastBeatFrame = m_frameCount;
                         sendBeatClockForChannel(ch);
                     }
                 }
             }
+        }
+        
+        // VU Kanäle verarbeiten
+        for (int ch = 0; ch < m_numVuChannels && ch < static_cast<int>(vuBuffers.size()); ++ch) {
+            const CSAMPLE* buffer = vuBuffers[ch];
+            
+            // RMS berechnen für Signal-Check
+            float sumSquares = 0.0f;
+            for (int i = 0; i < frameCount; ++i) {
+                sumSquares += buffer[i] * buffer[i];
+            }
+            float rms = std::sqrt(sumSquares / frameCount);
+            m_vuTrackStates[ch].hasSignal = (rms > 0.001f);  // ~-60dB
+            
+            // VU-Meter (Mono als Fake-Stereo)
+            std::vector<float> stereoBuffer(frameCount * 2);
+            for (int i = 0; i < frameCount; ++i) {
+                stereoBuffer[i * 2] = buffer[i];
+                stereoBuffer[i * 2 + 1] = buffer[i];
+            }
+            m_vuMeters[ch]->process(stereoBuffer.data(), frameCount);
         }
         
         // VU-Meter OSC senden
@@ -263,13 +301,13 @@ private:
     void sendBeatClockForChannel(int ch) {
         if (!m_enableBeatclock) return;
         if (!m_oscSender || !m_oscSender->isConnected()) return;
-        if (!m_trackStates[ch].hasSignal) return;
+        if (!m_bpmTrackStates[ch].hasSignal) return;
         
         BeatClockMessage msg;
         msg.track_id = ch;
         msg.frame_position = m_frameCount;
-        msg.bpm = static_cast<float>(m_trackStates[ch].currentBpm);
-        msg.beat_number = m_trackStates[ch].beatNumber;
+        msg.bpm = static_cast<float>(m_bpmTrackStates[ch].currentBpm);
+        msg.beat_number = m_bpmTrackStates[ch].beatNumber;
         msg.beat_strength = 1.0f;
         
         m_oscSender->sendBeatClock(msg);
@@ -278,19 +316,19 @@ private:
     void sendBeatForChannel(int ch) {
         if (!m_enableBeat) return;
         if (!m_oscSender || !m_oscSender->isConnected()) return;
-        if (!m_trackStates[ch].hasSignal) return;
+        if (!m_bpmTrackStates[ch].hasSignal) return;
         
         // Sende echten erkannten Beat: /beat/1, /beat/2, etc.
         std::string path = "/beat/" + std::to_string(ch + 1);
-        float bpm = static_cast<float>(m_trackStates[ch].currentBpm);
+        float bpm = static_cast<float>(m_bpmTrackStates[ch].currentBpm);
         m_oscSender->sendFloat(path, bpm);
     }
     
     void sendVuMeterOsc() {
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
-        for (int ch = 0; ch < m_numChannels; ++ch) {
-            if (!m_trackStates[ch].hasSignal) continue;
+        for (int ch = 0; ch < m_numVuChannels; ++ch) {
+            if (!m_vuTrackStates[ch].hasSignal) continue;
             
             float rmsDb = m_vuMeters[ch]->getRmsDb();
             float peakDb = m_vuMeters[ch]->getPeakDb();
@@ -313,17 +351,26 @@ private:
         double seconds = static_cast<double>(m_frameCount) / 44100.0;
         std::string status = "Status: " + std::to_string(static_cast<int>(seconds)) + "s";
         
-        bool anyActive = false;
-        for (int ch = 0; ch < m_numChannels; ++ch) {
-            if (m_trackStates[ch].hasSignal && m_trackStates[ch].currentBpm > 0) {
-                status += " | Ch" + std::to_string(ch+1) + ": " + 
-                         std::to_string(static_cast<int>(m_trackStates[ch].currentBpm)) + "BPM";
-                anyActive = true;
+        bool anyBpmActive = false;
+        for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+            if (m_bpmTrackStates[ch].hasSignal && m_bpmTrackStates[ch].currentBpm > 0) {
+                status += " | BPM" + std::to_string(ch+1) + ": " + 
+                         std::to_string(static_cast<int>(m_bpmTrackStates[ch].currentBpm));
+                anyBpmActive = true;
             }
         }
         
-        if (!anyActive) {
+        bool anyVuActive = false;
+        for (int ch = 0; ch < m_numVuChannels; ++ch) {
+            if (m_vuTrackStates[ch].hasSignal) {
+                anyVuActive = true;
+            }
+        }
+        
+        if (!anyBpmActive && !anyVuActive) {
             status += " | Kein Signal";
+        } else if (anyVuActive) {
+            status += " | VU aktiv";
         }
         
         if (m_oscSender && m_oscSender->isConnected()) {
@@ -335,16 +382,16 @@ private:
     
     // Audio
     std::shared_ptr<JackClient> m_jackClient;
-    int m_numChannels;
+    int m_numBpmChannels;
+    int m_numVuChannels;
     
-    // Beat Detection
+    // Beat Detection (nur für BPM Kanäle)
     std::vector<std::unique_ptr<RealTimeBeatTracker>> m_beatTrackers;
+    std::vector<BpmTrackState> m_bpmTrackStates;
     
-    // VU-Meter
+    // VU-Meter (nur für VU Kanäle)
     std::vector<std::unique_ptr<VuMeter>> m_vuMeters;
-    
-    // Track-Status
-    std::vector<TrackState> m_trackStates;
+    std::vector<VuTrackState> m_vuTrackStates;
     
     // OSC
     std::shared_ptr<OscSender> m_oscSender;
@@ -367,11 +414,14 @@ private:
 void printUsage(const char* programName) {
     std::cout << "\nBeat Analyzer - Echtzeit Beat Detection mit OSC Output\n\n";
     std::cout << "Verwendung: " << programName << "\n\n";
-    std::cout << "Konfiguration via .env Datei\n\n";
-    std::cout << "OSC Adressen:\n";
-    std::cout << "  /beatclock/1-N  Beat Clock pro Kanal\n";
-    std::cout << "  /rms/1-N        RMS Level pro Kanal\n";
-    std::cout << "  /peak/1-N       Peak Level pro Kanal\n";
+    std::cout << "Konfiguration via .env Datei:\n";
+    std::cout << "  NUM_BPM_CHANNELS=4  Anzahl BPM-Eingänge (bpm_1 bis bpm_N)\n";
+    std::cout << "  NUM_VU_CHANNELS=2   Anzahl VU-Eingänge (vu_1 bis vu_N)\n";
+    std::cout << "\nOSC Adressen:\n";
+    std::cout << "  /beatclock/1-N  Beat Clock (BPM Kanäle)\n";
+    std::cout << "  /beat/1-N       Echte Beats (BPM Kanäle)\n";
+    std::cout << "  /rms/1-N        RMS Level (VU Kanäle)\n";
+    std::cout << "  /peak/1-N       Peak Level (VU Kanäle)\n";
     std::cout << "\n";
 }
 
@@ -381,7 +431,7 @@ int main(int argc, char* argv[]) {
     
     std::cout << "\n";
     std::cout << "╔═══════════════════════════════════════════╗\n";
-    std::cout << "║          BEAT ANALYZER v1.1.0             ║\n";
+    std::cout << "║          BEAT ANALYZER v1.2.0             ║\n";
     std::cout << "║  Echtzeit Beat Detection + OSC Output     ║\n";
     std::cout << "╚═══════════════════════════════════════════╝\n";
     std::cout << "\n";

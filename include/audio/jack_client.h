@@ -13,15 +13,20 @@ namespace Audio {
 
 /**
  * JACK audio client for capturing multi-channel mono audio.
- * Supports configurable number of mono channels (1-8).
+ * Supports separate BPM channels (beat detection) and VU channels (metering).
  */
 class JackClient {
 public:
     using ProcessCallback = std::function<void(const CSAMPLE*, int)>;
-    // Callback für separate Mono-Kanäle
-    using MonoProcessCallback = std::function<void(const std::vector<const CSAMPLE*>&, int)>;
+    // Callback für separate Kanal-Typen
+    using MonoProcessCallback = std::function<void(
+        const std::vector<const CSAMPLE*>& bpmBuffers,
+        const std::vector<const CSAMPLE*>& vuBuffers,
+        int frameCount)>;
     
-    JackClient(const std::string& clientName = "beat-analyzer", int numChannels = 4);
+    JackClient(const std::string& clientName = "beat-analyzer", 
+               int numBpmChannels = 4, 
+               int numVuChannels = 2);
     ~JackClient();
     
     // Non-copyable
@@ -45,12 +50,14 @@ public:
         const std::string& portFilter = "");
     
     // Connect input port
-    bool connectPort(int channelIndex, const std::string& portName);
+    bool connectBpmPort(int channelIndex, const std::string& portName);
+    bool connectVuPort(int channelIndex, const std::string& portName);
     
     // Properties
     SampleRate getSampleRate() const;
     int getBufferSize() const;
-    int getNumChannels() const { return m_numChannels; }
+    int getNumBpmChannels() const { return m_numBpmChannels; }
+    int getNumVuChannels() const { return m_numVuChannels; }
     bool isConnected() const { return m_connected; }
     
     // Static JACK callbacks
@@ -59,9 +66,11 @@ public:
     
 private:
     std::string m_clientName;
-    int m_numChannels;
+    int m_numBpmChannels;
+    int m_numVuChannels;
     jack_client_t* m_client;
-    std::vector<jack_port_t*> m_inputPorts;
+    std::vector<jack_port_t*> m_bpmPorts;
+    std::vector<jack_port_t*> m_vuPorts;
     MonoProcessCallback m_monoProcessCallback;
     bool m_connected;
     

@@ -6,9 +6,10 @@
 namespace BeatAnalyzer {
 namespace Audio {
 
-JackClient::JackClient(const std::string& clientName, int numChannels)
+JackClient::JackClient(const std::string& clientName, int numBpmChannels, int numVuChannels)
     : m_clientName(clientName),
-      m_numChannels(std::max(1, std::min(8, numChannels))),
+      m_numBpmChannels(std::max(0, std::min(8, numBpmChannels))),
+      m_numVuChannels(std::max(0, std::min(8, numVuChannels))),
       m_client(nullptr),
       m_connected(false) {
 }
@@ -29,9 +30,9 @@ bool JackClient::initialize() {
         return false;
     }
     
-    // Create mono input ports
-    for (int i = 0; i < m_numChannels; ++i) {
-        std::string portName = "in_" + std::to_string(i + 1);
+    // Create BPM input ports (for beat detection)
+    for (int i = 0; i < m_numBpmChannels; ++i) {
+        std::string portName = "bpm_" + std::to_string(i + 1);
         jack_port_t* port = jack_port_register(
             m_client,
             portName.c_str(),
@@ -43,7 +44,24 @@ bool JackClient::initialize() {
             LOG_ERROR("Failed to create JACK port: " + portName);
             return false;
         }
-        m_inputPorts.push_back(port);
+        m_bpmPorts.push_back(port);
+    }
+    
+    // Create VU input ports (for metering)
+    for (int i = 0; i < m_numVuChannels; ++i) {
+        std::string portName = "vu_" + std::to_string(i + 1);
+        jack_port_t* port = jack_port_register(
+            m_client,
+            portName.c_str(),
+            JACK_DEFAULT_AUDIO_TYPE,
+            JackPortIsInput,
+            0);
+        
+        if (!port) {
+            LOG_ERROR("Failed to create JACK port: " + portName);
+            return false;
+        }
+        m_vuPorts.push_back(port);
     }
     
     // Set process callback
@@ -51,7 +69,8 @@ bool JackClient::initialize() {
     jack_on_shutdown(m_client, shutdownCallback, this);
     
     m_connected = true;
-    LOG_INFO("JACK client initialized with " + std::to_string(m_numChannels) + " mono channels");
+    LOG_INFO("JACK client initialized: " + std::to_string(m_numBpmChannels) + 
+             " BPM channels, " + std::to_string(m_numVuChannels) + " VU channels");
     return true;
 }
 
@@ -114,19 +133,35 @@ std::vector<std::string> JackClient::getAvailablePorts(
     return ports;
 }
 
-bool JackClient::connectPort(int channelIndex, const std::string& portName) {
-    if (channelIndex >= static_cast<int>(m_inputPorts.size())) {
+bool JackClient::connectBpmPort(int channelIndex, const std::string& portName) {
+    if (channelIndex >= static_cast<int>(m_bpmPorts.size())) {
         return false;
     }
     
-    std::string ourPort = m_clientName + ":in_" + std::to_string(channelIndex + 1);
+    std::string ourPort = m_clientName + ":bpm_" + std::to_string(channelIndex + 1);
     
     if (jack_connect(m_client, portName.c_str(), ourPort.c_str())) {
-        LOG_ERROR("Failed to connect port: " + portName);
+        LOG_ERROR("Failed to connect BPM port: " + portName);
         return false;
     }
     
-    LOG_INFO("Connected port: " + portName);
+    LOG_INFO("Connected BPM port: " + portName);
+    return true;
+}
+
+bool JackClient::connectVuPort(int channelIndex, const std::string& portName) {
+    if (channelIndex >= static_cast<int>(m_vuPorts.size())) {
+        return false;
+    }
+    
+    std::string ourPort = m_clientName + ":vu_" + std::to_string(channelIndex + 1);
+    
+    if (jack_connect(m_client, portName.c_str(), ourPort.c_str())) {
+        LOG_ERROR("Failed to connect VU port: " + portName);
+        return false;
+    }
+    
+    LOG_INFO("Connected VU port: " + portName);
     return true;
 }
 
@@ -142,17 +177,25 @@ void JackClient::shutdownCallback(void* arg) {
 }
 
 int JackClient::m_processInternal(int frameCount) {
-    // Get audio buffers from all mono ports
-    std::vector<const CSAMPLE*> monoBuffers;
-    for (size_t i = 0; i < m_inputPorts.size(); ++i) {
+    // Get audio buffers from BPM ports
+    std::vector<const CSAMPLE*> bpmBuffers;
+    for (size_t i = 0; i < m_bpmPorts.size(); ++i) {
         CSAMPLE* buf = static_cast<CSAMPLE*>(
-            jack_port_get_buffer(m_inputPorts[i], frameCount));
-        monoBuffers.push_back(buf);
+            jack_port_get_buffer(m_bpmPorts[i], frameCount));
+        bpmBuffers.push_back(buf);
     }
     
-    // Call mono callback
+    // Get audio buffers from VU ports
+    std::vector<const CSAMPLE*> vuBuffers;
+    for (size_t i = 0; i < m_vuPorts.size(); ++i) {
+        CSAMPLE* buf = static_cast<CSAMPLE*>(
+            jack_port_get_buffer(m_vuPorts[i], frameCount));
+        vuBuffers.push_back(buf);
+    }
+    
+    // Call mono callback with both buffer types
     if (m_monoProcessCallback) {
-        m_monoProcessCallback(monoBuffers, frameCount);
+        m_monoProcessCallback(bpmBuffers, vuBuffers, frameCount);
     }
     
     return 0;
