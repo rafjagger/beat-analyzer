@@ -110,10 +110,16 @@ public:
         m_vuRmsRelease = env.getFloat("VU_RMS_RELEASE", 0.2f);
         m_vuPeakFalloff = env.getFloat("VU_PEAK_FALLOFF", 20.0f);
         
+        // Beat Detection Latenz-Kompensation
+        // FFT analysiert Mitte des Fensters (512 samples) + Peak-Detection (512 samples)
+        // Bei 44100 Hz: (512 + 512) / 44100 = ~23ms
+        m_beatLatencyMs = env.getFloat("BEAT_LATENCY_MS", 23.0f);
+        m_beatLatencyFrames = static_cast<int64_t>(m_beatLatencyMs * 44.1f);  // samples
+        
         LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
                  " VU=" + std::string(m_enableVu ? "ON" : "OFF") +
-                 
-                 " Beat=" + std::string(m_enableBeat ? "ON" : "OFF"));
+                 " Beat=" + std::string(m_enableBeat ? "ON" : "OFF") +
+                 " Latenz-Kompensation=" + std::to_string(static_cast<int>(m_beatLatencyMs)) + "ms");
         
         // Beat Detector Konfiguration
         BeatDetectorConfig beatConfig;
@@ -272,10 +278,19 @@ private:
     // Track-Status für BPM Kanäle
     struct BpmTrackState {
         int64_t lastBeatFrame = 0;
+        int64_t lastRealBeatFrame = 0;      // Letzter echter erkannter Beat
+        int64_t prevRealBeatFrame = 0;      // Vorletzter echter Beat (für BPM-Berechnung)
+        int64_t realBeatCount = 0;          // Anzahl echter Beats in Folge
         int beatNumber = 0;
         double currentBpm = 0.0;
+        double realBeatBpm = 0.0;           // BPM basierend auf echten Beat-Abständen
         bool hasSignal = false;
+        bool usingRealBeats = false;        // true = echte Beats, false = synthetisch
     };
+    
+    // Konstanten für Beat-Modus-Wechsel
+    static constexpr int REAL_BEATS_THRESHOLD = 4;      // So viele echte Beats für Umschaltung
+    static constexpr double BEAT_TIMEOUT_FACTOR = 2.5;  // Nach X Beat-Intervallen auf synthetisch
     
     // Track-Status für VU Kanäle
     struct VuTrackState {
@@ -320,45 +335,113 @@ private:
                 }
                 m_beatTrackers[ch]->processAudio(stereoBuffer.data(), frameCount);
                 
-                // Echter Beat erkannt?
-                if (m_beatTrackers[ch]->hasBeatOccurred()) {
-                    sendBeatForChannel(ch);
-                }
-                
                 double bpm = m_beatTrackers[ch]->getCurrentBpm();
                 if (bpm > 0) {
                     m_bpmTrackStates[ch].currentBpm = bpm;
                 }
                 
-                // Beat Clock senden
-                if (m_bpmTrackStates[ch].currentBpm > 0) {
-                    double framesPerBeat = (60.0 / m_bpmTrackStates[ch].currentBpm) * sampleRate;
-                    int64_t beatsSinceLast = (m_frameCount - m_bpmTrackStates[ch].lastBeatFrame)
-                                            / static_cast<int64_t>(framesPerBeat);
+                // Echter Beat erkannt?
+                bool realBeatDetected = m_beatTrackers[ch]->hasBeatOccurred();
+                
+                if (realBeatDetected) {
+                    // BPM aus echten Beat-Abständen berechnen (zuverlässiger!)
+                    if (m_bpmTrackStates[ch].lastRealBeatFrame > 0) {
+                        int64_t beatInterval = m_frameCount - m_bpmTrackStates[ch].lastRealBeatFrame;
+                        if (beatInterval > 0) {
+                            double measuredBpm = 60.0 * sampleRate / beatInterval;
+                            // Sanity check: nur plausible BPM-Werte akzeptieren
+                            if (measuredBpm >= 40.0 && measuredBpm <= 220.0) {
+                                // Glättung mit vorherigem Wert
+                                if (m_bpmTrackStates[ch].realBeatBpm > 0) {
+                                    m_bpmTrackStates[ch].realBeatBpm = 
+                                        m_bpmTrackStates[ch].realBeatBpm * 0.7 + measuredBpm * 0.3;
+                                } else {
+                                    m_bpmTrackStates[ch].realBeatBpm = measuredBpm;
+                                }
+                                // Überschreibe das analysierte BPM mit dem gemessenen
+                                m_bpmTrackStates[ch].currentBpm = m_bpmTrackStates[ch].realBeatBpm;
+                            }
+                        }
+                    }
+                    m_bpmTrackStates[ch].prevRealBeatFrame = m_bpmTrackStates[ch].lastRealBeatFrame;
+                    m_bpmTrackStates[ch].lastRealBeatFrame = m_frameCount;
                     
-                    if (beatsSinceLast > 0) {
-                        m_bpmTrackStates[ch].beatNumber = (m_bpmTrackStates[ch].beatNumber + beatsSinceLast) % 4;
+                    // Echter Beat - Zähler erhöhen
+                    m_bpmTrackStates[ch].realBeatCount++;
+                    
+                    // Nach genug echten Beats in Folge: auf echte Beats umschalten
+                    if (m_bpmTrackStates[ch].realBeatCount >= REAL_BEATS_THRESHOLD) {
+                        m_bpmTrackStates[ch].usingRealBeats = true;
+                    }
+                    
+                    // Wenn wir echte Beats nutzen: diesen Beat senden
+                    if (m_bpmTrackStates[ch].usingRealBeats) {
+                        m_bpmTrackStates[ch].beatNumber = (m_bpmTrackStates[ch].beatNumber + 1) % 4;
                         m_bpmTrackStates[ch].lastBeatFrame = m_frameCount;
-                        sendBeatClockForChannel(ch);
+                        sendBeatForChannel(ch);
+                        sendBeatClockForChannel(ch, true);  // true = echter Beat
+                    }
+                }
+                
+                // Synthetische Clock wenn keine echten Beats
+                // Bevorzuge gemessenes BPM aus echten Beats, falls vorhanden
+                double effectiveBpm = m_bpmTrackStates[ch].realBeatBpm > 0 
+                    ? m_bpmTrackStates[ch].realBeatBpm 
+                    : m_bpmTrackStates[ch].currentBpm;
+                
+                if (effectiveBpm > 0) {
+                    double framesPerBeat = (60.0 / effectiveBpm) * sampleRate;
+                    
+                    // Prüfe ob zu lange kein echter Beat kam -> auf synthetisch wechseln
+                    int64_t framesSinceRealBeat = m_frameCount - m_bpmTrackStates[ch].lastRealBeatFrame;
+                    if (framesSinceRealBeat > static_cast<int64_t>(framesPerBeat * BEAT_TIMEOUT_FACTOR)) {
+                        if (m_bpmTrackStates[ch].usingRealBeats) {
+                            m_bpmTrackStates[ch].usingRealBeats = false;
+                            m_bpmTrackStates[ch].realBeatCount = 0;
+                        }
+                    }
+                    
+                    // Synthetische Beats nur wenn nicht im Real-Beat-Modus
+                    if (!m_bpmTrackStates[ch].usingRealBeats) {
+                        int64_t beatsSinceLast = (m_frameCount - m_bpmTrackStates[ch].lastBeatFrame)
+                                                / static_cast<int64_t>(framesPerBeat);
+                        
+                        if (beatsSinceLast > 0) {
+                            m_bpmTrackStates[ch].beatNumber = (m_bpmTrackStates[ch].beatNumber + beatsSinceLast) % 4;
+                            m_bpmTrackStates[ch].lastBeatFrame = m_frameCount;
+                            sendBeatClockForChannel(ch, false);  // false = synthetisch
+                        }
                     }
                 }
             }
         }
     }
     
-    void sendBeatClockForChannel(int ch) {
+    void sendBeatClockForChannel(int ch, bool isRealBeat = false) {
         if (!m_enableBeatclock) return;
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         if (!m_bpmTrackStates[ch].hasSignal) return;
         
         BeatClockMessage msg;
         msg.track_id = ch;
-        msg.frame_position = m_frameCount;
-        msg.bpm = static_cast<float>(m_bpmTrackStates[ch].currentBpm);
+        // Kompensiere Analyse-Latenz: Der Beat ist eigentlich schon passiert
+        msg.frame_position = m_frameCount - m_beatLatencyFrames;
+        msg.bpm = static_cast<float>(m_bpmTrackStates[ch].realBeatBpm > 0 
+            ? m_bpmTrackStates[ch].realBeatBpm 
+            : m_bpmTrackStates[ch].currentBpm);
         msg.beat_number = m_bpmTrackStates[ch].beatNumber;
-        msg.beat_strength = 1.0f;
+        msg.beat_strength = isRealBeat ? 1.0f : 0.5f;  // Unterscheide Stärke
         
         m_oscSender->sendBeatClock(msg);
+        
+        // Debug: Zeige Modus im Log (nur gelegentlich)
+        static int debugCounter = 0;
+        if (++debugCounter % 16 == 0) {
+            LOG_DEBUG("Beat Ch" + std::to_string(ch+1) + 
+                     (isRealBeat ? " [REAL]" : " [SYNTH]") +
+                     " BPM=" + std::to_string(static_cast<int>(msg.bpm)) +
+                     " realBPM=" + std::to_string(static_cast<int>(m_bpmTrackStates[ch].realBeatBpm)));
+        }
     }
     
     void sendBeatForChannel(int ch) {
@@ -368,7 +451,9 @@ private:
         
         // Sende echten erkannten Beat: /beat/1, /beat/2, etc.
         std::string path = "/beat/" + std::to_string(ch + 1);
-        float bpm = static_cast<float>(m_bpmTrackStates[ch].currentBpm);
+        float bpm = static_cast<float>(m_bpmTrackStates[ch].realBeatBpm > 0 
+            ? m_bpmTrackStates[ch].realBeatBpm 
+            : m_bpmTrackStates[ch].currentBpm);
         m_oscSender->sendFloat(path, bpm);
     }
     
@@ -453,6 +538,10 @@ private:
     float m_vuRmsAttack = 0.8f;
     float m_vuRmsRelease = 0.2f;
     float m_vuPeakFalloff = 20.0f;
+    
+    // Beat-Latenz-Kompensation
+    float m_beatLatencyMs = 23.0f;
+    int64_t m_beatLatencyFrames = 1014;  // ~23ms bei 44.1kHz
 };
 
 // ============================================================================

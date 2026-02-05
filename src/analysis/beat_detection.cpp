@@ -732,8 +732,9 @@ void RealTimeBeatTracker::reset() {
 
 BeatEventDetector::BeatEventDetector(int sampleRate)
     : m_sampleRate(sampleRate) {
-    // Minimum 200ms zwischen Beats (= max 300 BPM)
-    m_minBeatInterval = sampleRate * 0.2 / 512;  // In Analyse-Frames (hop=512)
+    // Minimum 400ms zwischen Beats (= max 150 BPM)
+    // Bei typischer Musik (80-130 BPM) verhindert das Offbeat-Erkennung
+    m_minBeatInterval = sampleRate * 0.4 / 512;  // In Analyse-Frames (hop=512)
     reset();
 }
 
@@ -747,8 +748,8 @@ bool BeatEventDetector::process(double onsetValue) {
         m_adaptiveThreshold *= THRESHOLD_DECAY;
     }
     
-    // Threshold ist 30% des adaptiven Maximums
-    m_threshold = m_adaptiveThreshold * 0.3;
+    // Threshold ist 50% des adaptiven Maximums (höher = nur starke Beats)
+    m_threshold = m_adaptiveThreshold * 0.5;
     
     // Peak Detection: prevOnset muss größer sein als Nachbarn UND über Threshold
     bool isPeak = (m_prevOnset > m_prevPrevOnset) && 
