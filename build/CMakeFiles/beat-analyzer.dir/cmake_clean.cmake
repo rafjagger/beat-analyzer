@@ -16,6 +16,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/beat-analyzer.dir/src/main.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o"
   "CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/osc/osc_receiver.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/osc/osc_receiver.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o"
   "CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o"

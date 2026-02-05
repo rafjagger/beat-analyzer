@@ -45,14 +45,18 @@ bool OscReceiver::start() {
     lo_server_thread_add_method(st, m_beatClockPath.c_str(), nullptr, 
                                  beatClockHandler, this);
     
-    // Auch auf /beat/* hören
+    // Auch auf /beat hören
     lo_server_thread_add_method(st, "/beat", nullptr, beatClockHandler, this);
+    
+    // Handler für Clock-Modus
+    lo_server_thread_add_method(st, "/clockmode", "i", clockModeHandler, this);
+    lo_server_thread_add_method(st, "/clockmode", "f", clockModeHandler, this);
     
     lo_server_thread_start(st);
     m_running = true;
     
     LOG_INFO("OSC Receiver started on port " + portStr + 
-             " (listening for " + m_beatClockPath + ")");
+             " (listening for " + m_beatClockPath + ", /clockmode)");
     return true;
 #else
     LOG_WARN("OSC Receiver not available - liblo not compiled in");
@@ -80,8 +84,8 @@ ReceivedBeatClock OscReceiver::getLastBeatClock() const {
     return m_lastBeatClock;
 }
 
-int OscReceiver::beatClockHandler(const char* path, const char* types,
-                                   void** argv, int argc, void* msg, void* userData) {
+int OscReceiver::beatClockHandler(const char* /*path*/, const char* types,
+                                   lo_arg** argv, int argc, lo_message /*msg*/, void* userData) {
 #ifdef HAS_LIBLO
     OscReceiver* self = static_cast<OscReceiver*>(userData);
     
@@ -92,14 +96,14 @@ int OscReceiver::beatClockHandler(const char* path, const char* types,
     
     // Parse arguments - verschiedene Formate unterstützen
     if (argc >= 1 && types[0] == 'i') {
-        clock.beatNumber = *static_cast<int32_t*>(argv[0]);
+        clock.beatNumber = argv[0]->i;
     }
     if (argc >= 2 && types[1] == 'f') {
-        clock.bpm = *static_cast<float*>(argv[1]);
+        clock.bpm = argv[1]->f;
     }
     // Alternativ: nur BPM als float
     if (argc >= 1 && types[0] == 'f') {
-        clock.bpm = *static_cast<float*>(argv[0]);
+        clock.bpm = argv[0]->f;
     }
     
     {
@@ -109,6 +113,41 @@ int OscReceiver::beatClockHandler(const char* path, const char* types,
     
     if (self->m_callback) {
         self->m_callback(clock);
+    }
+    
+    return 0;
+#else
+    (void)types; (void)argv; (void)argc; (void)userData;
+    return 0;
+#endif
+}
+
+int OscReceiver::clockModeHandler(const char* /*path*/, const char* types,
+                                   lo_arg** argv, int argc, lo_message /*msg*/, void* userData) {
+#ifdef HAS_LIBLO
+    OscReceiver* self = static_cast<OscReceiver*>(userData);
+    
+    int mode = 0;
+    
+    if (argc >= 1) {
+        if (types && types[0] == 'i') {
+            mode = argv[0]->i;
+        } else if (types && types[0] == 'f') {
+            mode = static_cast<int>(argv[0]->f);
+        }
+    }
+    
+    // Nur 0 oder 1 erlaubt
+    mode = (mode != 0) ? 1 : 0;
+    
+    int oldMode = self->m_clockMode.exchange(mode);
+    
+    if (oldMode != mode) {
+        LOG_INFO("Clock-Modus gewechselt: " + std::string(mode ? "TRAINING" : "NORMAL"));
+    }
+    
+    if (self->m_clockModeCallback) {
+        self->m_clockModeCallback(mode);
     }
     
     return 0;

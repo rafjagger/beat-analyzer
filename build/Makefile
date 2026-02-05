@@ -389,6 +389,30 @@ src/osc/osc_messages.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.s
 .PHONY : src/osc/osc_messages.cpp.s
 
+src/osc/osc_receiver.o: src/osc/osc_receiver.cpp.o
+.PHONY : src/osc/osc_receiver.o
+
+# target to build an object file
+src/osc/osc_receiver.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/osc/osc_receiver.cpp.o
+.PHONY : src/osc/osc_receiver.cpp.o
+
+src/osc/osc_receiver.i: src/osc/osc_receiver.cpp.i
+.PHONY : src/osc/osc_receiver.i
+
+# target to preprocess a source file
+src/osc/osc_receiver.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/osc/osc_receiver.cpp.i
+.PHONY : src/osc/osc_receiver.cpp.i
+
+src/osc/osc_receiver.s: src/osc/osc_receiver.cpp.s
+.PHONY : src/osc/osc_receiver.s
+
+# target to generate assembly for a file
+src/osc/osc_receiver.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/osc/osc_receiver.cpp.s
+.PHONY : src/osc/osc_receiver.cpp.s
+
 src/osc/osc_sender.o: src/osc/osc_sender.cpp.o
 .PHONY : src/osc/osc_sender.o
 
@@ -476,6 +500,9 @@ help:
 	@echo "... src/osc/osc_messages.o"
 	@echo "... src/osc/osc_messages.i"
 	@echo "... src/osc/osc_messages.s"
+	@echo "... src/osc/osc_receiver.o"
+	@echo "... src/osc/osc_receiver.i"
+	@echo "... src/osc/osc_receiver.s"
 	@echo "... src/osc/osc_sender.o"
 	@echo "... src/osc/osc_sender.i"
 	@echo "... src/osc/osc_sender.s"

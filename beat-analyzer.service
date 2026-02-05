@@ -1,0 +1,18 @@
+[Unit]                                                                                     
+Description=beat-analyzer (bpm & vu-meters)
+PartOf=a3-main.service
+After=a3-jack.service
+
+[Service]
+Type=idle
+#PrivateTmp=true
+WorkingDirectory=/home/aaa/beat-analyzer/build
+ExecStartPre=/bin/sleep 2
+ExecStart=/home/aaa/beat-analyzer/build/beat-analyzer
+#LimitRTPRIO=2
+CPUAffinity=1 2 3
+CPUSchedulingPolicy=rr
+CPUSchedulingPriority=65
+
+[Install]
+WantedBy=default.target
