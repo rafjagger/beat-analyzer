@@ -10,57 +10,77 @@ VuMeter::VuMeter(int sampleRate)
       m_rmsSamples(0),
       m_rmsLinear(0.0f),
       m_rmsDb(-60.0f),
+      m_rmsAttack(1.0f),
+      m_rmsRelease(0.5f),
       m_peakLinear(0.0f),
       m_peakDb(-60.0f),
       m_peakHold(0.0f),
-      m_peakFalloff(20.0f) {  // 20 dB/s Falloff
+      m_peakFalloff(40.0f) {
+}
+
+// Schnelle Mono-Version (kein Stereo-Overhead)
+void VuMeter::processMono(const float* monoInput, int frameCount) {
+    float maxPeak = 0.0f;
+    float sumSquares = 0.0f;
+    
+    for (int i = 0; i < frameCount; ++i) {
+        float absVal = std::fabs(monoInput[i]);
+        if (absVal > maxPeak) maxPeak = absVal;
+        sumSquares += monoInput[i] * monoInput[i];
+    }
+    
+    // RMS direkt (keine Glättung bei Attack=1.0)
+    float currentRms = std::sqrt(sumSquares / frameCount);
+    
+    if (m_rmsAttack >= 1.0f) {
+        m_rmsLinear = currentRms;  // Sofort, keine Interpolation
+    } else if (currentRms > m_rmsLinear) {
+        m_rmsLinear = m_rmsAttack * currentRms + (1.0f - m_rmsAttack) * m_rmsLinear;
+    } else {
+        m_rmsLinear = m_rmsRelease * currentRms + (1.0f - m_rmsRelease) * m_rmsLinear;
+    }
+    
+    // Peak sofort übernehmen
+    if (maxPeak > m_peakLinear) {
+        m_peakLinear = maxPeak;
+    } else {
+        // Falloff
+        float falloff = m_peakFalloff * frameCount / m_sampleRate;
+        m_peakLinear *= std::pow(10.0f, -falloff / 20.0f);
+        if (m_peakLinear < 0.0001f) m_peakLinear = 0.0f;
+    }
 }
 
 void VuMeter::process(const float* stereoInput, int frameCount) {
-    float maxPeak = m_peakLinear;
+    float maxPeak = 0.0f;
     float sumSquares = 0.0f;
     
-    // Verarbeite Stereo zu Mono und berechne RMS + Peak
     for (int i = 0; i < frameCount; ++i) {
-        // Mono downmix (L + R) / 2
         float left = stereoInput[i * 2];
         float right = stereoInput[i * 2 + 1];
         float mono = (left + right) * 0.5f;
         
-        // Peak (Maximum der absoluten Werte)
         float absVal = std::fabs(mono);
-        if (absVal > maxPeak) {
-            maxPeak = absVal;
-        }
-        
-        // RMS (Summe der Quadrate)
+        if (absVal > maxPeak) maxPeak = absVal;
         sumSquares += mono * mono;
     }
     
-    // RMS berechnen (gleitender Durchschnitt über ~50ms)
-    int rmsWindow = m_sampleRate / 20;  // 50ms bei 44100 Hz = 2205 samples
-    m_rmsSum += sumSquares;
-    m_rmsSamples += frameCount;
+    float currentRms = std::sqrt(sumSquares / frameCount);
     
-    if (m_rmsSamples >= rmsWindow) {
-        m_rmsLinear = std::sqrt(m_rmsSum / m_rmsSamples);
-        m_rmsDb = linearToDb(m_rmsLinear);
-        m_rmsSum = 0.0f;
-        m_rmsSamples = 0;
+    if (m_rmsAttack >= 1.0f) {
+        m_rmsLinear = currentRms;
+    } else if (currentRms > m_rmsLinear) {
+        m_rmsLinear = m_rmsAttack * currentRms + (1.0f - m_rmsAttack) * m_rmsLinear;
+    } else {
+        m_rmsLinear = m_rmsRelease * currentRms + (1.0f - m_rmsRelease) * m_rmsLinear;
     }
     
-    // Peak mit Falloff
-    float falloffPerFrame = m_peakFalloff * frameCount / m_sampleRate;
-    float falloffLinear = dbToLinear(m_peakDb - falloffPerFrame);
-    
     if (maxPeak > m_peakLinear) {
-        // Neuer Peak
         m_peakLinear = maxPeak;
-        m_peakDb = linearToDb(maxPeak);
     } else {
-        // Falloff
-        m_peakLinear = std::max(falloffLinear, 0.0001f);
-        m_peakDb = linearToDb(m_peakLinear);
+        float falloff = m_peakFalloff * frameCount / m_sampleRate;
+        m_peakLinear *= std::pow(10.0f, -falloff / 20.0f);
+        if (m_peakLinear < 0.0001f) m_peakLinear = 0.0f;
     }
 }
 

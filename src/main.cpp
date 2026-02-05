@@ -105,6 +105,11 @@ public:
         
         m_enableBeat = env.getInt("ENABLE_BEAT", 1) != 0;
         
+        // VU-Meter Konfiguration
+        m_vuRmsAttack = env.getFloat("VU_RMS_ATTACK", 0.8f);
+        m_vuRmsRelease = env.getFloat("VU_RMS_RELEASE", 0.2f);
+        m_vuPeakFalloff = env.getFloat("VU_PEAK_FALLOFF", 20.0f);
+        
         LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
                  " VU=" + std::string(m_enableVu ? "ON" : "OFF") +
                  
@@ -132,7 +137,11 @@ public:
         
         // VU-Meter für VU Kanäle
         for (int i = 0; i < m_numVuChannels; ++i) {
-            m_vuMeters.push_back(std::make_unique<VuMeter>());
+            auto vuMeter = std::make_unique<VuMeter>();
+            vuMeter->setRmsAttack(m_vuRmsAttack);
+            vuMeter->setRmsRelease(m_vuRmsRelease);
+            vuMeter->setPeakFalloff(m_vuPeakFalloff);
+            m_vuMeters.push_back(std::move(vuMeter));
             m_vuTrackStates.push_back(VuTrackState{});
         }
         
@@ -212,16 +221,28 @@ public:
         LOG_INFO("Warte auf Audio...");
         
         auto lastStatusTime = std::chrono::steady_clock::now();
+        auto lastVuOscTime = std::chrono::steady_clock::now();
+        
+        // VU OSC Rate: 25 Hz = 40ms (wie SuperCollider replyRate)
+        const auto vuOscInterval = std::chrono::milliseconds(40);
         
         while (g_running) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            
-            // Periodische Status-Ausgabe
             auto now = std::chrono::steady_clock::now();
+            
+            // VU-Meter OSC senden (25 Hz, außerhalb des Audio-Callbacks)
+            if (now - lastVuOscTime >= vuOscInterval) {
+                sendVuMeterOsc();
+                lastVuOscTime = now;
+            }
+            
+            // Periodische Status-Ausgabe (alle 5 Sekunden)
             if (std::chrono::duration_cast<std::chrono::seconds>(now - lastStatusTime).count() >= 5) {
                 printStatus();
                 lastStatusTime = now;
             }
+            
+            // Kurzes Sleep um CPU zu schonen, aber schnell genug für 25 Hz
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
         
         return true;
@@ -264,6 +285,14 @@ private:
     void processAudio(const std::vector<const CSAMPLE*>& bpmBuffers,
                       const std::vector<const CSAMPLE*>& vuBuffers,
                       int frameCount) {
+        
+        // VU Kanäle verarbeiten - KEIN LOCK (lock-free, nur float writes)
+        for (int ch = 0; ch < m_numVuChannels && ch < static_cast<int>(vuBuffers.size()); ++ch) {
+            const CSAMPLE* buffer = vuBuffers[ch];
+            m_vuMeters[ch]->processMono(buffer, frameCount);
+        }
+        
+        // BPM Kanäle mit Lock (komplexere Datenstrukturen)
         std::lock_guard<std::mutex> lock(m_mutex);
         
         m_frameCount += frameCount;
@@ -315,30 +344,6 @@ private:
                 }
             }
         }
-        
-        // VU Kanäle verarbeiten
-        for (int ch = 0; ch < m_numVuChannels && ch < static_cast<int>(vuBuffers.size()); ++ch) {
-            const CSAMPLE* buffer = vuBuffers[ch];
-            
-            // RMS berechnen für Signal-Check
-            float sumSquares = 0.0f;
-            for (int i = 0; i < frameCount; ++i) {
-                sumSquares += buffer[i] * buffer[i];
-            }
-            float rms = std::sqrt(sumSquares / frameCount);
-            m_vuTrackStates[ch].hasSignal = (rms > 0.001f);  // ~-60dB
-            
-            // VU-Meter (Mono als Fake-Stereo)
-            std::vector<float> stereoBuffer(frameCount * 2);
-            for (int i = 0; i < frameCount; ++i) {
-                stereoBuffer[i * 2] = buffer[i];
-                stereoBuffer[i * 2 + 1] = buffer[i];
-            }
-            m_vuMeters[ch]->process(stereoBuffer.data(), frameCount);
-        }
-        
-        // VU-Meter OSC senden
-        sendVuMeterOsc();
     }
     
     void sendBeatClockForChannel(int ch) {
@@ -373,8 +378,7 @@ private:
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
         for (int ch = 0; ch < m_numVuChannels; ++ch) {
-            if (!m_vuTrackStates[ch].hasSignal) continue;
-            
+            // Immer senden, auch ohne Signal (wie SuperCollider)
             float rmsLinear = m_vuMeters[ch]->getRmsLinear();
             float peakLinear = m_vuMeters[ch]->getPeakLinear();
             
@@ -444,6 +448,11 @@ private:
     bool m_enableVu = true;
     
     bool m_enableBeat = true;
+    
+    // VU-Meter Konfiguration
+    float m_vuRmsAttack = 0.8f;
+    float m_vuRmsRelease = 0.2f;
+    float m_vuPeakFalloff = 20.0f;
 };
 
 // ============================================================================
