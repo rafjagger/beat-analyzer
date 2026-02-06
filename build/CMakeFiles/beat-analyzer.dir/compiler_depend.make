@@ -2252,6 +2252,7 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /home/aaa/beat-analyzer/include/osc/osc_sender.h \
   /home/aaa/beat-analyzer/include/util/logging.h \
   /usr/include/alloca.h \
+  /usr/include/arpa/inet.h \
   /usr/include/asm-generic/bitsperlong.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -2349,6 +2350,7 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/c++/15/cstddef \
   /usr/include/c++/15/cstdio \
   /usr/include/c++/15/cstdlib \
+  /usr/include/c++/15/cstring \
   /usr/include/c++/15/cwchar \
   /usr/include/c++/15/cwctype \
   /usr/include/c++/15/debug/assertions.h \
@@ -2411,6 +2413,8 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/stdint.h \
   /usr/include/stdio.h \
   /usr/include/stdlib.h \
+  /usr/include/string.h \
+  /usr/include/strings.h \
   /usr/include/time.h \
   /usr/include/wchar.h \
   /usr/include/wctype.h \
@@ -2805,6 +2809,8 @@ CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o:
 /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so:
 
 /lib64/ld-linux-x86-64.so.2:
+
+/usr/include/arpa/inet.h:
 
 /usr/lib/linux/uapi/x86/asm/socket.h:
 

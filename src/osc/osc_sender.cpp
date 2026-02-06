@@ -3,6 +3,9 @@
 
 #ifdef HAS_LIBLO
 #include <lo/lo.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <cstring>
 #endif
 
 namespace BeatAnalyzer {
@@ -41,15 +44,39 @@ bool OscSender::initialize() {
     bool anyConnected = false;
     
     for (auto& target : m_targets) {
-        target.address = lo_address_new(target.host.c_str(), 
-                                        std::to_string(target.port).c_str());
+        // Hostname einmalig zu IP auflösen, damit beim Senden kein DNS-Lookup blockiert
+        std::string resolvedHost = target.host;
+        struct addrinfo hints, *res;
+        std::memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;       // IPv4
+        hints.ai_socktype = SOCK_DGRAM;  // UDP
+        
+        int err = getaddrinfo(target.host.c_str(), nullptr, &hints, &res);
+        if (err == 0 && res) {
+            char ipStr[INET_ADDRSTRLEN];
+            struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(res->ai_addr);
+            inet_ntop(AF_INET, &addr->sin_addr, ipStr, sizeof(ipStr));
+            resolvedHost = ipStr;
+            freeaddrinfo(res);
+            if (resolvedHost != target.host) {
+                LOG_INFO("OSC: " + target.host + " aufgelöst zu " + resolvedHost);
+            }
+        } else {
+            LOG_WARN("OSC: DNS-Auflösung fehlgeschlagen für " + target.host + 
+                     ", verwende direkt (kann beim Senden blockieren!)");
+        }
+        
+        // Explizit UDP erzwingen - NIEMALS TCP!
+        target.address = lo_address_new_with_proto(LO_UDP, 
+                                                    resolvedHost.c_str(), 
+                                                    std::to_string(target.port).c_str());
         
         if (!target.address) {
             LOG_ERROR("Failed to create OSC address for " + target.name + ": " + 
-                      target.host + ":" + std::to_string(target.port));
+                      resolvedHost + ":" + std::to_string(target.port));
         } else {
-            LOG_INFO("OSC target added: " + target.name + " -> " + 
-                     target.host + ":" + std::to_string(target.port));
+            LOG_INFO("OSC target added (UDP): " + target.name + " -> " + 
+                     resolvedHost + ":" + std::to_string(target.port));
             anyConnected = true;
         }
     }
@@ -71,15 +98,14 @@ bool OscSender::sendFloat(const std::string& path, float value) {
 #ifdef HAS_LIBLO
     if (!m_connected) return false;
     
-    bool allSuccess = true;
-    for (const auto& target : m_targets) {
+    for (auto& target : m_targets) {
         if (!target.address) continue;
         
         lo_address addr = static_cast<lo_address>(target.address);
-        int result = lo_send(addr, path.c_str(), "f", value);
-        if (result < 0) allSuccess = false;
+        lo_send(addr, path.c_str(), "f", value);
+        // UDP: Fehler ignorieren - fire and forget
     }
-    return allSuccess;
+    return true;
 #else
     return false;
 #endif
@@ -89,15 +115,14 @@ bool OscSender::sendFloats(const std::string& path, float value1, float value2) 
 #ifdef HAS_LIBLO
     if (!m_connected) return false;
     
-    bool allSuccess = true;
-    for (const auto& target : m_targets) {
+    for (auto& target : m_targets) {
         if (!target.address) continue;
         
         lo_address addr = static_cast<lo_address>(target.address);
-        int result = lo_send(addr, path.c_str(), "ff", value1, value2);
-        if (result < 0) allSuccess = false;
+        lo_send(addr, path.c_str(), "ff", value1, value2);
+        // UDP: Fehler ignorieren - fire and forget
     }
-    return allSuccess;
+    return true;
 #else
     return false;
 #endif
@@ -107,9 +132,7 @@ bool OscSender::sendMessage(const OscMessage& msg) {
 #ifdef HAS_LIBLO
     if (!m_connected) return false;
     
-    bool allSuccess = true;
-    
-    for (const auto& target : m_targets) {
+    for (auto& target : m_targets) {
         if (!target.address) continue;
         
         lo_address addr = static_cast<lo_address>(target.address);
@@ -118,7 +141,6 @@ bool OscSender::sendMessage(const OscMessage& msg) {
         lo_message lom = lo_message_new();
         
         for (const auto& arg : msg.args) {
-            // Try to determine type
             try {
                 int intVal = std::stoi(arg);
                 lo_message_add_int32(lom, intVal);
@@ -132,13 +154,12 @@ bool OscSender::sendMessage(const OscMessage& msg) {
             }
         }
         
-        int result = lo_send_message(addr, msg.path.c_str(), lom);
+        lo_send_message(addr, msg.path.c_str(), lom);
         lo_message_free(lom);
-        
-        if (result < 0) allSuccess = false;
+        // UDP: Fehler ignorieren - fire and forget
     }
     
-    return allSuccess;
+    return true;
 #else
     return false;
 #endif

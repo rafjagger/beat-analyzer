@@ -112,10 +112,13 @@ public:
         m_vuPeakFalloff = env.getFloat("VU_PEAK_FALLOFF", 20.0f);
         
         // Beat Detection Latenz-Kompensation
-        // FFT analysiert Mitte des Fensters (512 samples) + Peak-Detection (512 samples)
-        // Bei 44100 Hz: (512 + 512) / 44100 = ~23ms
-        m_beatLatencyMs = env.getFloat("BEAT_LATENCY_MS", 23.0f);
-        m_beatLatencyFrames = static_cast<int64_t>(m_beatLatencyMs * 44.1f);  // samples
+        // Latenz-Quellen bei frameSize=512, hopSize=256:
+        //   FFT Analyse-Zentrum: frameSize/2 = 256 samples = 5.8ms
+        //   Peak Detection Delay: 1 hop = 256 samples = 5.8ms
+        //   Ringpuffer + Thread: ~6ms
+        //   Gesamt: ~18ms
+        m_beatLatencyMs = env.getFloat("BEAT_LATENCY_MS", 18.0f);
+        m_beatLatencyFrames = static_cast<int64_t>(m_beatLatencyMs / 1000.0f * 44100.0f);  // samples
         
         LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
                  " VU=" + std::string(m_enableVu ? "ON" : "OFF") +
@@ -125,15 +128,28 @@ public:
         // Beat Detector Konfiguration
         BeatDetectorConfig beatConfig;
         beatConfig.sampleRate = 44100;
-        beatConfig.frameSize = 1024;
-        beatConfig.hopSize = 512;
+        beatConfig.frameSize = 512;   // Kleinere FFT für tightere Zeitauflösung (~5.8ms/hop)
+        beatConfig.hopSize = 256;     // 256 samples = 5.8ms Zeitauflösung
         m_bpmMin = env.getFloat("BPM_MIN", 60.0f);
         m_bpmMax = env.getFloat("BPM_MAX", 200.0f);
         beatConfig.minBpm = m_bpmMin;
         beatConfig.maxBpm = m_bpmMax;
         beatConfig.defaultBpm = 120.0;
         
+        // Auto Gain Control
+        beatConfig.agcEnabled = env.getInt("AGC_ENABLED", 1) != 0;
+        beatConfig.agcTargetPeak = env.getFloat("AGC_TARGET_PEAK", 0.7f);
+        
+        LOG_INFO("Beat Detection: FFT=" + std::to_string(beatConfig.frameSize) +
+                 " Hop=" + std::to_string(beatConfig.hopSize) +
+                 " AGC=" + std::string(beatConfig.agcEnabled ? "ON" : "OFF") +
+                 " BPM=" + std::to_string(static_cast<int>(m_bpmMin)) + 
+                 "-" + std::to_string(static_cast<int>(m_bpmMax)));
+        
         // Beat Tracker für BPM Kanäle
+        for (int i = 0; i < m_numBpmChannels; ++i) {
+            m_bpmRingBuffers.push_back(std::make_unique<BpmRingBuffer>());
+        }
         for (int i = 0; i < m_numBpmChannels; ++i) {
             auto tracker = std::make_unique<RealTimeBeatTracker>(beatConfig);
             if (!tracker->initialize()) {
@@ -203,26 +219,25 @@ public:
         m_oscReceiver->setPort(oscReceivePort);
         m_oscReceiver->setBeatClockPath("/beat");
         
-        // Callback für externe Beat-Clock
+        // Callback für externe Beat-Clock (/beat iii)
         m_oscReceiver->setCallback([this](const ReceivedBeatClock& clock) {
             m_lastExternalBeatTime = clock.timestamp;
             if (clock.bpm > 0) {
                 m_externalBpm = clock.bpm;
             }
-            // Beat-Nummer speichern (1-4)
             if (clock.beatNumber >= 1 && clock.beatNumber <= 4) {
                 m_externalBeatNumber.store(clock.beatNumber);
             }
-            // Im Training-Modus (0): externe /beat direkt weitersenden
+            
+            // EXT=0 (Training): externe /beat direkt weitersenden
             if (m_clockMode.load() == 0 && clock.beatNumber >= 1 && clock.beatNumber <= 4) {
-                // Interne States synchronisieren
                 {
                     std::lock_guard<std::mutex> lock(m_mutex);
                     for (int ch = 0; ch < m_numBpmChannels; ++ch) {
                         m_bpmTrackStates[ch].beatNumber = clock.beatNumber;
                     }
                 }
-                // Externe /beat direkt als eigene /beat weiterleiten
+                // Direkt als eigene /beat weiterleiten
                 if (m_oscSender && m_oscSender->isConnected()) {
                     BeatClockMessage msg;
                     msg.track_id = 0;
@@ -231,24 +246,39 @@ public:
                     msg.bpm = clock.bpm;
                     m_oscSender->sendBeatClock(msg);
                 }
-                LOG_DEBUG("Ext beat forwarded: " + std::to_string(clock.beatNumber) +
-                         " bpm=" + std::to_string(clock.bpm));
             }
         });
         
-        // Callback für Clock-Modus Wechsel
+        // Callback für Clock-Modus Wechsel (/clockmode i)
         m_oscReceiver->setClockModeCallback([this](int mode) {
             m_clockMode.store(mode);
-            LOG_INFO("Clock-Modus via OSC: " + std::string(mode ? "EIGENE BEATCLOCK" : "TRAINING"));
+            LOG_INFO("Clock-Modus via OSC: " + std::string(mode ? "EXT=1 EIGENE BEATCLOCK" : "EXT=0 TRAINING"));
         });
         
-        // Callback für Tap (Downbeat setzen)
+        // Callback für Tap (/tap i) - setzt Beat sofort (nur bei EXT=1)
         m_oscReceiver->setTapCallback([this](int beat) {
-            std::lock_guard<std::mutex> lock(m_mutex);
-            for (int ch = 0; ch < m_numBpmChannels; ++ch) {
-                m_bpmTrackStates[ch].beatNumber = beat;
+            if (m_clockMode.load() == 1) {
+                int64_t currentFrame = m_frameCount.load(std::memory_order_relaxed);
+                float bpm = 0;
+                for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                    m_bpmTrackStates[ch].beatNumber = beat;
+                    m_bpmTrackStates[ch].lastBeatFrame = currentFrame;
+                }
+                bpm = static_cast<float>(m_bpmTrackStates[0].realBeatBpm > 0 
+                    ? m_bpmTrackStates[0].realBeatBpm 
+                    : m_bpmTrackStates[0].currentBpm);
+                
+                // Sofort /beat senden mit dem getappten Wert
+                if (m_oscSender && m_oscSender->isConnected()) {
+                    BeatClockMessage msg;
+                    msg.track_id = 0;
+                    msg.beat_number = beat;
+                    msg.bar_number = 1;
+                    msg.bpm = static_cast<int>(bpm + 0.5f);
+                    m_oscSender->sendBeatClock(msg);
+                }
+                LOG_INFO("TAP: Beat " + std::to_string(beat) + " gesetzt + gesendet");
             }
-            LOG_INFO("TAP: Beat auf " + std::to_string(beat) + " gesetzt");
         });
         
         if (m_oscReceiver->start()) {
@@ -287,30 +317,37 @@ public:
         LOG_INFO("Beat Analyzer läuft (Ctrl+C zum Beenden)");
         LOG_INFO("Warte auf Audio...");
         
-        auto lastStatusTime = std::chrono::steady_clock::now();
-        auto lastVuOscTime = std::chrono::steady_clock::now();
-        
-        // VU OSC Rate: 25 Hz = 40ms (wie SuperCollider replyRate)
-        const auto vuOscInterval = std::chrono::milliseconds(40);
-        
-        while (g_running) {
-            auto now = std::chrono::steady_clock::now();
-            
-            // VU-Meter OSC senden (25 Hz, außerhalb des Audio-Callbacks)
-            if (now - lastVuOscTime >= vuOscInterval) {
+        // VU-Meter Thread: sendet /vu OSC mit 25 Hz (komplett unabhängig)
+        std::thread vuThread([this]() {
+            const auto vuOscInterval = std::chrono::milliseconds(40);  // 25 Hz
+            while (g_running) {
                 sendVuMeterOsc();
-                lastVuOscTime = now;
+                std::this_thread::sleep_for(vuOscInterval);
             }
-            
-            // Periodische Status-Ausgabe (alle 5 Sekunden)
-            if (std::chrono::duration_cast<std::chrono::seconds>(now - lastStatusTime).count() >= 5) {
+        });
+        
+        // Beat-Processing Thread: Beat Detection + OSC Senden
+        // Läuft NICHT im JACK-Callback - JACK kopiert nur Audio in Ringpuffer
+        std::thread beatThread([this]() {
+            processBeatThread();
+        });
+        
+        // Status Thread
+        std::thread statusThread([this]() {
+            while (g_running) {
                 printStatus();
-                lastStatusTime = now;
+                std::this_thread::sleep_for(std::chrono::seconds(5));
             }
-            
-            // Kurzes Sleep um CPU zu schonen, aber schnell genug für 25 Hz
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        });
+        
+        // Main-Thread wartet
+        while (g_running) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
+        
+        vuThread.join();
+        beatThread.join();
+        statusThread.join();
         
         return true;
     }
@@ -352,6 +389,10 @@ private:
         double realBeatBpm = 0.0;           // BPM basierend auf echten Beat-Abständen
         double recentBeatIntervals[4] = {0}; // Letzte 4 Beat-Intervalle für Toleranz-Check
         int intervalIndex = 0;
+        // Größerer Ringpuffer für Median-BPM-Berechnung
+        double recentBpmValues[8] = {0};    // Letzte 8 gemessene BPM-Werte
+        int bpmValueIndex = 0;
+        int bpmValueCount = 0;              // Wie viele gültige Werte im Puffer
         bool hasSignal = false;
         bool usingRealBeats = false;        // true = echte Beats, false = synthetisch
     };
@@ -406,37 +447,66 @@ private:
             m_vuMeters[ch]->processMono(buffer, frameCount);
         }
         
-        // BPM Kanäle mit Lock (komplexere Datenstrukturen)
-        std::lock_guard<std::mutex> lock(m_mutex);
-        
-        m_frameCount += frameCount;
-        
-        // Im Training-Modus (0): Keine eigene Beat-Generierung, externe /beat wird durchgereicht
-        if (m_clockMode.load() == 0) return;
-        
-        int sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
-        
-        // BPM Kanäle verarbeiten
+        // BPM Audio in Ringpuffer kopieren (lock-free für JACK-Thread)
+        // Der Beat-Processing-Thread liest diese Daten dann aus
         for (int ch = 0; ch < m_numBpmChannels && ch < static_cast<int>(bpmBuffers.size()); ++ch) {
             const CSAMPLE* buffer = bpmBuffers[ch];
+            auto& rb = *m_bpmRingBuffers[ch];
+            int writePos = rb.writePos.load(std::memory_order_relaxed);
             
-            // RMS berechnen für Signal-Check
-            float sumSquares = 0.0f;
             for (int i = 0; i < frameCount; ++i) {
-                sumSquares += buffer[i] * buffer[i];
+                rb.buffer[writePos] = buffer[i];
+                writePos = (writePos + 1) % BPM_RINGBUF_SIZE;
             }
-            float rms = std::sqrt(sumSquares / frameCount);
-            m_bpmTrackStates[ch].hasSignal = (rms > 0.001f);  // ~-60dB
+            rb.writePos.store(writePos, std::memory_order_release);
+        }
+        
+        m_frameCount.fetch_add(frameCount, std::memory_order_relaxed);
+    }
+    
+    // Beat-Processing: läuft in eigenem Thread, NICHT im JACK-Callback!
+    void processBeatThread() {
+        const auto interval = std::chrono::microseconds(1000);  // ~1000 Hz für präziseres Beat-Timing
+        int sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
+        
+        // Lokaler Buffer für Audio-Daten aus dem Ringpuffer
+        std::vector<CSAMPLE> localBuf(BPM_RINGBUF_SIZE);
+        
+        while (g_running) {
+            // Im Training-Modus (0): Keine eigene Beat-Generierung
+            if (m_clockMode.load() == 0) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                continue;
+            }
             
-            // Beat Detection nur wenn Signal vorhanden
-            if (m_bpmTrackStates[ch].hasSignal) {
-                // Mono als Fake-Stereo für Beat Tracker
-                std::vector<float> stereoBuffer(frameCount * 2);
-                for (int i = 0; i < frameCount; ++i) {
-                    stereoBuffer[i * 2] = buffer[i];
-                    stereoBuffer[i * 2 + 1] = buffer[i];
+            int64_t currentFrame = m_frameCount.load(std::memory_order_relaxed);
+            
+            for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                auto& rb = *m_bpmRingBuffers[ch];
+                int writePos = rb.writePos.load(std::memory_order_acquire);
+                int readPos = rb.readPos.load(std::memory_order_relaxed);
+                
+                // Berechne verfügbare Samples
+                int available = (writePos - readPos + BPM_RINGBUF_SIZE) % BPM_RINGBUF_SIZE;
+                if (available == 0) continue;
+                
+                // Audio aus Ringpuffer lesen
+                for (int i = 0; i < available; ++i) {
+                    localBuf[i] = rb.buffer[(readPos + i) % BPM_RINGBUF_SIZE];
                 }
-                m_beatTrackers[ch]->processAudio(stereoBuffer.data(), frameCount);
+                rb.readPos.store(writePos, std::memory_order_relaxed);
+                
+                // RMS berechnen für Signal-Check
+                float sumSquares = 0.0f;
+                for (int i = 0; i < available; ++i) {
+                    sumSquares += localBuf[i] * localBuf[i];
+                }
+                float rms = std::sqrt(sumSquares / available);
+                m_bpmTrackStates[ch].hasSignal = (rms > 0.001f);
+                
+                // Beat Detection nur bei Signal
+                if (m_bpmTrackStates[ch].hasSignal) {
+                    m_beatTrackers[ch]->processMonoAudio(localBuf.data(), available);
                 
                 double bpm = m_beatTrackers[ch]->getCurrentBpm();
                 if (bpm > 0) {
@@ -447,64 +517,82 @@ private:
                 bool realBeatDetected = m_beatTrackers[ch]->hasBeatOccurred();
                 
                 if (realBeatDetected) {
-                    // BPM aus echten Beat-Abständen berechnen (zuverlässiger!)
                     int64_t beatInterval = 0;
                     bool beatIsRegular = true;
                     
                     if (m_bpmTrackStates[ch].lastRealBeatFrame > 0) {
-                        beatInterval = m_frameCount - m_bpmTrackStates[ch].lastRealBeatFrame;
+                        // Latenz-kompensierter Frame für korrekte Intervall-Berechnung
+                        int64_t compensatedFrame = currentFrame - m_beatLatencyFrames;
+                        beatInterval = compensatedFrame - m_bpmTrackStates[ch].lastRealBeatFrame;
                         if (beatInterval > 0) {
                             double measuredBpm = 60.0 * sampleRate / beatInterval;
-                            // Sanity check: nur BPM innerhalb konfigurierter Limits
                             if (measuredBpm >= m_bpmMin && measuredBpm <= m_bpmMax) {
-                                // Prüfe ob Beat regelmäßig ist (±15% Toleranz)
                                 beatIsRegular = isBeatRegular(m_bpmTrackStates[ch], 
                                                               static_cast<double>(beatInterval));
+                                if (beatIsRegular && m_bpmTrackStates[ch].currentBpm > 0) {
+                                    double diff = std::abs(measuredBpm - m_bpmTrackStates[ch].currentBpm)
+                                                / m_bpmTrackStates[ch].currentBpm;
+                                    if (diff > 0.20) {
+                                        beatIsRegular = false;
+                                    }
+                                }
                                 
                                 if (beatIsRegular) {
-                                    // Glättung mit vorherigem Wert
-                                    if (m_bpmTrackStates[ch].realBeatBpm > 0) {
-                                        m_bpmTrackStates[ch].realBeatBpm = 
-                                            m_bpmTrackStates[ch].realBeatBpm * 0.7 + measuredBpm * 0.3;
-                                    } else {
-                                        m_bpmTrackStates[ch].realBeatBpm = measuredBpm;
+                                    int bpmIdx = m_bpmTrackStates[ch].bpmValueIndex % 8;
+                                    m_bpmTrackStates[ch].recentBpmValues[bpmIdx] = measuredBpm;
+                                    m_bpmTrackStates[ch].bpmValueIndex++;
+                                    if (m_bpmTrackStates[ch].bpmValueCount < 8)
+                                        m_bpmTrackStates[ch].bpmValueCount++;
+                                    
+                                    int count = m_bpmTrackStates[ch].bpmValueCount;
+                                    double sorted[8];
+                                    for (int k = 0; k < count; ++k)
+                                        sorted[k] = m_bpmTrackStates[ch].recentBpmValues[k];
+                                    for (int k = 1; k < count; ++k) {
+                                        double key = sorted[k];
+                                        int j = k - 1;
+                                        while (j >= 0 && sorted[j] > key) {
+                                            sorted[j + 1] = sorted[j];
+                                            j--;
+                                        }
+                                        sorted[j + 1] = key;
                                     }
-                                    // Überschreibe das analysierte BPM mit dem gemessenen
+                                    double medianBpm = (count >= 2) 
+                                        ? (sorted[count / 2 - 1] + sorted[count / 2]) / 2.0
+                                        : sorted[0];
+                                    
+                                    m_bpmTrackStates[ch].realBeatBpm = medianBpm;
                                     m_bpmTrackStates[ch].currentBpm = m_bpmTrackStates[ch].realBeatBpm;
                                 }
                             } else {
-                                beatIsRegular = false;  // Unplausible BPM = unregelmäßig
+                                beatIsRegular = false;
                             }
                         }
                     }
                     
-                    // Nur regelmäßige Beats zählen
                     if (beatIsRegular) {
                         m_bpmTrackStates[ch].prevRealBeatFrame = m_bpmTrackStates[ch].lastRealBeatFrame;
-                        m_bpmTrackStates[ch].lastRealBeatFrame = m_frameCount;
-                        
-                        // Echter Beat - Zähler erhöhen
+                        // Latenz-Kompensation: Der Beat wurde tatsächlich früher abgespielt
+                        int64_t compensatedFrame = currentFrame - m_beatLatencyFrames;
+                        m_bpmTrackStates[ch].lastRealBeatFrame = compensatedFrame;
                         m_bpmTrackStates[ch].realBeatCount++;
                         
-                        // Nach genug echten Beats in Folge: auf echte Beats umschalten
                         if (m_bpmTrackStates[ch].realBeatCount >= REAL_BEATS_THRESHOLD) {
                             m_bpmTrackStates[ch].usingRealBeats = true;
                         }
                         
-                        // Wenn wir echte Beats nutzen: diesen Beat senden
                         if (m_bpmTrackStates[ch].usingRealBeats) {
                             m_bpmTrackStates[ch].beatNumber = (m_bpmTrackStates[ch].beatNumber % 4) + 1;
-                            m_bpmTrackStates[ch].lastBeatFrame = m_frameCount;
-                            sendBeatClockForChannel(ch, true);  // true = echter Beat
+                            m_bpmTrackStates[ch].lastBeatFrame = compensatedFrame;
+                            sendBeatClockForChannel(ch, true);
                         }
                     } else {
-                        // Unregelmäßiger Beat - Reset Zähler
                         m_bpmTrackStates[ch].realBeatCount = 0;
                     }
                 }
+                } // end hasSignal
                 
-                // Synthetische Clock wenn keine echten Beats
-                // Bevorzuge gemessenes BPM aus echten Beats, falls vorhanden
+                // Synthetische Clock (läuft IMMER weiter, auch ohne Signal)
                 double effectiveBpm = m_bpmTrackStates[ch].realBeatBpm > 0 
                     ? m_bpmTrackStates[ch].realBeatBpm 
                     : m_bpmTrackStates[ch].currentBpm;
@@ -512,8 +600,7 @@ private:
                 if (effectiveBpm > 0) {
                     double framesPerBeat = (60.0 / effectiveBpm) * sampleRate;
                     
-                    // Prüfe ob zu lange kein echter Beat kam -> auf synthetisch wechseln
-                    int64_t framesSinceRealBeat = m_frameCount - m_bpmTrackStates[ch].lastRealBeatFrame;
+                    int64_t framesSinceRealBeat = currentFrame - m_bpmTrackStates[ch].lastRealBeatFrame;
                     if (framesSinceRealBeat > static_cast<int64_t>(framesPerBeat * BEAT_TIMEOUT_FACTOR)) {
                         if (m_bpmTrackStates[ch].usingRealBeats) {
                             m_bpmTrackStates[ch].usingRealBeats = false;
@@ -521,54 +608,53 @@ private:
                         }
                     }
                     
-                    // Synthetische Beats nur wenn nicht im Real-Beat-Modus
                     if (!m_bpmTrackStates[ch].usingRealBeats) {
-                        int64_t beatsSinceLast = (m_frameCount - m_bpmTrackStates[ch].lastBeatFrame)
-                                                / static_cast<int64_t>(framesPerBeat);
+                        // Präzise synthetische Clock mit fraktionaler Zählung
+                        double elapsed = static_cast<double>(currentFrame - m_bpmTrackStates[ch].lastBeatFrame);
+                        double framesPerBeatExact = (60.0 / effectiveBpm) * sampleRate;
                         
-                        if (beatsSinceLast > 0) {
+                        if (elapsed >= framesPerBeatExact) {
+                            // Exakt ein Beat-Intervall weiterschalten
                             int oldBeat = m_bpmTrackStates[ch].beatNumber;
-                            // Addiere beatsSinceLast, wrappe auf 1-4
-                            m_bpmTrackStates[ch].beatNumber = ((oldBeat - 1 + beatsSinceLast) % 4) + 1;
-                            m_bpmTrackStates[ch].lastBeatFrame = m_frameCount;
-                            sendBeatClockForChannel(ch, false);  // false = synthetisch
+                            m_bpmTrackStates[ch].beatNumber = (oldBeat % 4) + 1;
+                            // Korrigiere lastBeatFrame um Überschuss zu erhalten (verhindert Drift)
+                            m_bpmTrackStates[ch].lastBeatFrame += static_cast<int64_t>(framesPerBeatExact);
+                            sendBeatClockForChannel(ch, false);
                         }
                     }
                 }
             }
+            
+            std::this_thread::sleep_for(interval);
         }
     }
     
     void sendBeatClockForChannel(int ch, bool isRealBeat = false) {
         if (!m_enableBeatclock) return;
         if (!m_oscSender || !m_oscSender->isConnected()) return;
-        if (!m_bpmTrackStates[ch].hasSignal) return;
         
-        // Im Training-Modus (0): Externe Clock als BPM-Referenz nutzen
-        float effectiveBpm;
-        if (m_clockMode.load() == 0 && m_externalBpm > 0) {
-            effectiveBpm = m_externalBpm;
-        } else {
-            effectiveBpm = static_cast<float>(m_bpmTrackStates[ch].realBeatBpm > 0 
-                ? m_bpmTrackStates[ch].realBeatBpm 
-                : m_bpmTrackStates[ch].currentBpm);
-        }
+        // Nur bei EXT=1 (eigene Beatclock) senden
+        // Bei EXT=0 wird extern empfangene /beat direkt weitergeleitet
+        if (m_clockMode.load() == 0) return;
+        
+        float effectiveBpm = static_cast<float>(m_bpmTrackStates[ch].realBeatBpm > 0 
+            ? m_bpmTrackStates[ch].realBeatBpm 
+            : m_bpmTrackStates[ch].currentBpm);
         
         // /beat iii  beat(1-4), bar, bpm
         BeatClockMessage msg;
         msg.track_id = ch;
         msg.beat_number = m_bpmTrackStates[ch].beatNumber;
         msg.bar_number = m_bpmTrackStates[ch].barNumber;
-        msg.bpm = static_cast<int>(effectiveBpm + 0.5f);  // Runden
+        msg.bpm = static_cast<int>(effectiveBpm + 0.5f);
         
         m_oscSender->sendBeatClock(msg);
         
         // Debug-Log (nur gelegentlich)
         static int debugCounter = 0;
         if (++debugCounter % 16 == 0) {
-            std::string modeStr = m_clockMode.load() == 0 ? " [TRAINING]" : "";
             LOG_DEBUG("Beat Ch" + std::to_string(ch+1) + 
-                     (isRealBeat ? " [REAL]" : " [SYNTH]") + modeStr +
+                     (isRealBeat ? " [REAL]" : " [SYNTH]") +
                      " beat=" + std::to_string(msg.beat_number) +
                      " bar=" + std::to_string(msg.bar_number) +
                      " BPM=" + std::to_string(msg.bpm));
@@ -594,9 +680,7 @@ private:
     }
     
     void printStatus() {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        
-        double seconds = static_cast<double>(m_frameCount) / 44100.0;
+        double seconds = static_cast<double>(m_frameCount.load(std::memory_order_relaxed)) / 44100.0;
         std::string status = "Status: " + std::to_string(static_cast<int>(seconds)) + "s";
         
         bool anyBpmActive = false;
@@ -633,6 +717,15 @@ private:
     int m_numBpmChannels;
     int m_numVuChannels;
     
+    // Lock-free Ringpuffer für BPM-Audio (JACK-Callback → Beat-Thread)
+    static constexpr int BPM_RINGBUF_SIZE = 16384;  // ~370ms bei 44.1kHz
+    struct BpmRingBuffer {
+        CSAMPLE buffer[16384] = {};
+        std::atomic<int> writePos{0};
+        std::atomic<int> readPos{0};
+    };
+    std::vector<std::unique_ptr<BpmRingBuffer>> m_bpmRingBuffers;
+    
     // Beat Detection (nur für BPM Kanäle)
     std::vector<std::unique_ptr<RealTimeBeatTracker>> m_beatTrackers;
     std::vector<BpmTrackState> m_bpmTrackStates;
@@ -652,8 +745,8 @@ private:
     float m_externalBpm = 0.0f;
     
     // Status
-    std::mutex m_mutex;
-    int64_t m_frameCount;
+    std::mutex m_mutex;  // Nur noch für printStatus und Tap-Callback
+    std::atomic<int64_t> m_frameCount{0};
     
     // Feature Toggles
     bool m_enableBeatclock = true;
@@ -667,8 +760,8 @@ private:
     float m_vuPeakFalloff = 20.0f;
     
     // Beat-Latenz-Kompensation
-    float m_beatLatencyMs = 23.0f;
-    int64_t m_beatLatencyFrames = 1014;  // ~23ms bei 44.1kHz
+    float m_beatLatencyMs = 18.0f;
+    int64_t m_beatLatencyFrames = 794;  // ~18ms bei 44.1kHz
     
     // BPM-Limits aus Konfiguration
     float m_bpmMin = 60.0f;

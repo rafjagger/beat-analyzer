@@ -167,6 +167,33 @@ OnsetDetector::OnsetDetector(const BeatDetectorConfig& config)
     m_prevPhase.resize(halfSize, 0.0);
     m_prevPrevPhase.resize(halfSize, 0.0);
     m_spectrum.resize(config.frameSize);
+    
+    // Frequenzgewichtung: Bass (Kick/Snare) betonen, Höhen dämpfen
+    // Bin-Frequenz = bin * sampleRate / frameSize
+    m_freqWeights.resize(halfSize);
+    double binFreqStep = static_cast<double>(config.sampleRate) / config.frameSize;
+    for (int i = 0; i < halfSize; ++i) {
+        double freq = i * binFreqStep;
+        if (freq < 30.0) {
+            // Sub-Bass: moderate Gewichtung (Kick-Fundamental)
+            m_freqWeights[i] = 1.5;
+        } else if (freq < 200.0) {
+            // Bass: starke Gewichtung (Kick/Bass-Transienten)
+            m_freqWeights[i] = 3.0;
+        } else if (freq < 500.0) {
+            // Low-Mid: gute Gewichtung (Snare Body)
+            m_freqWeights[i] = 2.0;
+        } else if (freq < 4000.0) {
+            // Mid: normal (Snare Click, Hi-Hat)
+            m_freqWeights[i] = 1.0;
+        } else if (freq < 8000.0) {
+            // High-Mid: reduziert
+            m_freqWeights[i] = 0.5;
+        } else {
+            // Höhen: stark reduziert (Rauschen, Becken-Rauschen)
+            m_freqWeights[i] = 0.2;
+        }
+    }
 }
 
 OnsetDetector::~OnsetDetector() = default;
@@ -212,38 +239,33 @@ double OnsetDetector::computeSpectralDifference() {
 }
 
 double OnsetDetector::computeComplexSpectralDifference() {
-    // Complex Spectral Difference - empfindlicher für Transienten
+    // Complex Spectral Difference mit Frequenzgewichtung
+    // Bass-Frequenzen werden betont, da dort die rhythmischen Transienten liegen
     double sum = 0.0;
     int halfSize = m_config.frameSize / 2 + 1;
-    const double pi = 3.14159265358979323846;
     
     for (int i = 0; i < halfSize; ++i) {
-        // Erwartete Phase basierend auf vorherigen Frames
+        // Erwartete Phase basierend auf vorherigen Frames (lineare Extrapolation)
         double expectedPhase = 2.0 * m_prevPhase[i] - m_prevPrevPhase[i];
         
-        // Phase-Deviation
-        double phaseDev = m_phase[i] - expectedPhase;
+        // Vorhergesagtes Spektrum
+        double predictedReal = m_prevMagnitude[i] * std::cos(expectedPhase);
+        double predictedImag = m_prevMagnitude[i] * std::sin(expectedPhase);
         
-        // Wrap to [-pi, pi]
-        while (phaseDev > pi) phaseDev -= 2.0 * pi;
-        while (phaseDev < -pi) phaseDev += 2.0 * pi;
+        // Aktuelles Spektrum
+        double currReal = m_magnitude[i] * std::cos(m_phase[i]);
+        double currImag = m_magnitude[i] * std::sin(m_phase[i]);
         
-        // Target magnitude (mit phase deviation)
-        double targetReal = m_prevMagnitude[i] * std::cos(phaseDev);
-        double targetImag = m_prevMagnitude[i] * std::sin(phaseDev);
+        // Gewichtete Euclidean distance
+        double diffReal = currReal - predictedReal;
+        double diffImag = currImag - predictedImag;
+        double dist = diffReal * diffReal + diffImag * diffImag;
         
-        // Aktuelle komplexe Werte
-        double currReal = m_magnitude[i];
-        double currImag = 0.0;  // Nach FFT ist imaginärteil in phase
-        
-        // Euclidean distance
-        double diffReal = currReal - targetReal;
-        double diffImag = currImag - targetImag;
-        
-        sum += std::sqrt(diffReal * diffReal + diffImag * diffImag);
+        // Frequenzgewichtung anwenden
+        sum += dist * m_freqWeights[i];
     }
     
-    return sum;
+    return std::sqrt(sum);
 }
 
 void OnsetDetector::reset() {
@@ -367,8 +389,9 @@ void TempoTracker::viterbiDecode(const std::vector<std::vector<double>>& rcfMatr
     const size_t Q = rcfMatrix[0].size();   // Zustände (Perioden)
     
     // Transitions-Matrix (Gaussian um Diagonale)
+    // sigma=14 erlaubt dem Viterbi-Decoder flexiblere Tempo-Wechsel
     std::vector<std::vector<double>> tmat(Q, std::vector<double>(Q, 0.0));
-    const double sigma = 8.0;
+    const double sigma = 14.0;
     
     for (size_t i = 20; i < Q - 20; ++i) {
         for (size_t j = 20; j < Q - 20; ++j) {
@@ -443,23 +466,34 @@ void TempoTracker::viterbiDecode(const std::vector<std::vector<double>>& rcfMatr
 void TempoTracker::calculateBeatPeriod(const std::vector<double>& df,
                                        std::vector<int>& beatPeriod,
                                        double inputTempo) {
-    const int wvLen = 128;  // Weight vector length
+    // Weight vector muss alle möglichen Beat-Perioden abdecken
+    // Bei hop=256, sr=44100: 60 BPM = 60/60*44100/256 = 172 Frames
+    // Sicherheitsmarge: 256 Frames
+    const int wvLen = 256;  // Weight vector length
     
     // Rayleigh Parameter basierend auf Tempo
     // 60 * sampleRate / hopSize ist magische Zahl für BPM-zu-Period Konversion
     double rayparam = (60.0 * m_sampleRate / m_hopSize) / inputTempo;
     
-    // Rayleigh Gewichtungs-Kurve
+    // Rayleigh Gewichtungs-Kurve mit flacherem Floor
+    // Uniform Floor verhindert dass falsche inputTempo andere BPM-Werte komplett ausblendet
     std::vector<double> weights(wvLen);
+    double maxWeight = 0.0;
     for (int i = 0; i < wvLen; ++i) {
         double x = static_cast<double>(i);
         weights[i] = (x / (rayparam * rayparam)) * 
                      std::exp(-x * x / (2.0 * rayparam * rayparam));
+        if (weights[i] > maxWeight) maxWeight = weights[i];
+    }
+    // Addiere 20% uniform floor damit auch entferntere Tempi eine Chance haben
+    double uniformFloor = maxWeight * 0.2;
+    for (int i = 0; i < wvLen; ++i) {
+        weights[i] += uniformFloor;
     }
     
-    // Analyse-Fenster
-    const int winLen = 512;
-    const int hopSize = 128;
+    // Analyse-Fenster (muss > 2x max Beat-Periode sein für gute ACF)
+    const int winLen = 1024;
+    const int hopSize = 256;
     
     int dfLen = static_cast<int>(df.size());
     
@@ -570,7 +604,10 @@ RealTimeBeatTracker::RealTimeBeatTracker(const BeatDetectorConfig& config)
 bool RealTimeBeatTracker::initialize() {
     m_onsetDetector = std::make_unique<OnsetDetector>(m_config);
     m_tempoTracker = std::make_unique<TempoTracker>(m_config.sampleRate, m_config.hopSize);
-    m_beatEventDetector = std::make_unique<BeatEventDetector>(m_config.sampleRate);
+    m_beatEventDetector = std::make_unique<BeatEventDetector>(
+        m_config.sampleRate,
+        m_config.hopSize,
+        m_config.maxBpm);
     
     m_monoBuffer.resize(m_config.frameSize, 0.0);
     m_frameBuffer.resize(m_config.frameSize, 0.0);
@@ -593,6 +630,52 @@ void RealTimeBeatTracker::processAudio(const Sample* stereoInput, int frameCount
     std::vector<double> monoInput(frameCount);
     downmixToMono(stereoInput, monoInput.data(), frameCount);
     
+    processMonoInternal(monoInput.data(), frameCount);
+}
+
+void RealTimeBeatTracker::processMonoAudio(const Sample* monoInput, int frameCount) {
+    m_beatOccurred = false;  // Reset am Anfang jedes Blocks
+    
+    // Float zu Double konvertieren MIT Auto Gain Control
+    std::vector<double> monoDouble(frameCount);
+    
+    if (m_config.agcEnabled) {
+        // Peak-Tracking: schneller Attack, langsamer Release
+        float peak = 0.0f;
+        for (int i = 0; i < frameCount; ++i) {
+            float absVal = std::fabs(monoInput[i]);
+            if (absVal > peak) peak = absVal;
+        }
+        
+        // Peak-Tracker aktualisieren
+        if (peak > m_agcPeakTracker) {
+            m_agcPeakTracker = m_agcPeakTracker * 0.3f + peak * 0.7f;  // Schneller Attack
+        } else {
+            m_agcPeakTracker = m_agcPeakTracker * 0.999f + peak * 0.001f;  // Sehr langsamer Release
+        }
+        
+        // Gain berechnen um Ziel-Peak zu erreichen
+        if (m_agcPeakTracker > 1e-6f) {
+            float desiredGain = m_config.agcTargetPeak / m_agcPeakTracker;
+            // Gain begrenzen: min 1x (nie leiser), max 100x (+40dB)
+            desiredGain = std::max(1.0f, std::min(desiredGain, 100.0f));
+            // Sanfte Gain-Änderung
+            m_agcGain = m_agcGain * 0.95f + desiredGain * 0.05f;
+        }
+        
+        for (int i = 0; i < frameCount; ++i) {
+            monoDouble[i] = static_cast<double>(monoInput[i]) * m_agcGain;
+        }
+    } else {
+        for (int i = 0; i < frameCount; ++i) {
+            monoDouble[i] = static_cast<double>(monoInput[i]);
+        }
+    }
+    
+    processMonoInternal(monoDouble.data(), frameCount);
+}
+
+void RealTimeBeatTracker::processMonoInternal(const double* monoInput, int frameCount) {
     for (int i = 0; i < frameCount; ++i) {
         // Sicherstellen dass wir nicht über den Buffer hinaus schreiben
         if (m_bufferWritePos >= m_monoBuffer.size()) {
@@ -612,16 +695,52 @@ void RealTimeBeatTracker::processAudio(const Sample* stereoInput, int frameCount
             
             // Onset Detection
             double onset = m_onsetDetector->process(m_frameBuffer.data());
+            
+            // Tempo-Gating: wenn BPM bekannt, Onsets nahe erwartetem Beat leicht boosten
+            if (m_currentBpm > 0 && m_lastBeatOnsetFrame > 0) {
+                int64_t currentDfFrame = static_cast<int64_t>(m_detectionFunction.size());
+                double beatsPerDfFrame = m_currentBpm / 60.0 * m_config.hopSize / m_config.sampleRate;
+                double dfFramesPerBeat = 1.0 / beatsPerDfFrame;
+                int64_t frameSinceBeat = currentDfFrame - m_lastBeatOnsetFrame;
+                
+                // Nächster erwarteter Beat
+                double phaseInBeat = static_cast<double>(frameSinceBeat) / dfFramesPerBeat;
+                phaseInBeat -= std::floor(phaseInBeat);  // 0..1
+                
+                // Fenster um erwarteten Beat: +-10% des Beat-Intervalls
+                if (phaseInBeat > 0.9 || phaseInBeat < 0.1) {
+                    onset *= 1.3;  // 30% Boost nahe erwartetem Beat
+                } else if (phaseInBeat > 0.3 && phaseInBeat < 0.7) {
+                    onset *= 0.85;  // 15% Dämpfung weit vom erwarteten Beat
+                }
+            }
+            
             m_detectionFunction.push_back(onset);
+            
+            // Detection Function begrenzen (max ~16 Sekunden)
+            const size_t maxDfSize = static_cast<size_t>(16.0 * m_config.sampleRate / m_config.hopSize);
+            if (m_detectionFunction.size() > maxDfSize) {
+                // Anzahl zu entfernender Frames
+                size_t toRemove = m_detectionFunction.size() - maxDfSize;
+                m_detectionFunction.erase(m_detectionFunction.begin(), 
+                    m_detectionFunction.begin() + toRemove);
+                // lastBeatOnsetFrame korrigieren
+                m_lastBeatOnsetFrame -= static_cast<int64_t>(toRemove);
+                if (m_lastBeatOnsetFrame < 0) m_lastBeatOnsetFrame = 0;
+            }
             
             // Beat Event Detection
             if (m_beatEventDetector->process(onset)) {
                 m_beatOccurred = true;
+                m_lastBeatOnsetFrame = static_cast<int64_t>(m_detectionFunction.size()) - 1;
             }
             
-            // Echtzeit BPM-Schätzung alle 2 Sekunden (ca. 172 Frames bei 512 hop)
+            // Echtzeit BPM-Schätzung alle ~0.35 Sekunden
+            // Bei hop=256, sr=44100: 0.35s ≈ 60 Frames
+            size_t updateInterval = static_cast<size_t>(0.35 * m_config.sampleRate / m_config.hopSize);
+            if (updateInterval < 10) updateInterval = 10;
             if (m_detectionFunction.size() >= 100 && 
-                m_detectionFunction.size() % 50 == 0) {
+                m_detectionFunction.size() % updateInterval == 0) {
                 updateRealtimeBpm();
             }
             
@@ -637,30 +756,51 @@ void RealTimeBeatTracker::processAudio(const Sample* stereoInput, int frameCount
 void RealTimeBeatTracker::updateRealtimeBpm() {
     if (m_detectionFunction.size() < 50) return;
     
-    // Nutze die letzten 4 Sekunden für BPM-Schätzung
-    size_t windowSize = std::min(m_detectionFunction.size(), static_cast<size_t>(344));
+    // Nutze die letzten 10 Sekunden für BPM-Schätzung
+    // Bei hop=256, sr=44100: 10s = 10*44100/256 = 1723 Frames
+    size_t framesFor10s = static_cast<size_t>(10.0 * m_config.sampleRate / m_config.hopSize);
+    size_t windowSize = std::min(m_detectionFunction.size(), framesFor10s);
     std::vector<double> df(m_detectionFunction.end() - windowSize, 
                           m_detectionFunction.end());
     
     std::vector<int> beatPeriod;
-    m_tempoTracker->calculateBeatPeriod(df, beatPeriod, 
-        m_currentBpm > 0 ? m_currentBpm : m_config.defaultBpm);
+    // WICHTIG: Nutze defaultBpm als Referenz statt currentBpm um Feedback-Bias zu vermeiden.
+    // Der Rayleigh-Gewichtung in calculateBeatPeriod zieht den Schätzer Richtung inputTempo,
+    // wenn wir hier den aktuellen Wert einspeisen, verstärkt sich ein falscher BPM-Wert.
+    // Nur den Mittelwert des konfigurierten Bereichs verwenden.
+    double referenceBpm = (m_config.minBpm + m_config.maxBpm) / 2.0;
+    m_tempoTracker->calculateBeatPeriod(df, beatPeriod, referenceBpm);
     
     if (!beatPeriod.empty()) {
-        double avgPeriod = 0.0;
-        for (int p : beatPeriod) {
-            avgPeriod += p;
-        }
-        avgPeriod /= beatPeriod.size();
+        // Median statt Durchschnitt (robuster gegen Ausreißer)
+        std::vector<int> sortedPeriods = beatPeriod;
+        std::sort(sortedPeriods.begin(), sortedPeriods.end());
         
-        if (avgPeriod > 0) {
-            double newBpm = 60.0 * m_config.sampleRate / (avgPeriod * m_config.hopSize);
+        // Trimmed median: ignoriere oberes und unteres 10%
+        size_t trimCount = sortedPeriods.size() / 10;
+        double sumPeriod = 0;
+        int validCount = 0;
+        for (size_t i = trimCount; i < sortedPeriods.size() - trimCount; ++i) {
+            sumPeriod += sortedPeriods[i];
+            validCount++;
+        }
+        double medianPeriod = (validCount > 0) ? (sumPeriod / validCount) : sortedPeriods[sortedPeriods.size() / 2];
+        
+        if (medianPeriod > 0) {
+            double newBpm = 60.0 * m_config.sampleRate / (medianPeriod * m_config.hopSize);
             
             // Sanity check: BPM sollte im erlaubten Bereich sein
             if (newBpm >= m_config.minBpm && newBpm <= m_config.maxBpm) {
-                // Glätte BPM-Änderungen
                 if (m_currentBpm > 0) {
-                    m_currentBpm = m_currentBpm * 0.7 + newBpm * 0.3;
+                    // Leichtere Glättung: 0.6/0.4 bei großer Änderung, 0.85/0.15 sonst
+                    double diff = std::abs(newBpm - m_currentBpm) / m_currentBpm;
+                    if (diff > 0.08) {
+                        // Große Änderung: schnell reagieren
+                        m_currentBpm = m_currentBpm * 0.4 + newBpm * 0.6;
+                    } else {
+                        // Fein-Stabilisierung
+                        m_currentBpm = m_currentBpm * 0.85 + newBpm * 0.15;
+                    }
                 } else {
                     m_currentBpm = newBpm;
                 }
@@ -730,26 +870,43 @@ void RealTimeBeatTracker::reset() {
 // BeatEventDetector Implementation
 // ============================================================================
 
-BeatEventDetector::BeatEventDetector(int sampleRate)
+BeatEventDetector::BeatEventDetector(int sampleRate, int hopSize, double maxBpm)
     : m_sampleRate(sampleRate) {
-    // Minimum 400ms zwischen Beats (= max 150 BPM)
-    // Bei typischer Musik (80-130 BPM) verhindert das Offbeat-Erkennung
-    m_minBeatInterval = sampleRate * 0.4 / 512;  // In Analyse-Frames (hop=512)
+    // Minimum-Abstand zwischen Beats basierend auf max BPM
+    // minBeatSec = 60/maxBpm, mit 15% Toleranz für frühe Peaks
+    double minBeatSec = (60.0 / maxBpm) * 0.85;
+    m_minBeatInterval = static_cast<int>(minBeatSec * sampleRate / hopSize);
+    if (m_minBeatInterval < 6) m_minBeatInterval = 6;  // Minimum ~70ms bei hop=512
     reset();
 }
 
 bool BeatEventDetector::process(double onsetValue) {
     m_framesSinceLastBeat++;
     
-    // Adaptive Threshold aktualisieren
+    // Laufenden Mittelwert für Normalisierung aktualisieren (schneller: α=0.08)
+    const double alpha = 0.08;
+    m_runningMean = m_runningMean * (1.0 - alpha) + onsetValue * alpha;
+    double deviation = std::abs(onsetValue - m_runningMean);
+    m_runningDev = m_runningDev * (1.0 - alpha) + deviation * alpha;
+    
+    // Adaptive Threshold aktualisieren (langsam abklingend)
     if (onsetValue > m_adaptiveThreshold) {
         m_adaptiveThreshold = onsetValue;
     } else {
         m_adaptiveThreshold *= THRESHOLD_DECAY;
     }
     
-    // Threshold ist 50% des adaptiven Maximums (höher = nur starke Beats)
-    m_threshold = m_adaptiveThreshold * 0.5;
+    // Early exit bei sehr kleinem Signal
+    if (m_runningMean < 1e-6 && onsetValue < 1e-6) {
+        m_prevPrevOnset = m_prevOnset;
+        m_prevOnset = onsetValue;
+        return false;
+    }
+    
+    // Threshold: Kombination aus adaptivem Maximum und dynamischer Streuung
+    // mean + 1.8*dev ist empfindlicher aber immer noch stabil
+    double dynamicThreshold = m_runningMean + (m_runningDev * 1.8);
+    m_threshold = std::max(m_adaptiveThreshold * 0.35, dynamicThreshold);
     
     // Peak Detection: prevOnset muss größer sein als Nachbarn UND über Threshold
     bool isPeak = (m_prevOnset > m_prevPrevOnset) && 
@@ -773,6 +930,8 @@ bool BeatEventDetector::process(double onsetValue) {
 void BeatEventDetector::reset() {
     m_threshold = 0.0;
     m_adaptiveThreshold = 0.0;
+    m_runningMean = 0.0;
+    m_runningDev = 0.0;
     m_prevOnset = 0.0;
     m_prevPrevOnset = 0.0;
     m_framesSinceLastBeat = m_minBeatInterval;  // Erlaube sofort Beat

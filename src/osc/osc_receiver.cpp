@@ -49,8 +49,7 @@ bool OscReceiver::start() {
     lo_server_thread_add_method(st, "/clockmode", "i", clockModeHandler, this);
     lo_server_thread_add_method(st, "/clockmode", "f", clockModeHandler, this);
     
-    // Handler für Tap (Downbeat setzen)
-    lo_server_thread_add_method(st, "/tap", "i", tapHandler, this);
+    // Handler für Tap (Downbeat setzen) - nullptr matcht alle Typen
     lo_server_thread_add_method(st, "/tap", nullptr, tapHandler, this);
     
     lo_server_thread_start(st);

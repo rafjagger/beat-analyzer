@@ -213,4 +213,5 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/netdb.h \
  /usr/include/lo/lo_osc_types.h /usr/include/lo/lo_errors.h \
  /usr/include/lo/lo_lowlevel.h /usr/include/lo/lo_serverthread.h \
- /usr/include/lo/lo_macros.h
+ /usr/include/lo/lo_macros.h /usr/include/arpa/inet.h \
+ /usr/include/c++/15/cstring /usr/include/string.h /usr/include/strings.h
