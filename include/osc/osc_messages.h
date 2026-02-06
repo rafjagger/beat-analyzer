@@ -25,14 +25,14 @@ struct OscMessage {
 };
 
 /**
- * Beat clock message for Pro Tools sync.
+ * Beat clock message.
+ * OSC Format: /beat iii  beat(1-4), bar, bpm
  */
 struct BeatClockMessage {
-    int track_id;           // 0-3 for 4 tracks
-    int64_t frame_position; // Absolute frame position
-    float bpm;              // Current BPM
-    int beat_number;        // 0-3 for 4/4 time
-    float beat_strength;    // 0.0-1.0
+    int track_id;           // Kanal-Index (0-based)
+    int beat_number;        // 1-4 (Schlag im Takt)
+    int bar_number;         // Takt-Nummer (ab 1, fortlaufend)
+    int bpm;                // Aktuelles BPM (gerundet)
     
     OscMessage toOscMessage() const;
 };

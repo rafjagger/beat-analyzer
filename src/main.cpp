@@ -201,7 +201,7 @@ public:
         int oscReceivePort = env.getInt("OSC_RECEIVE_PORT", 7775);
         m_oscReceiver = std::make_unique<OscReceiver>();
         m_oscReceiver->setPort(oscReceivePort);
-        m_oscReceiver->setBeatClockPath("/beatclock");
+        m_oscReceiver->setBeatClockPath("/beat");
         
         // Callback für externe Beat-Clock
         m_oscReceiver->setCallback([this](const ReceivedBeatClock& clock) {
@@ -209,12 +209,46 @@ public:
             if (clock.bpm > 0) {
                 m_externalBpm = clock.bpm;
             }
+            // Beat-Nummer speichern (1-4)
+            if (clock.beatNumber >= 1 && clock.beatNumber <= 4) {
+                m_externalBeatNumber.store(clock.beatNumber);
+            }
+            // Im Training-Modus (0): externe /beat direkt weitersenden
+            if (m_clockMode.load() == 0 && clock.beatNumber >= 1 && clock.beatNumber <= 4) {
+                // Interne States synchronisieren
+                {
+                    std::lock_guard<std::mutex> lock(m_mutex);
+                    for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                        m_bpmTrackStates[ch].beatNumber = clock.beatNumber;
+                    }
+                }
+                // Externe /beat direkt als eigene /beat weiterleiten
+                if (m_oscSender && m_oscSender->isConnected()) {
+                    BeatClockMessage msg;
+                    msg.track_id = 0;
+                    msg.beat_number = clock.beatNumber;
+                    msg.bar_number = clock.bar;
+                    msg.bpm = clock.bpm;
+                    m_oscSender->sendBeatClock(msg);
+                }
+                LOG_DEBUG("Ext beat forwarded: " + std::to_string(clock.beatNumber) +
+                         " bpm=" + std::to_string(clock.bpm));
+            }
         });
         
         // Callback für Clock-Modus Wechsel
         m_oscReceiver->setClockModeCallback([this](int mode) {
             m_clockMode.store(mode);
-            LOG_INFO("Clock-Modus via OSC: " + std::string(mode ? "TRAINING" : "NORMAL"));
+            LOG_INFO("Clock-Modus via OSC: " + std::string(mode ? "EIGENE BEATCLOCK" : "TRAINING"));
+        });
+        
+        // Callback für Tap (Downbeat setzen)
+        m_oscReceiver->setTapCallback([this](int beat) {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                m_bpmTrackStates[ch].beatNumber = beat;
+            }
+            LOG_INFO("TAP: Beat auf " + std::to_string(beat) + " gesetzt");
         });
         
         if (m_oscReceiver->start()) {
@@ -312,7 +346,8 @@ private:
         int64_t lastRealBeatFrame = 0;      // Letzter echter erkannter Beat
         int64_t prevRealBeatFrame = 0;      // Vorletzter echter Beat (für BPM-Berechnung)
         int64_t realBeatCount = 0;          // Anzahl echter Beats in Folge
-        int beatNumber = 1;
+        int beatNumber = 1;                 // 1-4 (Schlag im Takt)
+        int barNumber = 1;                  // Takt-Nummer (fortlaufend)
         double currentBpm = 0.0;
         double realBeatBpm = 0.0;           // BPM basierend auf echten Beat-Abständen
         double recentBeatIntervals[4] = {0}; // Letzte 4 Beat-Intervalle für Toleranz-Check
@@ -375,6 +410,10 @@ private:
         std::lock_guard<std::mutex> lock(m_mutex);
         
         m_frameCount += frameCount;
+        
+        // Im Training-Modus (0): Keine eigene Beat-Generierung, externe /beat wird durchgereicht
+        if (m_clockMode.load() == 0) return;
+        
         int sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
         
         // BPM Kanäle verarbeiten
@@ -456,7 +495,6 @@ private:
                         if (m_bpmTrackStates[ch].usingRealBeats) {
                             m_bpmTrackStates[ch].beatNumber = (m_bpmTrackStates[ch].beatNumber % 4) + 1;
                             m_bpmTrackStates[ch].lastBeatFrame = m_frameCount;
-                            sendBeatForChannel(ch);
                             sendBeatClockForChannel(ch, true);  // true = echter Beat
                         }
                     } else {
@@ -489,8 +527,9 @@ private:
                                                 / static_cast<int64_t>(framesPerBeat);
                         
                         if (beatsSinceLast > 0) {
+                            int oldBeat = m_bpmTrackStates[ch].beatNumber;
                             // Addiere beatsSinceLast, wrappe auf 1-4
-                            m_bpmTrackStates[ch].beatNumber = ((m_bpmTrackStates[ch].beatNumber - 1 + beatsSinceLast) % 4) + 1;
+                            m_bpmTrackStates[ch].beatNumber = ((oldBeat - 1 + beatsSinceLast) % 4) + 1;
                             m_bpmTrackStates[ch].lastBeatFrame = m_frameCount;
                             sendBeatClockForChannel(ch, false);  // false = synthetisch
                         }
@@ -505,51 +544,38 @@ private:
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         if (!m_bpmTrackStates[ch].hasSignal) return;
         
-        // Im Training-Modus: Externe Clock als BPM-Referenz nutzen
+        // Im Training-Modus (0): Externe Clock als BPM-Referenz nutzen
         float effectiveBpm;
-        if (m_clockMode.load() == 1 && m_externalBpm > 0) {
-            // Training-Modus: Nutze externe BPM
+        if (m_clockMode.load() == 0 && m_externalBpm > 0) {
             effectiveBpm = m_externalBpm;
         } else {
-            // Normal-Modus: Nutze eigene Messung
             effectiveBpm = static_cast<float>(m_bpmTrackStates[ch].realBeatBpm > 0 
                 ? m_bpmTrackStates[ch].realBeatBpm 
                 : m_bpmTrackStates[ch].currentBpm);
         }
         
+        // /beat iii  beat(1-4), bar, bpm
         BeatClockMessage msg;
         msg.track_id = ch;
-        // Kompensiere Analyse-Latenz: Der Beat ist eigentlich schon passiert
-        msg.frame_position = m_frameCount - m_beatLatencyFrames;
-        msg.bpm = effectiveBpm;
         msg.beat_number = m_bpmTrackStates[ch].beatNumber;
-        msg.beat_strength = isRealBeat ? 1.0f : 0.5f;  // Unterscheide Stärke
+        msg.bar_number = m_bpmTrackStates[ch].barNumber;
+        msg.bpm = static_cast<int>(effectiveBpm + 0.5f);  // Runden
         
         m_oscSender->sendBeatClock(msg);
         
-        // Debug: Zeige Modus im Log (nur gelegentlich)
+        // Debug-Log (nur gelegentlich)
         static int debugCounter = 0;
         if (++debugCounter % 16 == 0) {
-            std::string modeStr = m_clockMode.load() == 1 ? " [TRAINING]" : "";
+            std::string modeStr = m_clockMode.load() == 0 ? " [TRAINING]" : "";
             LOG_DEBUG("Beat Ch" + std::to_string(ch+1) + 
                      (isRealBeat ? " [REAL]" : " [SYNTH]") + modeStr +
-                     " BPM=" + std::to_string(static_cast<int>(msg.bpm)) +
-                     " realBPM=" + std::to_string(static_cast<int>(m_bpmTrackStates[ch].realBeatBpm)));
+                     " beat=" + std::to_string(msg.beat_number) +
+                     " bar=" + std::to_string(msg.bar_number) +
+                     " BPM=" + std::to_string(msg.bpm));
         }
     }
     
-    void sendBeatForChannel(int ch) {
-        if (!m_enableBeat) return;
-        if (!m_oscSender || !m_oscSender->isConnected()) return;
-        if (!m_bpmTrackStates[ch].hasSignal) return;
-        
-        // Sende echten erkannten Beat: /beat/1, /beat/2, etc.
-        std::string path = "/beat/" + std::to_string(ch + 1);
-        float bpm = static_cast<float>(m_bpmTrackStates[ch].realBeatBpm > 0 
-            ? m_bpmTrackStates[ch].realBeatBpm 
-            : m_bpmTrackStates[ch].currentBpm);
-        m_oscSender->sendFloat(path, bpm);
-    }
+
     
     void sendVuMeterOsc() {
         if (!m_enableVu) return;
@@ -583,16 +609,16 @@ private:
         }
         
         bool anyVuActive = false;
-        for (int ch = 0; ch < m_numVuChannels; ++ch) {
-            if (m_vuTrackStates[ch].hasSignal) {
-                anyVuActive = true;
-            }
-        }
+        // for (int ch = 0; ch < m_numVuChannels; ++ch) {
+        //     if (m_vuTrackStates[ch].hasSignal) {
+        //         anyVuActive = true;
+        //     }
+        // }
         
         if (!anyBpmActive && !anyVuActive) {
             status += " | Kein Signal";
-        } else if (anyVuActive) {
-            status += " | VU aktiv";
+        // } else if (anyVuActive) {
+        //     status += " | VU aktiv";
         }
         
         if (m_oscSender && m_oscSender->isConnected()) {
@@ -620,7 +646,8 @@ private:
     std::unique_ptr<OscReceiver> m_oscReceiver;
     
     // Training-Modus
-    std::atomic<int> m_clockMode{0};  // 0=Normal, 1=Training
+    std::atomic<int> m_clockMode{1};  // 0=Training, 1=Eigene Beatclock
+    std::atomic<int> m_externalBeatNumber{0};  // Letzter externer Beat (1-4), 0=keiner
     int64_t m_lastExternalBeatTime = 0;
     float m_externalBpm = 0.0f;
     
@@ -662,8 +689,7 @@ void printUsage(const char* programName) {
     std::cout << "  OSC_HOST_Name=host:port\n";
     std::cout << "  Beispiel: OSC_HOST_Protokol=127.0.0.1:9000\n";
     std::cout << "\nOSC Adressen:\n";
-    std::cout << "  /beatclock/1-N  Beat Clock (BPM Kanäle)\n";
-    std::cout << "  /beat/1-N       Echte Beats (BPM Kanäle)\n";
+    std::cout << "  /beat           Beat Clock: iif beat(1-4), bar, bpm\n";
     std::cout << "  /rms/1-N        RMS Level (VU Kanäle)\n";
     std::cout << "  /peak/1-N       Peak Level (VU Kanäle)\n";
     std::cout << "\n";

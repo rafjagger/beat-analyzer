@@ -35,12 +35,11 @@ std::string OscMessage::toString() const {
 }
 
 OscMessage BeatClockMessage::toOscMessage() const {
-    // Track-ID wird Teil des Pfades: /beatclock/1, /beatclock/2, /beatclock/3, /beatclock/4
-    OscMessage msg("/beatclock/" + std::to_string(track_id + 1));
-    msg.addInt(static_cast<int>(frame_position));
-    msg.addFloat(bpm);
+    // /beat iii  beat(1-4), bar, bpm
+    OscMessage msg("/beat");
     msg.addInt(beat_number);
-    msg.addFloat(beat_strength);
+    msg.addInt(bar_number);
+    msg.addInt(bpm);
     return msg;
 }
 

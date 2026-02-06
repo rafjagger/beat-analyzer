@@ -150,20 +150,13 @@ bool OscSender::broadcastBeatClock(
     int beatNumber,
     float strength) {
     
-    for (int track = 0; track < 4; ++track) {
-        BeatClockMessage msg;
-        msg.track_id = track;
-        msg.frame_position = framePos;
-        msg.bpm = bpm;
-        msg.beat_number = beatNumber;
-        msg.beat_strength = strength;
-        
-        if (!sendBeatClock(msg)) {
-            return false;
-        }
-    }
+    BeatClockMessage msg;
+    msg.track_id = 0;
+    msg.beat_number = beatNumber;
+    msg.bar_number = 1;
+    msg.bpm = static_cast<int>(bpm + 0.5f);
     
-    return true;
+    return sendBeatClock(msg);
 }
 
 } // namespace OSC
