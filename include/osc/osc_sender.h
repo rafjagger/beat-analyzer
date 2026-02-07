@@ -7,6 +7,8 @@
 #include <atomic>
 #include <thread>
 #include <array>
+#include <mutex>
+#include <condition_variable>
 #include "osc_messages.h"
 
 namespace BeatAnalyzer {
@@ -114,6 +116,8 @@ private:
     // Sender-Thread
     std::thread m_senderThread;
     std::atomic<bool> m_senderRunning{false};
+    std::mutex m_queueMutex;
+    std::condition_variable m_queueCV;
     void senderThreadFunc();
     
     // Interne Send-Funktionen (nur vom Sender-Thread aufgerufen)

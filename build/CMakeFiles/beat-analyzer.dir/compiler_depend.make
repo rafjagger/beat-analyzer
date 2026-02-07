@@ -1494,6 +1494,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: /home/aaa/beat-analyzer/src/main.cp
   /usr/include/c++/15/compare \
   /usr/include/c++/15/complex \
   /usr/include/c++/15/concepts \
+  /usr/include/c++/15/condition_variable \
   /usr/include/c++/15/csignal \
   /usr/include/c++/15/cstddef \
   /usr/include/c++/15/cstdint \
@@ -2262,6 +2263,7 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/asm-generic/sockios.h \
   /usr/include/asm-generic/types.h \
   /usr/include/c++/15/array \
+  /usr/include/c++/15/atomic \
   /usr/include/c++/15/backward/auto_ptr.h \
   /usr/include/c++/15/backward/binders.h \
   /usr/include/c++/15/bit \
@@ -2277,6 +2279,7 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/c++/15/bits/basic_string.tcc \
   /usr/include/c++/15/bits/char_traits.h \
   /usr/include/c++/15/bits/charconv.h \
+  /usr/include/c++/15/bits/chrono.h \
   /usr/include/c++/15/bits/concept_check.h \
   /usr/include/c++/15/bits/cpp_type_traits.h \
   /usr/include/c++/15/bits/cxxabi_forced.h \
@@ -2308,6 +2311,7 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/c++/15/bits/ostream.h \
   /usr/include/c++/15/bits/ostream.tcc \
   /usr/include/c++/15/bits/ostream_insert.h \
+  /usr/include/c++/15/bits/parse_numbers.h \
   /usr/include/c++/15/bits/postypes.h \
   /usr/include/c++/15/bits/predefined_ops.h \
   /usr/include/c++/15/bits/ptr_traits.h \
@@ -2319,6 +2323,8 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/c++/15/bits/shared_ptr_base.h \
   /usr/include/c++/15/bits/std_abs.h \
   /usr/include/c++/15/bits/std_function.h \
+  /usr/include/c++/15/bits/std_mutex.h \
+  /usr/include/c++/15/bits/std_thread.h \
   /usr/include/c++/15/bits/stl_algobase.h \
   /usr/include/c++/15/bits/stl_bvector.h \
   /usr/include/c++/15/bits/stl_construct.h \
@@ -2335,6 +2341,8 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/c++/15/bits/streambuf_iterator.h \
   /usr/include/c++/15/bits/string_view.tcc \
   /usr/include/c++/15/bits/stringfwd.h \
+  /usr/include/c++/15/bits/this_thread_sleep.h \
+  /usr/include/c++/15/bits/unique_lock.h \
   /usr/include/c++/15/bits/unique_ptr.h \
   /usr/include/c++/15/bits/unordered_map.h \
   /usr/include/c++/15/bits/uses_allocator.h \
@@ -2347,10 +2355,13 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/c++/15/clocale \
   /usr/include/c++/15/compare \
   /usr/include/c++/15/concepts \
+  /usr/include/c++/15/condition_variable \
   /usr/include/c++/15/cstddef \
+  /usr/include/c++/15/cstdint \
   /usr/include/c++/15/cstdio \
   /usr/include/c++/15/cstdlib \
   /usr/include/c++/15/cstring \
+  /usr/include/c++/15/ctime \
   /usr/include/c++/15/cwchar \
   /usr/include/c++/15/cwctype \
   /usr/include/c++/15/debug/assertions.h \
@@ -2369,17 +2380,21 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o: /home/aaa/beat-analyzer/s
   /usr/include/c++/15/iosfwd \
   /usr/include/c++/15/iostream \
   /usr/include/c++/15/istream \
+  /usr/include/c++/15/limits \
   /usr/include/c++/15/memory \
+  /usr/include/c++/15/mutex \
   /usr/include/c++/15/new \
   /usr/include/c++/15/ostream \
   /usr/include/c++/15/pstl/execution_defs.h \
   /usr/include/c++/15/pstl/glue_memory_defs.h \
   /usr/include/c++/15/pstl/pstl_config.h \
+  /usr/include/c++/15/ratio \
   /usr/include/c++/15/stdexcept \
   /usr/include/c++/15/streambuf \
   /usr/include/c++/15/string \
   /usr/include/c++/15/string_view \
   /usr/include/c++/15/system_error \
+  /usr/include/c++/15/thread \
   /usr/include/c++/15/tuple \
   /usr/include/c++/15/type_traits \
   /usr/include/c++/15/typeinfo \
@@ -3045,6 +3060,8 @@ CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o:
 /usr/include/c++/15/clocale:
 
 /usr/include/c++/15/bits/stl_algobase.h:
+
+/usr/include/c++/15/condition_variable:
 
 /usr/include/c++/15/ext/alloc_traits.h:
 

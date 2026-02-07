@@ -709,9 +709,9 @@ void RealTimeBeatTracker::processMonoInternal(const double* monoInput, int frame
                 
                 // Fenster um erwarteten Beat: +-10% des Beat-Intervalls
                 if (phaseInBeat > 0.9 || phaseInBeat < 0.1) {
-                    onset *= 1.3;  // 30% Boost nahe erwartetem Beat
-                } else if (phaseInBeat > 0.3 && phaseInBeat < 0.7) {
-                    onset *= 0.85;  // 15% Dämpfung weit vom erwarteten Beat
+                    onset *= 1.5;  // 50% Boost nahe erwartetem Beat
+                } else if (phaseInBeat > 0.25 && phaseInBeat < 0.75) {
+                    onset *= 0.6;  // 40% Dämpfung weit vom erwarteten Beat
                 }
             }
             
@@ -873,10 +873,10 @@ void RealTimeBeatTracker::reset() {
 BeatEventDetector::BeatEventDetector(int sampleRate, int hopSize, double maxBpm)
     : m_sampleRate(sampleRate) {
     // Minimum-Abstand zwischen Beats basierend auf max BPM
-    // minBeatSec = 60/maxBpm, mit 15% Toleranz für frühe Peaks
-    double minBeatSec = (60.0 / maxBpm) * 0.85;
+    // minBeatSec = 60/maxBpm, mit 30% Toleranz für frühe Peaks
+    double minBeatSec = (60.0 / maxBpm) * 0.70;
     m_minBeatInterval = static_cast<int>(minBeatSec * sampleRate / hopSize);
-    if (m_minBeatInterval < 6) m_minBeatInterval = 6;  // Minimum ~70ms bei hop=512
+    if (m_minBeatInterval < 8) m_minBeatInterval = 8;  // Minimum ~93ms bei hop=256
     reset();
 }
 
@@ -904,9 +904,9 @@ bool BeatEventDetector::process(double onsetValue) {
     }
     
     // Threshold: Kombination aus adaptivem Maximum und dynamischer Streuung
-    // mean + 1.8*dev ist empfindlicher aber immer noch stabil
-    double dynamicThreshold = m_runningMean + (m_runningDev * 1.8);
-    m_threshold = std::max(m_adaptiveThreshold * 0.35, dynamicThreshold);
+    // mean + 2.5*dev filtert Hi-Hats und Snares raus, nur Kicks kommen durch
+    double dynamicThreshold = m_runningMean + (m_runningDev * 2.5);
+    m_threshold = std::max(m_adaptiveThreshold * 0.45, dynamicThreshold);
     
     // Peak Detection: prevOnset muss größer sein als Nachbarn UND über Threshold
     bool isPeak = (m_prevOnset > m_prevPrevOnset) && 

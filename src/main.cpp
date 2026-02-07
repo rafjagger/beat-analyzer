@@ -310,11 +310,14 @@ public:
         LOG_INFO("Warte auf Audio...");
         
         // VU-Meter Thread: sendet /vu OSC mit konfigurierbarer Rate (komplett unabhängig)
+        // Verwendet sleep_until statt sleep_for für drift-freies, absolutes Timing
         std::thread vuThread([this]() {
-            const auto vuOscInterval = std::chrono::milliseconds(m_oscSendIntervalMs);
+            const auto vuOscInterval = std::chrono::microseconds(1000000 / m_oscSendRate);
+            auto nextSendTime = std::chrono::steady_clock::now();
             while (g_running) {
+                nextSendTime += vuOscInterval;
                 sendVuMeterOsc();
-                std::this_thread::sleep_for(vuOscInterval);
+                std::this_thread::sleep_until(nextSendTime);
             }
         });
         
@@ -324,14 +327,6 @@ public:
             processBeatThread();
         });
         
-        // Status Thread
-        std::thread statusThread([this]() {
-            while (g_running) {
-                printStatus();
-                std::this_thread::sleep_for(std::chrono::seconds(5));
-            }
-        });
-        
         // Main-Thread wartet
         while (g_running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -339,7 +334,6 @@ public:
         
         vuThread.join();
         beatThread.join();
-        statusThread.join();
         
         return true;
     }
@@ -444,10 +438,14 @@ private:
         // Lokaler Buffer für Audio-Daten aus dem Ringpuffer
         std::vector<CSAMPLE> localBuf(BPM_RINGBUF_SIZE);
         
+        // Drift-freies Timing: sleep_until statt sleep_for
+        auto nextWakeTime = std::chrono::steady_clock::now();
+        
         while (g_running) {
             // Im Training-Modus (0): Keine eigene Beat-Generierung
             if (m_clockMode.load() == 0) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                nextWakeTime = std::chrono::steady_clock::now();  // Reset nach Training-Pause
                 continue;
             }
             
@@ -494,10 +492,23 @@ private:
                     m_beatTrackers[ch]->processMonoAudio(localBuf.data(), available);
                     
                     // ACF/Viterbi BPM übernehmen (primäre BPM-Quelle)
+                    // BPM-Glättung: Sprünge begrenzen auf max ±3 BPM pro Update
+                    // um Jitter durch plötzliche Tempo-Wechsel zu vermeiden
                     double acfBpm = m_beatTrackers[ch]->getCurrentBpm();
                     if (acfBpm > 0) {
                         m_bpmTrackStates[ch].acfBpm = acfBpm;
-                        m_bpmTrackStates[ch].currentBpm = acfBpm;
+                        double prevBpm = m_bpmTrackStates[ch].currentBpm;
+                        if (prevBpm <= 0) {
+                            // Erste BPM-Erkennung: direkt übernehmen
+                            m_bpmTrackStates[ch].currentBpm = acfBpm;
+                        } else {
+                            // BPM-Änderung begrenzen: max ±3 BPM pro Update
+                            double diff = acfBpm - prevBpm;
+                            double maxChange = 3.0;
+                            if (diff > maxChange) diff = maxChange;
+                            else if (diff < -maxChange) diff = -maxChange;
+                            m_bpmTrackStates[ch].currentBpm = prevBpm + diff;
+                        }
                     }
                     
                     // Echter Beat erkannt? → Phase-Sync
@@ -546,16 +557,9 @@ private:
                         
                         m_bpmTrackStates[ch].lastRealBeatFrame = compensatedFrame;
                         
-                        // Phase-Lock: Wenn genug regelmäßige Beats, synce die Clock-Phase
-                        if (m_bpmTrackStates[ch].consecutiveRegularBeats >= PHASE_LOCK_BEATS) {
-                            // Beat-Nummer weiterschalten
-                            m_bpmTrackStates[ch].beatNumber = (m_bpmTrackStates[ch].beatNumber % 4) + 1;
-                            // Phase der Synth-Clock auf den echten Beat setzen
-                            m_bpmTrackStates[ch].lastBeatFrame = compensatedFrame;
-                            sendBeatClockForChannel(ch, true);
-                            // Goto überspringt Synth-Clock-Check für diesen Channel
-                            continue;
-                        }
+                        // Real Beats werden NUR für BPM-Verfeinerung genutzt (oben).
+                        // Phase-Nudge deaktiviert: Die Synth-Clock läuft allein tight genug,
+                        // Phase-Korrekturen verursachen mehr Jitter als sie beheben.
                     }
                 } // hasSignal
                 
@@ -570,8 +574,10 @@ private:
                         // oder wenn es zu weit in der Vergangenheit liegt (>2 Beats),
                         // auf jetzt setzen damit die Clock sofort startet.
                         int64_t elapsed = currentFrame - m_bpmTrackStates[ch].lastBeatFrame;
-                        if (m_bpmTrackStates[ch].lastBeatFrame == 0 || elapsed > static_cast<int64_t>(framesPerBeat * 2.5)) {
-                            m_bpmTrackStates[ch].lastBeatFrame = currentFrame;
+                        if (m_bpmTrackStates[ch].lastBeatFrame == 0 || elapsed > static_cast<int64_t>(framesPerBeat * 2.0)) {
+                            // Bei BPM-Änderung: lastBeatFrame so setzen, dass der nächste Beat
+                            // ca. eine halbe Periode entfernt ist (sanfter Übergang)
+                            m_bpmTrackStates[ch].lastBeatFrame = currentFrame - static_cast<int64_t>(framesPerBeat * 0.5);
                         }
                         
                         elapsed = currentFrame - m_bpmTrackStates[ch].lastBeatFrame;
@@ -585,7 +591,7 @@ private:
                 }
             }
             
-            std::this_thread::sleep_for(interval);
+            std::this_thread::sleep_until(nextWakeTime += interval);
         }
     }
     
@@ -608,14 +614,20 @@ private:
         
         m_oscSender->sendBeatClock(msg);
         
-        // Debug-Log (nur gelegentlich)
-        static int debugCounter = 0;
-        if (++debugCounter % 16 == 0) {
-            LOG_DEBUG("Beat Ch" + std::to_string(ch+1) + 
-                     (isRealBeat ? " [REAL]" : " [SYNTH]") +
-                     " beat=" + std::to_string(msg.beat_number) +
-                     " bar=" + std::to_string(msg.bar_number) +
-                     " BPM=" + std::to_string(msg.bpm));
+        // Timing-Analyse: Jeden Beat mit Timestamp + Delta ausgeben
+        {
+            static auto lastBeatTime = std::chrono::steady_clock::now();
+            auto now = std::chrono::steady_clock::now();
+            double deltaMs = std::chrono::duration<double, std::milli>(now - lastBeatTime).count();
+            lastBeatTime = now;
+            
+            double expectedMs = (msg.bpm > 0) ? (60000.0 / msg.bpm) : 0.0;
+            double jitterMs = (expectedMs > 0) ? (deltaMs - expectedMs) : 0.0;
+            
+            printf("BEAT %d | BPM %3d | delta %7.1fms | expected %7.1fms | jitter %+.1fms | %s\n",
+                   msg.beat_number, msg.bpm, deltaMs, expectedMs, jitterMs,
+                   isRealBeat ? "REAL" : "SYNTH");
+            fflush(stdout);
         }
     }
     

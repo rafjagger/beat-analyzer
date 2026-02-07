@@ -237,10 +237,11 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/c++/15/bits/this_thread_sleep.h \
  /usr/include/c++/15/bits/chrono.h /usr/include/c++/15/ratio \
  /usr/include/c++/15/ctime /usr/include/c++/15/bits/parse_numbers.h \
- /home/aaa/beat-analyzer/include/osc/osc_messages.h \
- /home/aaa/beat-analyzer/include/osc/osc_receiver.h \
  /usr/include/c++/15/mutex /usr/include/c++/15/bits/std_mutex.h \
- /usr/include/c++/15/bits/unique_lock.h /usr/include/lo/lo.h \
+ /usr/include/c++/15/bits/unique_lock.h \
+ /usr/include/c++/15/condition_variable \
+ /home/aaa/beat-analyzer/include/osc/osc_messages.h \
+ /home/aaa/beat-analyzer/include/osc/osc_receiver.h /usr/include/lo/lo.h \
  /usr/include/lo/lo_endian.h /usr/include/netinet/in.h \
  /usr/include/x86_64-linux-gnu/sys/socket.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h \

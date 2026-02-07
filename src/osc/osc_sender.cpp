@@ -107,6 +107,7 @@ bool OscSender::initialize() {
 void OscSender::shutdown() {
     if (m_senderRunning) {
         m_senderRunning = false;
+        m_queueCV.notify_one();  // Sender-Thread aufwecken damit er beendet
         if (m_senderThread.joinable()) {
             m_senderThread.join();
         }
@@ -138,6 +139,7 @@ bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
     entry.ready.store(true, std::memory_order_release);
     
     m_queueWritePos.store(nextPos, std::memory_order_release);
+    m_queueCV.notify_one();
     return true;
 }
 
@@ -159,6 +161,7 @@ bool OscSender::sendFloat(const std::string& path, float value) {
     entry.ready.store(true, std::memory_order_release);
     
     m_queueWritePos.store(nextPos, std::memory_order_release);
+    m_queueCV.notify_one();
     return true;
 }
 
@@ -181,6 +184,7 @@ bool OscSender::sendFloats(const std::string& path, float value1, float value2) 
     entry.ready.store(true, std::memory_order_release);
     
     m_queueWritePos.store(nextPos, std::memory_order_release);
+    m_queueCV.notify_one();
     return true;
 }
 
@@ -200,6 +204,7 @@ bool OscSender::sendMessage(const OscMessage& msg) {
     entry.ready.store(true, std::memory_order_release);
     
     m_queueWritePos.store(nextPos, std::memory_order_release);
+    m_queueCV.notify_one();
     return true;
 }
 
@@ -224,12 +229,22 @@ bool OscSender::broadcastBeatClock(
 
 void OscSender::senderThreadFunc() {
     while (m_senderRunning) {
+        // Warte auf Daten oder Shutdown-Signal
+        {
+            std::unique_lock<std::mutex> lock(m_queueMutex);
+            m_queueCV.wait_for(lock, std::chrono::milliseconds(5), [this]() {
+                return !m_senderRunning || 
+                       m_queueReadPos.load(std::memory_order_relaxed) != 
+                       m_queueWritePos.load(std::memory_order_acquire);
+            });
+        }
+        
+        if (!m_senderRunning) break;
+        
         int readPos = m_queueReadPos.load(std::memory_order_relaxed);
         int writePos = m_queueWritePos.load(std::memory_order_acquire);
         
         if (readPos == writePos) {
-            // Queue leer - kurz schlafen (200µs = 5kHz max rate)
-            std::this_thread::sleep_for(std::chrono::microseconds(200));
             continue;
         }
         
