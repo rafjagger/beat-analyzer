@@ -231,6 +231,12 @@ public:
     // Aktuelle BPM Schätzung (für Echtzeit-Display)
     double getCurrentBpm() const { return m_currentBpm; }
     
+    // Tap-Referenz BPM setzen: steuert die Rayleigh-Gewichtung in der ACF
+    // Damit wählt die ACF die richtige Harmonische (z.B. 90 statt 130)
+    // 0.0 = kein Hint, nutze (minBpm+maxBpm)/2
+    void setReferenceBpm(double bpm) { m_referenceBpmHint = bpm; }
+    double getReferenceBpm() const { return m_referenceBpmHint; }
+    
     // Wurde im letzten processAudio() ein Beat erkannt?
     bool hasBeatOccurred() const { return m_beatOccurred; }
     
@@ -255,6 +261,7 @@ private:
     size_t m_bufferWritePos;
     
     double m_currentBpm;
+    double m_referenceBpmHint = 0.0;  // Tap-Referenz für ACF Rayleigh-Gewichtung
     int64_t m_totalFramesProcessed;
     
     // Auto Gain Control

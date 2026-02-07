@@ -765,11 +765,12 @@ void RealTimeBeatTracker::updateRealtimeBpm() {
                           m_detectionFunction.end());
     
     std::vector<int> beatPeriod;
-    // WICHTIG: Nutze defaultBpm als Referenz statt currentBpm um Feedback-Bias zu vermeiden.
-    // Der Rayleigh-Gewichtung in calculateBeatPeriod zieht den Schätzer Richtung inputTempo,
-    // wenn wir hier den aktuellen Wert einspeisen, verstärkt sich ein falscher BPM-Wert.
-    // Nur den Mittelwert des konfigurierten Bereichs verwenden.
-    double referenceBpm = (m_config.minBpm + m_config.maxBpm) / 2.0;
+    // Referenz-BPM für die Rayleigh-Gewichtung in der ACF:
+    // - Wenn Tap-Hint gesetzt: nutze diesen (hilft die richtige Harmonische zu wählen)
+    // - Sonst: Mittelwert des konfigurierten Bereichs
+    double referenceBpm = (m_referenceBpmHint > 0.0) 
+        ? m_referenceBpmHint 
+        : (m_config.minBpm + m_config.maxBpm) / 2.0;
     m_tempoTracker->calculateBeatPeriod(df, beatPeriod, referenceBpm);
     
     if (!beatPeriod.empty()) {

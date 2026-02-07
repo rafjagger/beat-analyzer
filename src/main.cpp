@@ -264,11 +264,16 @@ public:
         });
         
         // Callback für Tap (/tap i) - setzt Beat sofort (nur bei EXT=1)
-        // Tap wird via atomarem Flag an den Beat-Thread übergeben (thread-safe)
+        // Tap wird via SPSC-Ringbuffer an den Beat-Thread übergeben (lock-free, kein Tap geht verloren)
         m_oscReceiver->setTapCallback([this](int beat) {
             if (m_clockMode.load() == 1) {
-                // Atomares Flag setzen - Beat-Thread wird es beim nächsten Durchlauf abholen
-                m_tapRequested.store(beat, std::memory_order_release);
+                auto now = std::chrono::steady_clock::now();
+                int w = m_tapQueueWrite.load(std::memory_order_relaxed);
+                int next = (w + 1) & (TAP_QUEUE_SIZE - 1);
+                if (next != m_tapQueueRead.load(std::memory_order_acquire)) {
+                    m_tapQueue[w] = {beat, now};
+                    m_tapQueueWrite.store(next, std::memory_order_release);
+                }
                 LOG_INFO("TAP: Beat " + std::to_string(beat) + " angefordert");
             }
         });
@@ -368,19 +373,20 @@ public:
     }
     
 private:
-    // Track-Status für BPM Kanäle - VEREINFACHT
-    // Eine Synth-Clock läuft immer. Echte Beat-Events synchronisieren nur die Phase.
+    // Track-Status für BPM Kanäle
+    // ARCHITEKTUR: Tap = Autorität für BPM + Phase.
+    // ACF liefert Initial-BPM und darf nach Tap nur noch micro-verfeinern (±5%, 1% Einfluss).
     struct BpmTrackState {
         // Clock-State
         int64_t lastBeatFrame = 0;          // Letzter ausgegebener Beat (synth oder real)
         int beatNumber = 1;                 // 1-4 (Schlag im Takt)
         int barNumber = 1;                  // Takt-Nummer (fortlaufend)
         
-        // BPM (primär aus ACF/Viterbi, sekundär aus Beat-Intervallen)
+        // BPM
         double currentBpm = 0.0;            // Aktive BPM für die Clock
-        double acfBpm = 0.0;               // BPM aus ACF/Viterbi-Analyse
+        double acfBpm = 0.0;               // BPM aus ACF/Viterbi-Analyse (nur Info)
         
-        // Beat-Intervall-basierte Verfeinerung
+        // Beat-Intervall-basierte Verfeinerung (nur ohne Tap aktiv)
         int64_t lastRealBeatFrame = 0;      // Letzter erkannter Beat-Event
         double recentBpmValues[8] = {0};    // Letzte 8 gemessene BPM-Werte
         int bpmValueIndex = 0;
@@ -451,16 +457,21 @@ private:
             
             int64_t currentFrame = m_frameCount.load(std::memory_order_relaxed);
             
-            // Prüfe ob Tap angefordert wurde (aus OSC-Thread)
-            int tapBeat = m_tapRequested.exchange(0, std::memory_order_acquire);
-            if (tapBeat > 0) {
-                auto now = std::chrono::steady_clock::now();
+            // Alle anstehenden Taps aus der SPSC-Queue verarbeiten
+            while (true) {
+            int r = m_tapQueueRead.load(std::memory_order_relaxed);
+            if (r == m_tapQueueWrite.load(std::memory_order_acquire)) break;
+            TapEvent tap = m_tapQueue[r];
+            m_tapQueueRead.store((r + 1) & (TAP_QUEUE_SIZE - 1), std::memory_order_release);
+            int tapBeat = tap.beat;
+            {
+                // Zeitstempel kommt direkt aus dem OSC-Thread — exaktes Timing!
                 double tapDeltaMs = m_hasPrevTap 
-                    ? std::chrono::duration<double, std::milli>(now - m_lastTapTime).count() 
+                    ? std::chrono::duration<double, std::milli>(tap.timestamp - m_lastTapTime).count() 
                     : 0.0;
                 
-                // Erster Tap = nach >1s Pause (oder allererster Tap)
-                bool isFirstTap = !m_hasPrevTap || tapDeltaMs > 1000.0;
+                // Erster Tap = nach >1.5s Pause (oder allererster Tap)
+                bool isFirstTap = !m_hasPrevTap || tapDeltaMs > 1500.0;
                 
                 if (isFirstTap) {
                     // Tap-Intervall-Buffer zurücksetzen
@@ -468,18 +479,18 @@ private:
                     m_tapIntervalIndex = 0;
                     m_tapBpm = 0.0;
                     
-                    printf("TAP %d | (erster Tap — Clock auf Beat %d gesetzt)\n", tapBeat, tapBeat);
-                    fflush(stdout);
-                    
-                    // NUR beim ersten Tap: Beat-Nummer setzen und Phase resetten
+                    // Phase-Reset: Beat-Nummer setzen, Clock auf jetzt
                     for (int ch = 0; ch < m_numBpmChannels; ++ch) {
                         m_bpmTrackStates[ch].beatNumber = tapBeat;
                         m_bpmTrackStates[ch].lastBeatFrame = currentFrame;
                     }
-                    // Sofort senden
                     sendBeatClockForChannel(0, false);
+                    
+                    printf("TAP %d | (erster Tap — Phase-Reset auf Beat %d)\n", tapBeat, tapBeat);
+                    fflush(stdout);
                 } else {
-                    // Folge-Tap: nur Timing messen, Clock NICHT anfassen
+                    // Folge-Tap: NUR Timing messen + Referenz-BPM für ACF setzen
+                    // KEIN Phase-Reset, KEIN Beat-Nummer ändern — das macht nur der erste Tap!
                     
                     // Tap-Intervall speichern (Ringpuffer)
                     m_tapIntervals[m_tapIntervalIndex % 8] = tapDeltaMs;
@@ -498,36 +509,32 @@ private:
                         m_tapBpm = 60000.0 / tapDeltaMs;
                     }
                     
-                    // Double/Half-Time Erkennung und Korrektur
-                    double currentBpm = m_bpmTrackStates[0].currentBpm;
-                    const char* correction = "";
-                    if (currentBpm > 0 && m_tapBpm > 0 && m_tapIntervalCount >= 3) {
-                        double ratio = currentBpm / m_tapBpm;
-                        if (ratio > 1.7 && ratio < 2.3) {
-                            // Clock läuft doppelt so schnell wie getappt → Half-Time
-                            for (int ch = 0; ch < m_numBpmChannels; ++ch) {
-                                m_bpmTrackStates[ch].currentBpm = currentBpm / 2.0;
-                            }
-                            correction = " → HALF-TIME KORREKTUR!";
-                        } else if (ratio > 0.43 && ratio < 0.58) {
-                            // Clock läuft halb so schnell wie getappt → Double-Time
-                            for (int ch = 0; ch < m_numBpmChannels; ++ch) {
-                                m_bpmTrackStates[ch].currentBpm = currentBpm * 2.0;
-                            }
-                            correction = " → DOUBLE-TIME KORREKTUR!";
-                        }
-                    }
+                    double oldBpm = m_bpmTrackStates[0].currentBpm;
                     
-                    printf("TAP %d | delta %7.1fms | tapBPM %5.1f | clockBPM %3.0f | ratio %.2f%s\n",
-                           tapBeat, tapDeltaMs, m_tapBpm,
-                           m_bpmTrackStates[0].currentBpm,
-                           currentBpm > 0 ? currentBpm / m_tapBpm : 0.0,
-                           correction);
+                    if (m_tapBpm >= m_bpmMin && m_tapBpm <= m_bpmMax) {
+                        // Referenz-BPM auf dem BeatTracker setzen → ACF wählt richtige Harmonische
+                        for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                            m_beatTrackers[ch]->setReferenceBpm(m_tapBpm);
+                        }
+                        
+                        // Clock-BPM sofort auf Tap-BPM setzen (ACF wird nachziehen)
+                        for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                            m_bpmTrackStates[ch].currentBpm = m_tapBpm;
+                        }
+                        
+                        printf("TAP %d | delta %7.1fms | tapBPM %5.1f | clockBPM %3.0f → %3.0f | ref=%3.0f | taps=%d\n",
+                               tapBeat, tapDeltaMs, m_tapBpm,
+                               oldBpm, m_bpmTrackStates[0].currentBpm, m_tapBpm, m_tapIntervalCount);
+                    } else {
+                        printf("TAP %d | delta %7.1fms | tapBPM %5.1f (außerhalb %.0f-%.0f)\n",
+                               tapBeat, tapDeltaMs, m_tapBpm, m_bpmMin, m_bpmMax);
+                    }
                     fflush(stdout);
                 }
-                m_lastTapTime = now;
+                m_lastTapTime = tap.timestamp;
                 m_hasPrevTap = true;
             }
+            } // while (tap queue)
             
             for (int ch = 0; ch < m_numBpmChannels; ++ch) {
                 auto& rb = *m_bpmRingBuffers[ch];
@@ -559,22 +566,34 @@ private:
                     m_beatTrackers[ch]->processMonoAudio(localBuf.data(), available);
                     
                     // ACF/Viterbi BPM übernehmen (primäre BPM-Quelle)
-                    // BPM-Glättung: Sprünge begrenzen auf max ±3 BPM pro Update
-                    // um Jitter durch plötzliche Tempo-Wechsel zu vermeiden
                     double acfBpm = m_beatTrackers[ch]->getCurrentBpm();
                     if (acfBpm > 0) {
                         m_bpmTrackStates[ch].acfBpm = acfBpm;
                         double prevBpm = m_bpmTrackStates[ch].currentBpm;
                         if (prevBpm <= 0) {
-                            // Erste BPM-Erkennung: direkt übernehmen
                             m_bpmTrackStates[ch].currentBpm = acfBpm;
                         } else {
-                            // BPM-Änderung begrenzen: max ±3 BPM pro Update
-                            double diff = acfBpm - prevBpm;
-                            double maxChange = 3.0;
-                            if (diff > maxChange) diff = maxChange;
-                            else if (diff < -maxChange) diff = -maxChange;
-                            m_bpmTrackStates[ch].currentBpm = prevBpm + diff;
+                            // Wenn Tap-Referenz aktiv: ACF darf Clock-BPM nur überschreiben
+                            // wenn sie nahe genug am Tap-BPM liegt (konvergiert hat).
+                            // Sonst bleibt die Clock beim Tap-BPM.
+                            bool acfOverrideAllowed = true;
+                            double tapRef = m_beatTrackers[ch]->getReferenceBpm();
+                            if (tapRef > 0) {
+                                double acfTapDiff = std::abs(acfBpm - tapRef) / tapRef;
+                                if (acfTapDiff > 0.05) {
+                                    // ACF ist noch >5% vom Tap-BPM entfernt → nicht übernehmen,
+                                    // Clock bleibt beim Tap-BPM
+                                    acfOverrideAllowed = false;
+                                }
+                            }
+                            if (acfOverrideAllowed) {
+                                // BPM-Änderung begrenzen: max ±3 BPM pro Update
+                                double diff = acfBpm - prevBpm;
+                                double maxChange = 3.0;
+                                if (diff > maxChange) diff = maxChange;
+                                else if (diff < -maxChange) diff = -maxChange;
+                                m_bpmTrackStates[ch].currentBpm = prevBpm + diff;
+                            }
                         }
                     }
                     
@@ -779,11 +798,20 @@ private:
     // Training-Modus
     std::atomic<int> m_clockMode{1};  // 0=Training, 1=Eigene Beatclock
     std::atomic<int> m_externalBeatNumber{0};  // Letzter externer Beat (1-4), 0=keiner
-    std::atomic<int> m_tapRequested{0};  // Tap-Anforderung aus OSC-Thread (0=keine, 1-4=Beat)
     int64_t m_lastExternalBeatTime = 0;
     float m_externalBpm = 0.0f;
     
-    // Tap-Timing für Konsolen-Ausgabe und Double/Half-Time Erkennung
+    // Tap-Queue: SPSC Ringbuffer, Zeitstempel wird im OSC-Thread erfasst
+    struct TapEvent {
+        int beat;
+        std::chrono::steady_clock::time_point timestamp;
+    };
+    static constexpr int TAP_QUEUE_SIZE = 16;  // Muss Zweierpotenz sein
+    TapEvent m_tapQueue[TAP_QUEUE_SIZE];
+    std::atomic<int> m_tapQueueWrite{0};
+    std::atomic<int> m_tapQueueRead{0};
+    
+    // Tap-Timing (nur im Beat-Thread benutzt)
     std::chrono::steady_clock::time_point m_lastTapTime{};
     bool m_hasPrevTap = false;
     double m_tapBpm = 0.0;              // BPM aus Tap-Intervallen
