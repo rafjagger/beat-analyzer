@@ -141,9 +141,11 @@ public:
     explicit TempoTracker(int sampleRate, int hopSize);
     
     // Berechne optimale Beat-Perioden aus Detection Function
+    // hasReference=true → stärkere Rayleigh-Gewichtung (5% Floor statt 20%)
     void calculateBeatPeriod(const std::vector<double>& df,
                             std::vector<int>& beatPeriod,
-                            double inputTempo = 120.0);
+                            double inputTempo = 120.0,
+                            bool hasReference = false);
     
     // Berechne Beat-Positionen
     void calculateBeats(const std::vector<double>& df,

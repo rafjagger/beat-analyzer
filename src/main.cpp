@@ -121,11 +121,12 @@ public:
         
         // Beat Detection Latenz-Kompensation
         // Latenz-Quellen bei frameSize=512, hopSize=256:
+        //   JACK Buffer (128 frames): 2.9ms
         //   FFT Analyse-Zentrum: frameSize/2 = 256 samples = 5.8ms
         //   Peak Detection Delay: 1 hop = 256 samples = 5.8ms
-        //   Ringpuffer + Thread: ~6ms
-        //   Gesamt: ~18ms
-        m_beatLatencyMs = env.getFloat("BEAT_LATENCY_MS", 18.0f);
+        //   Thread-Polling (~0.25ms avg)
+        //   Gesamt: ~15ms
+        m_beatLatencyMs = env.getFloat("BEAT_LATENCY_MS", 15.0f);
         m_beatLatencyFrames = static_cast<int64_t>(m_beatLatencyMs / 1000.0f * 44100.0f);  // samples
         
         LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
@@ -607,8 +608,19 @@ private:
                             if (beatInterval > 0) {
                                 double measuredBpm = 60.0 * sampleRate / beatInterval;
                                 
-                                // Nur akzeptieren wenn im BPM-Bereich und nahe am ACF-BPM
+                                // Nur akzeptieren wenn im BPM-Bereich und nahe am aktuellen BPM
                                 if (measuredBpm >= m_bpmMin && measuredBpm <= m_bpmMax) {
+                                    // Wenn Tap-Referenz aktiv: auch Beat-Intervall muss nahe am Tap-BPM liegen
+                                    double tapRef2 = m_beatTrackers[ch]->getReferenceBpm();
+                                    if (tapRef2 > 0) {
+                                        double beatTapDiff = std::abs(measuredBpm - tapRef2) / tapRef2;
+                                        if (beatTapDiff > 0.10) {
+                                            // Beat-Intervall passt nicht zum Tap-BPM → ignorieren
+                                            m_bpmTrackStates[ch].lastRealBeatFrame = compensatedFrame;
+                                            goto synthClock;
+                                        }
+                                    }
+                                    
                                     double acfDiff = m_bpmTrackStates[ch].currentBpm > 0 
                                         ? std::abs(measuredBpm - m_bpmTrackStates[ch].currentBpm) / m_bpmTrackStates[ch].currentBpm
                                         : 0.0;
@@ -839,8 +851,8 @@ private:
     int m_oscSendIntervalMs = 40;   // 1000/rate ms
     
     // Beat-Latenz-Kompensation
-    float m_beatLatencyMs = 18.0f;
-    int64_t m_beatLatencyFrames = 794;  // ~18ms bei 44.1kHz
+    float m_beatLatencyMs = 15.0f;
+    int64_t m_beatLatencyFrames = 662;  // ~15ms bei 44.1kHz
     
     // BPM-Limits aus Konfiguration
     float m_bpmMin = 60.0f;

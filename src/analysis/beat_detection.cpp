@@ -465,7 +465,8 @@ void TempoTracker::viterbiDecode(const std::vector<std::vector<double>>& rcfMatr
 
 void TempoTracker::calculateBeatPeriod(const std::vector<double>& df,
                                        std::vector<int>& beatPeriod,
-                                       double inputTempo) {
+                                       double inputTempo,
+                                       bool hasReference) {
     // Weight vector muss alle möglichen Beat-Perioden abdecken
     // Bei hop=256, sr=44100: 60 BPM = 60/60*44100/256 = 172 Frames
     // Sicherheitsmarge: 256 Frames
@@ -485,8 +486,10 @@ void TempoTracker::calculateBeatPeriod(const std::vector<double>& df,
                      std::exp(-x * x / (2.0 * rayparam * rayparam));
         if (weights[i] > maxWeight) maxWeight = weights[i];
     }
-    // Addiere 20% uniform floor damit auch entferntere Tempi eine Chance haben
-    double uniformFloor = maxWeight * 0.2;
+    // Uniform floor: 20% default, 5% wenn Tap-Referenz gesetzt (stärkere Lenkung)
+    // Bei Tap-Referenz wollen wir die richtige Harmonische stark bevorzugen
+    double floorRatio = hasReference ? 0.05 : 0.20;
+    double uniformFloor = maxWeight * floorRatio;
     for (int i = 0; i < wvLen; ++i) {
         weights[i] += uniformFloor;
     }
@@ -771,7 +774,8 @@ void RealTimeBeatTracker::updateRealtimeBpm() {
     double referenceBpm = (m_referenceBpmHint > 0.0) 
         ? m_referenceBpmHint 
         : (m_config.minBpm + m_config.maxBpm) / 2.0;
-    m_tempoTracker->calculateBeatPeriod(df, beatPeriod, referenceBpm);
+    bool hasRef = (m_referenceBpmHint > 0.0);
+    m_tempoTracker->calculateBeatPeriod(df, beatPeriod, referenceBpm, hasRef);
     
     if (!beatPeriod.empty()) {
         // Median statt Durchschnitt (robuster gegen Ausreißer)
@@ -793,6 +797,30 @@ void RealTimeBeatTracker::updateRealtimeBpm() {
             
             // Sanity check: BPM sollte im erlaubten Bereich sein
             if (newBpm >= m_config.minBpm && newBpm <= m_config.maxBpm) {
+                // Wenn Referenz-Hint gesetzt: Harmonische-Korrektur
+                // ACF erkennt oft doppeltes/dreifaches Tempo → auf richtige Oktave bringen
+                if (m_referenceBpmHint > 0.0) {
+                    double ratio = newBpm / m_referenceBpmHint;
+                    // Prüfe ob newBpm ein Vielfaches des Hints ist (2x, 3x, 4x)
+                    // und korrigiere auf die richtige Oktave
+                    if (ratio > 1.8 && ratio < 2.2) {
+                        newBpm /= 2.0;  // Doppelte Harmonische → halftime
+                    } else if (ratio > 2.8 && ratio < 3.2) {
+                        newBpm /= 3.0;  // Dreifache Harmonische
+                    } else if (ratio > 3.8 && ratio < 4.2) {
+                        newBpm /= 4.0;  // Vierfache Harmonische
+                    } else if (ratio > 0.45 && ratio < 0.55) {
+                        newBpm *= 2.0;  // Halbe Harmonische → doubletime
+                    } else if (ratio > 0.3 && ratio < 0.37) {
+                        newBpm *= 3.0;  // Drittel
+                    }
+                    // Nach Korrektur: immer noch zu weit weg? → verwerfen
+                    double refDiff = std::abs(newBpm - m_referenceBpmHint) / m_referenceBpmHint;
+                    if (refDiff > 0.15) {
+                        return;
+                    }
+                }
+                
                 if (m_currentBpm > 0) {
                     // Leichtere Glättung: 0.6/0.4 bei großer Änderung, 0.85/0.15 sonst
                     double diff = std::abs(newBpm - m_currentBpm) / m_currentBpm;
