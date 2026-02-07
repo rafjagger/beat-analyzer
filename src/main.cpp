@@ -454,12 +454,79 @@ private:
             // Prüfe ob Tap angefordert wurde (aus OSC-Thread)
             int tapBeat = m_tapRequested.exchange(0, std::memory_order_acquire);
             if (tapBeat > 0) {
-                for (int ch = 0; ch < m_numBpmChannels; ++ch) {
-                    m_bpmTrackStates[ch].beatNumber = tapBeat;
-                    m_bpmTrackStates[ch].lastBeatFrame = currentFrame;
+                auto now = std::chrono::steady_clock::now();
+                double tapDeltaMs = m_hasPrevTap 
+                    ? std::chrono::duration<double, std::milli>(now - m_lastTapTime).count() 
+                    : 0.0;
+                
+                // Erster Tap = nach >1s Pause (oder allererster Tap)
+                bool isFirstTap = !m_hasPrevTap || tapDeltaMs > 1000.0;
+                
+                if (isFirstTap) {
+                    // Tap-Intervall-Buffer zurücksetzen
+                    m_tapIntervalCount = 0;
+                    m_tapIntervalIndex = 0;
+                    m_tapBpm = 0.0;
+                    
+                    printf("TAP %d | (erster Tap — Clock auf Beat %d gesetzt)\n", tapBeat, tapBeat);
+                    fflush(stdout);
+                    
+                    // NUR beim ersten Tap: Beat-Nummer setzen und Phase resetten
+                    for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                        m_bpmTrackStates[ch].beatNumber = tapBeat;
+                        m_bpmTrackStates[ch].lastBeatFrame = currentFrame;
+                    }
+                    // Sofort senden
+                    sendBeatClockForChannel(0, false);
+                } else {
+                    // Folge-Tap: nur Timing messen, Clock NICHT anfassen
+                    
+                    // Tap-Intervall speichern (Ringpuffer)
+                    m_tapIntervals[m_tapIntervalIndex % 8] = tapDeltaMs;
+                    m_tapIntervalIndex++;
+                    if (m_tapIntervalCount < 8) m_tapIntervalCount++;
+                    
+                    // Median-BPM aus letzten Tap-Intervallen
+                    if (m_tapIntervalCount >= 2) {
+                        double sorted[8];
+                        for (int k = 0; k < m_tapIntervalCount; ++k)
+                            sorted[k] = m_tapIntervals[k];
+                        std::sort(sorted, sorted + m_tapIntervalCount);
+                        double medianInterval = sorted[m_tapIntervalCount / 2];
+                        m_tapBpm = 60000.0 / medianInterval;
+                    } else {
+                        m_tapBpm = 60000.0 / tapDeltaMs;
+                    }
+                    
+                    // Double/Half-Time Erkennung und Korrektur
+                    double currentBpm = m_bpmTrackStates[0].currentBpm;
+                    const char* correction = "";
+                    if (currentBpm > 0 && m_tapBpm > 0 && m_tapIntervalCount >= 3) {
+                        double ratio = currentBpm / m_tapBpm;
+                        if (ratio > 1.7 && ratio < 2.3) {
+                            // Clock läuft doppelt so schnell wie getappt → Half-Time
+                            for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                                m_bpmTrackStates[ch].currentBpm = currentBpm / 2.0;
+                            }
+                            correction = " → HALF-TIME KORREKTUR!";
+                        } else if (ratio > 0.43 && ratio < 0.58) {
+                            // Clock läuft halb so schnell wie getappt → Double-Time
+                            for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                                m_bpmTrackStates[ch].currentBpm = currentBpm * 2.0;
+                            }
+                            correction = " → DOUBLE-TIME KORREKTUR!";
+                        }
+                    }
+                    
+                    printf("TAP %d | delta %7.1fms | tapBPM %5.1f | clockBPM %3.0f | ratio %.2f%s\n",
+                           tapBeat, tapDeltaMs, m_tapBpm,
+                           m_bpmTrackStates[0].currentBpm,
+                           currentBpm > 0 ? currentBpm / m_tapBpm : 0.0,
+                           correction);
+                    fflush(stdout);
                 }
-                // Sofort senden
-                sendBeatClockForChannel(0, false);
+                m_lastTapTime = now;
+                m_hasPrevTap = true;
             }
             
             for (int ch = 0; ch < m_numBpmChannels; ++ch) {
@@ -557,9 +624,10 @@ private:
                         
                         m_bpmTrackStates[ch].lastRealBeatFrame = compensatedFrame;
                         
-                        // Real Beats werden NUR für BPM-Verfeinerung genutzt (oben).
-                        // Phase-Nudge deaktiviert: Die Synth-Clock läuft allein tight genug,
-                        // Phase-Korrekturen verursachen mehr Jitter als sie beheben.
+                        // Real Beats werden NUR für BPM-Verfeinerung genutzt.
+                        // Downbeat-Erkennung über Onset-Stärke funktioniert nicht zuverlässig,
+                        // weil REAL Beats asynchron zum Synth-Zyklus kommen.
+                        // Downbeat (Beat 1) kann manuell per /tap 1 gesetzt werden.
                     }
                 } // hasSignal
                 
@@ -714,6 +782,14 @@ private:
     std::atomic<int> m_tapRequested{0};  // Tap-Anforderung aus OSC-Thread (0=keine, 1-4=Beat)
     int64_t m_lastExternalBeatTime = 0;
     float m_externalBpm = 0.0f;
+    
+    // Tap-Timing für Konsolen-Ausgabe und Double/Half-Time Erkennung
+    std::chrono::steady_clock::time_point m_lastTapTime{};
+    bool m_hasPrevTap = false;
+    double m_tapBpm = 0.0;              // BPM aus Tap-Intervallen
+    double m_tapIntervals[8] = {0};     // Letzte 8 Tap-Intervalle (ms)
+    int m_tapIntervalIndex = 0;
+    int m_tapIntervalCount = 0;
     
     // Status
     std::mutex m_mutex;  // Nur noch für printStatus und Tap-Callback

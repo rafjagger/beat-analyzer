@@ -234,6 +234,9 @@ public:
     // Wurde im letzten processAudio() ein Beat erkannt?
     bool hasBeatOccurred() const { return m_beatOccurred; }
     
+    // Onset-Stärke des letzten erkannten Beats (für Downbeat-Analyse)
+    double getLastBeatOnsetStrength() const { return m_lastBeatOnsetStrength; }
+    
     // Reset
     void reset();
     
@@ -243,6 +246,7 @@ private:
     std::unique_ptr<TempoTracker> m_tempoTracker;
     std::unique_ptr<BeatEventDetector> m_beatEventDetector;
     bool m_beatOccurred = false;
+    double m_lastBeatOnsetStrength = 0.0;  // Onset-Stärke des letzten erkannten Beats
     
     // Buffering
     std::vector<double> m_monoBuffer;

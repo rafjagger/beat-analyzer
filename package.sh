@@ -40,7 +40,7 @@ Package: beat-analyzer
 Version: $VERSION-$RELEASE
 Architecture: amd64
 Maintainer: Beat Analyzer Development <dev@beat-analyzer.local>
-Depends: libc6 (>= 2.29), libjack0, liblo0
+Depends: libc6 (>= 2.29), libjack0
 Description: Real-time beat analysis with OSC output
  Beat Analyzer ist eine Echtzeit-Anwendung für Beatanalyse mit OSC-Output.
  Sie nutzt die Queen Mary DSP Library aus Mixxx für hochpräzise Beat-Erkennung

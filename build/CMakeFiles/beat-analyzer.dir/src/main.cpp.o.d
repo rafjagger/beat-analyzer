@@ -237,13 +237,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/c++/15/bits/this_thread_sleep.h \
  /usr/include/c++/15/bits/chrono.h /usr/include/c++/15/ratio \
  /usr/include/c++/15/ctime /usr/include/c++/15/bits/parse_numbers.h \
- /usr/include/c++/15/mutex /usr/include/c++/15/bits/std_mutex.h \
- /usr/include/c++/15/bits/unique_lock.h \
- /usr/include/c++/15/condition_variable \
- /home/aaa/beat-analyzer/include/osc/osc_messages.h \
- /home/aaa/beat-analyzer/include/osc/osc_receiver.h /usr/include/lo/lo.h \
- /usr/include/lo/lo_endian.h /usr/include/netinet/in.h \
- /usr/include/x86_64-linux-gnu/sys/socket.h \
+ /usr/include/netinet/in.h /usr/include/x86_64-linux-gnu/sys/socket.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h \
  /usr/include/x86_64-linux-gnu/bits/socket.h \
  /usr/include/x86_64-linux-gnu/bits/socket_type.h \
@@ -251,14 +245,11 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/lib/linux/uapi/x86/asm/socket.h /usr/include/asm-generic/socket.h \
  /usr/lib/linux/uapi/x86/asm/sockios.h /usr/include/asm-generic/sockios.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_osockaddr.h \
- /usr/include/x86_64-linux-gnu/bits/in.h /usr/include/lo/lo_types.h \
- /usr/include/netdb.h /usr/include/rpc/netdb.h \
- /usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h \
- /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h \
- /usr/include/x86_64-linux-gnu/bits/netdb.h \
- /usr/include/lo/lo_osc_types.h /usr/include/lo/lo_errors.h \
- /usr/include/lo/lo_lowlevel.h /usr/include/lo/lo_serverthread.h \
- /usr/include/lo/lo_macros.h \
+ /usr/include/x86_64-linux-gnu/bits/in.h \
+ /home/aaa/beat-analyzer/include/osc/osc_messages.h \
+ /home/aaa/beat-analyzer/include/osc/osc_receiver.h \
+ /usr/include/c++/15/mutex /usr/include/c++/15/bits/std_mutex.h \
+ /usr/include/c++/15/bits/unique_lock.h \
  /home/aaa/beat-analyzer/include/config/config_loader.h \
  /home/aaa/beat-analyzer/include/config/env_config.h \
  /usr/include/c++/15/fstream /usr/include/c++/15/bits/codecvt.h \
@@ -272,10 +263,12 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/bits/signum-arch.h \
  /usr/include/x86_64-linux-gnu/bits/types/sig_atomic_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/siginfo_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/__sigval_t.h \
  /usr/include/x86_64-linux-gnu/bits/siginfo-arch.h \
  /usr/include/x86_64-linux-gnu/bits/siginfo-consts.h \
  /usr/include/x86_64-linux-gnu/bits/siginfo-consts-arch.h \
  /usr/include/x86_64-linux-gnu/bits/types/sigval_t.h \
+ /usr/include/x86_64-linux-gnu/bits/types/sigevent_t.h \
  /usr/include/x86_64-linux-gnu/bits/sigevent-consts.h \
  /usr/include/x86_64-linux-gnu/bits/sigaction.h \
  /usr/include/x86_64-linux-gnu/bits/sigcontext.h \

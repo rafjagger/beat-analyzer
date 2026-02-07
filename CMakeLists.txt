@@ -16,7 +16,6 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(JACK jack)
-pkg_check_modules(LIBLO liblo)
 pkg_check_modules(SNDFILE sndfile)
 
 # Try to find in system if pkg-config fails
@@ -68,11 +67,7 @@ target_link_libraries(beat-analyzer PRIVATE
     m
 )
 
-# Optional liblo support
-if(LIBLO_FOUND)
-    target_link_libraries(beat-analyzer PRIVATE lo)
-    target_compile_definitions(beat-analyzer PRIVATE HAS_LIBLO=1)
-endif()
+# liblo nicht mehr benötigt — OSC sender/receiver nutzen raw UDP sockets
 
 # Optional sndfile support
 if(SNDFILE_FOUND)
@@ -83,7 +78,6 @@ endif()
 # Include directories for dependencies
 target_include_directories(beat-analyzer PRIVATE
     ${JACK_INCLUDE_DIRS}
-    ${LIBLO_INCLUDE_DIRS}
     ${SNDFILE_INCLUDE_DIRS}
 )
 
@@ -114,5 +108,4 @@ install(FILES config/config.yaml
 # Print summary
 message(STATUS "BeatAnalyzer Configuration:")
 message(STATUS "  JACK support: ${JACK_FOUND}")
-message(STATUS "  liblo support: ${LIBLO_FOUND}")
 message(STATUS "  Build tests: ${BUILD_TESTS}")

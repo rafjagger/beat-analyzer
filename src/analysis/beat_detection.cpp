@@ -732,6 +732,7 @@ void RealTimeBeatTracker::processMonoInternal(const double* monoInput, int frame
             // Beat Event Detection
             if (m_beatEventDetector->process(onset)) {
                 m_beatOccurred = true;
+                m_lastBeatOnsetStrength = onset;  // Für Downbeat-Analyse
                 m_lastBeatOnsetFrame = static_cast<int64_t>(m_detectionFunction.size()) - 1;
             }
             

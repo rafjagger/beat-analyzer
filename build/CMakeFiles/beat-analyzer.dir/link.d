@@ -15,8 +15,6 @@ beat-analyzer: \
   CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libjack.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libpthread.a \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libpthread.a \
-  /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/liblo.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libm.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libm.so \
@@ -77,10 +75,6 @@ CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o:
 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libjack.so:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libpthread.a:
-
-/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libpthread.a:
-
-/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/liblo.so:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so:
 

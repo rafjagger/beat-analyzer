@@ -1,13 +1,48 @@
 #include "osc/osc_receiver.h"
 #include "util/logging.h"
-#include <chrono>
 
-#ifdef HAS_LIBLO
-#include <lo/lo.h>
-#endif
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <poll.h>
+#include <cstring>
+#include <chrono>
 
 namespace BeatAnalyzer {
 namespace OSC {
+
+// ============================================================================
+// OSC binary reading helpers
+// ============================================================================
+
+int OscReceiver::readOscString(const char* buf, int len, const char*& out) {
+    // OSC string: null-terminated, padded to 4 bytes
+    out = buf;
+    int slen = static_cast<int>(strnlen(buf, len));
+    if (slen >= len) return -1;
+    int padded = (slen + 4) & ~3;  // round up to next 4 bytes
+    return (padded <= len) ? padded : -1;
+}
+
+int32_t OscReceiver::readInt32(const char* buf) {
+    uint32_t v = (static_cast<uint8_t>(buf[0]) << 24) |
+                 (static_cast<uint8_t>(buf[1]) << 16) |
+                 (static_cast<uint8_t>(buf[2]) <<  8) |
+                 (static_cast<uint8_t>(buf[3]));
+    return static_cast<int32_t>(v);
+}
+
+float OscReceiver::readFloat32(const char* buf) {
+    int32_t i = readInt32(buf);
+    float f;
+    std::memcpy(&f, &i, 4);
+    return f;
+}
+
+// ============================================================================
+// Constructor / Destructor
+// ============================================================================
 
 OscReceiver::OscReceiver() = default;
 
@@ -15,170 +50,200 @@ OscReceiver::~OscReceiver() {
     stop();
 }
 
-void OscReceiver::setPort(int port) {
-    m_port = port;
-}
-
-void OscReceiver::setBeatClockPath(const std::string& path) {
-    m_beatClockPath = path;
-}
-
-void OscReceiver::setCallback(BeatClockCallback callback) {
-    m_callback = callback;
-}
-
-bool OscReceiver::start() {
-#ifdef HAS_LIBLO
-    if (m_running) return true;
-    
-    std::string portStr = std::to_string(m_port);
-    // Explizit UDP erzwingen (LO_UDP) - NIEMALS TCP!
-    lo_server_thread st = lo_server_thread_new_with_proto(portStr.c_str(), LO_UDP, nullptr);
-    
-    if (!st) {
-        LOG_ERROR("Failed to create OSC server (UDP) on port " + portStr);
-        return false;
-    }
-    
-    m_serverThread = st;
-    
-    // Handler für Beat-Clock registrieren
-    lo_server_thread_add_method(st, m_beatClockPath.c_str(), nullptr, 
-                                 beatClockHandler, this);
-    
-    // Handler für Clock-Modus
-    lo_server_thread_add_method(st, "/clockmode", "i", clockModeHandler, this);
-    lo_server_thread_add_method(st, "/clockmode", "f", clockModeHandler, this);
-    
-    // Handler für Tap (Downbeat setzen) - nullptr matcht alle Typen
-    lo_server_thread_add_method(st, "/tap", nullptr, tapHandler, this);
-    
-    lo_server_thread_start(st);
-    m_running = true;
-    
-    LOG_INFO("OSC Receiver started on port " + portStr + 
-             " (listening for " + m_beatClockPath + ", /clockmode, /tap)");
-    return true;
-#else
-    LOG_WARN("OSC Receiver not available - liblo not compiled in");
-    return false;
-#endif
-}
-
-void OscReceiver::stop() {
-#ifdef HAS_LIBLO
-    if (!m_running) return;
-    
-    if (m_serverThread) {
-        lo_server_thread_stop(static_cast<lo_server_thread>(m_serverThread));
-        lo_server_thread_free(static_cast<lo_server_thread>(m_serverThread));
-        m_serverThread = nullptr;
-    }
-    
-    m_running = false;
-    LOG_INFO("OSC Receiver stopped");
-#endif
-}
+void OscReceiver::setPort(int port) { m_port = port; }
+void OscReceiver::setBeatClockPath(const std::string& path) { m_beatClockPath = path; }
+void OscReceiver::setCallback(BeatClockCallback callback) { m_callback = callback; }
 
 ReceivedBeatClock OscReceiver::getLastBeatClock() const {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_lastBeatClock;
 }
 
-int OscReceiver::beatClockHandler(const char* /*path*/, const char* types,
-                                   lo_arg** argv, int argc, lo_message /*msg*/, void* userData) {
-#ifdef HAS_LIBLO
-    OscReceiver* self = static_cast<OscReceiver*>(userData);
+// ============================================================================
+// Start / Stop
+// ============================================================================
+
+bool OscReceiver::start() {
+    if (m_running) return true;
     
-    ReceivedBeatClock clock;
-    clock.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()).count();
-    clock.valid = true;
-    
-    // Parse: /beat iii  beat(1-4), bar, bpm
-    if (argc >= 1 && types[0] == 'i') {
-        clock.beatNumber = argv[0]->i;
-    }
-    if (argc >= 2 && types[1] == 'i') {
-        clock.bar = argv[1]->i;
-    }
-    if (argc >= 3 && types[2] == 'i') {
-        clock.bpm = argv[2]->i;
+    // Create UDP socket
+    m_sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (m_sockfd < 0) {
+        LOG_ERROR("OSC Receiver: Socket-Fehler");
+        return false;
     }
     
-    {
-        std::lock_guard<std::mutex> lock(self->m_mutex);
-        self->m_lastBeatClock = clock;
+    // Allow reuse
+    int optval = 1;
+    setsockopt(m_sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
+    
+    // Bind
+    struct sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(static_cast<uint16_t>(m_port));
+    addr.sin_addr.s_addr = INADDR_ANY;
+    
+    if (bind(m_sockfd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+        LOG_ERROR("OSC Receiver: Bind fehlgeschlagen auf Port " + std::to_string(m_port));
+        close(m_sockfd);
+        m_sockfd = -1;
+        return false;
     }
     
-    if (self->m_callback) {
-        self->m_callback(clock);
-    }
+    m_running = true;
+    m_thread = std::thread(&OscReceiver::recvLoop, this);
     
-    return 0;
-#else
-    (void)types; (void)argv; (void)argc; (void)userData;
-    return 0;
-#endif
+    LOG_INFO("OSC Receiver gestartet auf Port " + std::to_string(m_port) + 
+             " (UDP, listening for " + m_beatClockPath + ", /clockmode, /tap)");
+    return true;
 }
 
-int OscReceiver::clockModeHandler(const char* /*path*/, const char* types,
-                                   lo_arg** argv, int argc, lo_message /*msg*/, void* userData) {
-#ifdef HAS_LIBLO
-    OscReceiver* self = static_cast<OscReceiver*>(userData);
+void OscReceiver::stop() {
+    if (!m_running) return;
+    m_running = false;
     
-    int mode = 0;
+    // Unblock recvfrom by closing socket
+    if (m_sockfd >= 0) {
+        ::shutdown(m_sockfd, SHUT_RDWR);
+        close(m_sockfd);
+        m_sockfd = -1;
+    }
     
-    if (argc >= 1) {
-        if (types && types[0] == 'i') {
-            mode = argv[0]->i;
-        } else if (types && types[0] == 'f') {
-            mode = static_cast<int>(argv[0]->f);
+    if (m_thread.joinable()) {
+        m_thread.join();
+    }
+    
+    LOG_INFO("OSC Receiver gestoppt");
+}
+
+// ============================================================================
+// Receive loop
+// ============================================================================
+
+void OscReceiver::recvLoop() {
+    char buf[1024];
+    
+    while (m_running) {
+        // poll() with timeout so we can check m_running
+        struct pollfd pfd;
+        pfd.fd = m_sockfd;
+        pfd.events = POLLIN;
+        
+        int ret = poll(&pfd, 1, 50);  // 50ms timeout
+        if (ret <= 0) continue;
+        if (!(pfd.revents & POLLIN)) continue;
+        
+        struct sockaddr_in sender{};
+        socklen_t slen = sizeof(sender);
+        ssize_t n = recvfrom(m_sockfd, buf, sizeof(buf), 0,
+                             reinterpret_cast<struct sockaddr*>(&sender), &slen);
+        
+        if (n > 0) {
+            handlePacket(buf, static_cast<int>(n));
+        }
+    }
+}
+
+// ============================================================================
+// OSC packet handler
+// ============================================================================
+
+void OscReceiver::handlePacket(const char* data, int len) {
+    if (len < 4) return;
+    
+    // Read OSC path
+    const char* path = nullptr;
+    int pos = readOscString(data, len, path);
+    if (pos < 0 || !path) return;
+    
+    // Read type tag string (starts with ',')
+    const char* types = nullptr;
+    int typesLen = 0;
+    if (pos < len) {
+        typesLen = readOscString(data + pos, len - pos, types);
+        if (typesLen > 0) {
+            pos += typesLen;
         }
     }
     
-    // Nur 0 oder 1 erlaubt
-    mode = (mode != 0) ? 1 : 0;
+    // Skip the ',' in type tag
+    const char* typeChars = (types && types[0] == ',') ? types + 1 : "";
+    int argc = static_cast<int>(strlen(typeChars));
+    int argPos = pos;
     
-    int oldMode = self->m_clockMode.exchange(mode);
-    
-    if (oldMode != mode) {
-        LOG_INFO("Clock-Modus gewechselt: " + std::string(mode ? "EIGENE BEATCLOCK" : "TRAINING"));
+    // ── /beat iii ──────────────────────────────────────────────
+    if (std::strcmp(path, m_beatClockPath.c_str()) == 0) {
+        ReceivedBeatClock clock;
+        clock.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+        clock.valid = true;
+        
+        for (int i = 0; i < argc && argPos + 4 <= len; i++) {
+            if (typeChars[i] == 'i') {
+                int32_t val = readInt32(data + argPos);
+                if (i == 0) clock.beatNumber = val;
+                else if (i == 1) clock.bar = val;
+                else if (i == 2) clock.bpm = val;
+                argPos += 4;
+            } else if (typeChars[i] == 'f') {
+                float val = readFloat32(data + argPos);
+                if (i == 0) clock.beatNumber = static_cast<int>(val);
+                else if (i == 1) clock.bar = static_cast<int>(val);
+                else if (i == 2) clock.bpm = static_cast<int>(val);
+                argPos += 4;
+            }
+        }
+        
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_lastBeatClock = clock;
+        }
+        
+        if (m_callback) {
+            m_callback(clock);
+        }
     }
-    
-    if (self->m_clockModeCallback) {
-        self->m_clockModeCallback(mode);
+    // ── /clockmode i|f ────────────────────────────────────────
+    else if (std::strcmp(path, "/clockmode") == 0) {
+        int mode = 0;
+        if (argc >= 1 && argPos + 4 <= len) {
+            if (typeChars[0] == 'i') {
+                mode = readInt32(data + argPos);
+            } else if (typeChars[0] == 'f') {
+                mode = static_cast<int>(readFloat32(data + argPos));
+            }
+        }
+        
+        mode = (mode != 0) ? 1 : 0;
+        int oldMode = m_clockMode.exchange(mode);
+        
+        if (oldMode != mode) {
+            LOG_INFO("Clock-Modus gewechselt: " + std::string(mode ? "EIGENE BEATCLOCK" : "TRAINING"));
+        }
+        
+        if (m_clockModeCallback) {
+            m_clockModeCallback(mode);
+        }
     }
-    
-    return 0;
-#else
-    return 0;
-#endif
-}
-
-int OscReceiver::tapHandler(const char* /*path*/, const char* types,
-                             lo_arg** argv, int argc, lo_message /*msg*/, void* userData) {
-#ifdef HAS_LIBLO
-    OscReceiver* self = static_cast<OscReceiver*>(userData);
-    
-    int beat = 1;  // Default: Downbeat
-    if (argc >= 1 && types && types[0] == 'i') {
-        beat = argv[0]->i;
+    // ── /tap [i] ─────────────────────────────────────────────
+    else if (std::strcmp(path, "/tap") == 0) {
+        int beat = 1;
+        if (argc >= 1 && argPos + 4 <= len) {
+            if (typeChars[0] == 'i') {
+                beat = readInt32(data + argPos);
+            } else if (typeChars[0] == 'f') {
+                beat = static_cast<int>(readFloat32(data + argPos));
+            }
+        }
+        
+        if (beat < 1 || beat > 4) beat = 1;
+        
+        LOG_INFO("TAP empfangen -> Beat " + std::to_string(beat));
+        
+        if (m_tapCallback) {
+            m_tapCallback(beat);
+        }
     }
-    
-    // Beat auf 1-4 clampen
-    if (beat < 1 || beat > 4) beat = 1;
-    
-    LOG_INFO("TAP empfangen -> Beat " + std::to_string(beat));
-    
-    if (self->m_tapCallback) {
-        self->m_tapCallback(beat);
-    }
-    
-    return 0;
-#else
-    return 0;
-#endif
 }
 
 } // namespace OSC
