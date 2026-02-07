@@ -4,6 +4,9 @@
 #include <memory>
 #include <functional>
 #include <vector>
+#include <atomic>
+#include <thread>
+#include <array>
 #include "osc_messages.h"
 
 namespace BeatAnalyzer {
@@ -21,7 +24,10 @@ struct OscTarget {
 
 /**
  * OSC sender supporting multiple targets.
- * Sends beat clock and synchronization messages to all configured hosts.
+ * 
+ * THREAD-SAFE: Alle send*()-Methoden schreiben in eine lock-free Queue.
+ * Ein dedizierter Sender-Thread liest die Queue und macht alle lo_send-Aufrufe.
+ * Dadurch kein Blocking in VU/Beat/OSC-Threads.
  */
 class OscSender {
 public:
@@ -35,19 +41,22 @@ public:
     // Add a target host
     void addTarget(const std::string& name, const std::string& host, int port);
     
-    // Initialize all OSC targets
+    // Initialize all OSC targets and start sender thread
     bool initialize();
     
-    // Send beat clock message to all targets
+    // Stop sender thread
+    void shutdown();
+    
+    // Send beat clock message (thread-safe, non-blocking)
     bool sendBeatClock(const BeatClockMessage& msg);
     
-    // Send single float value to path (all targets)
+    // Send single float value to path (thread-safe, non-blocking)
     bool sendFloat(const std::string& path, float value);
     
-    // Send two float values to path (all targets) - for VU meter (peak, rms)
+    // Send two float values to path (thread-safe, non-blocking)
     bool sendFloats(const std::string& path, float value1, float value2);
     
-    // Send raw OSC message to all targets
+    // Send raw OSC message (thread-safe, non-blocking)
     bool sendMessage(const OscMessage& msg);
     
     // Send to all tracks (0-3) on all targets
@@ -72,6 +81,46 @@ private:
     std::vector<OscTarget> m_targets;
     bool m_connected;
     ErrorCallback m_errorCallback;
+    
+    // === Lock-free Send Queue ===
+    // Nachrichtentypen für die Queue
+    enum class QueueMsgType : uint8_t {
+        BEAT_CLOCK,   // path + 3x int (beat, bar, bpm)
+        FLOAT,        // path + 1x float
+        FLOAT2,       // path + 2x float
+        GENERIC       // path + args als strings
+    };
+    
+    struct QueueEntry {
+        QueueMsgType type;
+        char path[64];          // OSC path (z.B. "/beat", "/vu/0")
+        union {
+            struct { int i1, i2, i3; } ints;        // BEAT_CLOCK
+            struct { float f1; } oneFloat;           // FLOAT
+            struct { float f1, f2; } twoFloats;      // FLOAT2
+        } data;
+        // Für GENERIC: OscMessage wird inline gespeichert (selten genutzt)
+        OscMessage genericMsg;
+        std::atomic<bool> ready{false};  // true = Eintrag bereit zum Senden
+    };
+    
+    // Ring-Buffer mit fester Größe (keine Allokation beim Senden)
+    static constexpr int QUEUE_SIZE = 512;  // Muss Power-of-2 sein
+    static constexpr int QUEUE_MASK = QUEUE_SIZE - 1;
+    std::array<QueueEntry, QUEUE_SIZE> m_queue;
+    std::atomic<int> m_queueWritePos{0};
+    std::atomic<int> m_queueReadPos{0};
+    
+    // Sender-Thread
+    std::thread m_senderThread;
+    std::atomic<bool> m_senderRunning{false};
+    void senderThreadFunc();
+    
+    // Interne Send-Funktionen (nur vom Sender-Thread aufgerufen)
+    void doSendInts(const char* path, int i1, int i2, int i3);
+    void doSendFloat(const char* path, float f1);
+    void doSendFloats(const char* path, float f1, float f2);
+    void doSendGeneric(const OscMessage& msg);
 };
 
 using OscSenderPtr = std::shared_ptr<OscSender>;

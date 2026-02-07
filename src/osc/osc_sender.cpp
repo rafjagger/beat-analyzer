@@ -13,9 +13,15 @@ namespace OSC {
 
 OscSender::OscSender()
     : m_connected(false) {
+    // Queue-Einträge initialisieren
+    for (auto& entry : m_queue) {
+        entry.ready.store(false, std::memory_order_relaxed);
+    }
 }
 
 OscSender::~OscSender() {
+    shutdown();
+    
 #ifdef HAS_LIBLO
     for (auto& target : m_targets) {
         if (target.address) {
@@ -82,6 +88,14 @@ bool OscSender::initialize() {
     }
     
     m_connected = anyConnected;
+    
+    // Sender-Thread starten
+    if (m_connected) {
+        m_senderRunning = true;
+        m_senderThread = std::thread(&OscSender::senderThreadFunc, this);
+        LOG_INFO("OSC Sender-Thread gestartet (non-blocking queue)");
+    }
+    
     return anyConnected;
 #else
     LOG_WARN("liblo not available - OSC support disabled");
@@ -90,54 +104,215 @@ bool OscSender::initialize() {
 #endif
 }
 
+void OscSender::shutdown() {
+    if (m_senderRunning) {
+        m_senderRunning = false;
+        if (m_senderThread.joinable()) {
+            m_senderThread.join();
+        }
+    }
+}
+
+// ============================================================================
+// Thread-safe Queue-basierte Send-Methoden (non-blocking)
+// ============================================================================
+
 bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
-    return sendMessage(msg.toOscMessage());
+    if (!m_connected) return false;
+    
+    int writePos = m_queueWritePos.load(std::memory_order_relaxed);
+    int nextPos = (writePos + 1) & QUEUE_MASK;
+    
+    // Queue voll? Drop statt blockieren
+    if (nextPos == m_queueReadPos.load(std::memory_order_acquire)) {
+        return false;  // Silently drop - besser als blockieren
+    }
+    
+    auto& entry = m_queue[writePos];
+    entry.type = QueueMsgType::BEAT_CLOCK;
+    std::strncpy(entry.path, "/beat", sizeof(entry.path) - 1);
+    entry.path[sizeof(entry.path) - 1] = '\0';
+    entry.data.ints.i1 = msg.beat_number;
+    entry.data.ints.i2 = msg.bar_number;
+    entry.data.ints.i3 = msg.bpm;
+    entry.ready.store(true, std::memory_order_release);
+    
+    m_queueWritePos.store(nextPos, std::memory_order_release);
+    return true;
 }
 
 bool OscSender::sendFloat(const std::string& path, float value) {
-#ifdef HAS_LIBLO
     if (!m_connected) return false;
     
-    for (auto& target : m_targets) {
-        if (!target.address) continue;
-        
-        lo_address addr = static_cast<lo_address>(target.address);
-        lo_send(addr, path.c_str(), "f", value);
-        // UDP: Fehler ignorieren - fire and forget
+    int writePos = m_queueWritePos.load(std::memory_order_relaxed);
+    int nextPos = (writePos + 1) & QUEUE_MASK;
+    
+    if (nextPos == m_queueReadPos.load(std::memory_order_acquire)) {
+        return false;
     }
+    
+    auto& entry = m_queue[writePos];
+    entry.type = QueueMsgType::FLOAT;
+    std::strncpy(entry.path, path.c_str(), sizeof(entry.path) - 1);
+    entry.path[sizeof(entry.path) - 1] = '\0';
+    entry.data.oneFloat.f1 = value;
+    entry.ready.store(true, std::memory_order_release);
+    
+    m_queueWritePos.store(nextPos, std::memory_order_release);
     return true;
-#else
-    return false;
-#endif
 }
 
 bool OscSender::sendFloats(const std::string& path, float value1, float value2) {
-#ifdef HAS_LIBLO
     if (!m_connected) return false;
     
-    for (auto& target : m_targets) {
-        if (!target.address) continue;
-        
-        lo_address addr = static_cast<lo_address>(target.address);
-        lo_send(addr, path.c_str(), "ff", value1, value2);
-        // UDP: Fehler ignorieren - fire and forget
+    int writePos = m_queueWritePos.load(std::memory_order_relaxed);
+    int nextPos = (writePos + 1) & QUEUE_MASK;
+    
+    if (nextPos == m_queueReadPos.load(std::memory_order_acquire)) {
+        return false;
     }
+    
+    auto& entry = m_queue[writePos];
+    entry.type = QueueMsgType::FLOAT2;
+    std::strncpy(entry.path, path.c_str(), sizeof(entry.path) - 1);
+    entry.path[sizeof(entry.path) - 1] = '\0';
+    entry.data.twoFloats.f1 = value1;
+    entry.data.twoFloats.f2 = value2;
+    entry.ready.store(true, std::memory_order_release);
+    
+    m_queueWritePos.store(nextPos, std::memory_order_release);
     return true;
-#else
-    return false;
-#endif
 }
 
 bool OscSender::sendMessage(const OscMessage& msg) {
-#ifdef HAS_LIBLO
     if (!m_connected) return false;
     
+    int writePos = m_queueWritePos.load(std::memory_order_relaxed);
+    int nextPos = (writePos + 1) & QUEUE_MASK;
+    
+    if (nextPos == m_queueReadPos.load(std::memory_order_acquire)) {
+        return false;
+    }
+    
+    auto& entry = m_queue[writePos];
+    entry.type = QueueMsgType::GENERIC;
+    entry.genericMsg = msg;
+    entry.ready.store(true, std::memory_order_release);
+    
+    m_queueWritePos.store(nextPos, std::memory_order_release);
+    return true;
+}
+
+bool OscSender::broadcastBeatClock(
+    int64_t /*framePos*/,
+    float bpm,
+    int beatNumber,
+    float /*strength*/) {
+    
+    BeatClockMessage msg;
+    msg.track_id = 0;
+    msg.beat_number = beatNumber;
+    msg.bar_number = 1;
+    msg.bpm = static_cast<int>(bpm + 0.5f);
+    
+    return sendBeatClock(msg);
+}
+
+// ============================================================================
+// Sender-Thread: Einziger Thread der lo_send aufruft
+// ============================================================================
+
+void OscSender::senderThreadFunc() {
+    while (m_senderRunning) {
+        int readPos = m_queueReadPos.load(std::memory_order_relaxed);
+        int writePos = m_queueWritePos.load(std::memory_order_acquire);
+        
+        if (readPos == writePos) {
+            // Queue leer - kurz schlafen (200µs = 5kHz max rate)
+            std::this_thread::sleep_for(std::chrono::microseconds(200));
+            continue;
+        }
+        
+        // Alle verfügbaren Nachrichten senden
+        while (readPos != writePos) {
+            auto& entry = m_queue[readPos];
+            
+            // Warte bis Eintrag wirklich bereit ist
+            if (!entry.ready.load(std::memory_order_acquire)) {
+                break;
+            }
+            
+            switch (entry.type) {
+                case QueueMsgType::BEAT_CLOCK:
+                    doSendInts(entry.path, entry.data.ints.i1, entry.data.ints.i2, entry.data.ints.i3);
+                    break;
+                case QueueMsgType::FLOAT:
+                    doSendFloat(entry.path, entry.data.oneFloat.f1);
+                    break;
+                case QueueMsgType::FLOAT2:
+                    doSendFloats(entry.path, entry.data.twoFloats.f1, entry.data.twoFloats.f2);
+                    break;
+                case QueueMsgType::GENERIC:
+                    doSendGeneric(entry.genericMsg);
+                    break;
+            }
+            
+            entry.ready.store(false, std::memory_order_release);
+            readPos = (readPos + 1) & QUEUE_MASK;
+        }
+        
+        m_queueReadPos.store(readPos, std::memory_order_release);
+    }
+    
+    LOG_INFO("OSC Sender-Thread beendet");
+}
+
+// ============================================================================
+// Interne Send-Funktionen (nur vom Sender-Thread aufgerufen, kein Lock nötig)
+// ============================================================================
+
+void OscSender::doSendInts(const char* path, int i1, int i2, int i3) {
+#ifdef HAS_LIBLO
+    for (auto& target : m_targets) {
+        if (!target.address) continue;
+        lo_address addr = static_cast<lo_address>(target.address);
+        lo_send(addr, path, "iii", i1, i2, i3);
+    }
+#else
+    (void)path; (void)i1; (void)i2; (void)i3;
+#endif
+}
+
+void OscSender::doSendFloat(const char* path, float f1) {
+#ifdef HAS_LIBLO
+    for (auto& target : m_targets) {
+        if (!target.address) continue;
+        lo_address addr = static_cast<lo_address>(target.address);
+        lo_send(addr, path, "f", f1);
+    }
+#else
+    (void)path; (void)f1;
+#endif
+}
+
+void OscSender::doSendFloats(const char* path, float f1, float f2) {
+#ifdef HAS_LIBLO
+    for (auto& target : m_targets) {
+        if (!target.address) continue;
+        lo_address addr = static_cast<lo_address>(target.address);
+        lo_send(addr, path, "ff", f1, f2);
+    }
+#else
+    (void)path; (void)f1; (void)f2;
+#endif
+}
+
+void OscSender::doSendGeneric(const OscMessage& msg) {
+#ifdef HAS_LIBLO
     for (auto& target : m_targets) {
         if (!target.address) continue;
         
         lo_address addr = static_cast<lo_address>(target.address);
-        
-        // Build OSC message
         lo_message lom = lo_message_new();
         
         for (const auto& arg : msg.args) {
@@ -156,28 +331,10 @@ bool OscSender::sendMessage(const OscMessage& msg) {
         
         lo_send_message(addr, msg.path.c_str(), lom);
         lo_message_free(lom);
-        // UDP: Fehler ignorieren - fire and forget
     }
-    
-    return true;
 #else
-    return false;
+    (void)msg;
 #endif
-}
-
-bool OscSender::broadcastBeatClock(
-    int64_t framePos,
-    float bpm,
-    int beatNumber,
-    float strength) {
-    
-    BeatClockMessage msg;
-    msg.track_id = 0;
-    msg.beat_number = beatNumber;
-    msg.bar_number = 1;
-    msg.bpm = static_cast<int>(bpm + 0.5f);
-    
-    return sendBeatClock(msg);
 }
 
 } // namespace OSC

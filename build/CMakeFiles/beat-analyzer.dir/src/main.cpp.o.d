@@ -232,12 +232,14 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/c++/15/bits/sstream.tcc \
  /home/aaa/beat-analyzer/include/analysis/vu_meter.h \
  /home/aaa/beat-analyzer/include/osc/osc_sender.h \
- /home/aaa/beat-analyzer/include/osc/osc_messages.h \
- /home/aaa/beat-analyzer/include/osc/osc_receiver.h \
- /usr/include/c++/15/atomic /usr/include/c++/15/mutex \
+ /usr/include/c++/15/atomic /usr/include/c++/15/thread \
+ /usr/include/c++/15/bits/std_thread.h \
+ /usr/include/c++/15/bits/this_thread_sleep.h \
  /usr/include/c++/15/bits/chrono.h /usr/include/c++/15/ratio \
  /usr/include/c++/15/ctime /usr/include/c++/15/bits/parse_numbers.h \
- /usr/include/c++/15/bits/std_mutex.h \
+ /home/aaa/beat-analyzer/include/osc/osc_messages.h \
+ /home/aaa/beat-analyzer/include/osc/osc_receiver.h \
+ /usr/include/c++/15/mutex /usr/include/c++/15/bits/std_mutex.h \
  /usr/include/c++/15/bits/unique_lock.h /usr/include/lo/lo.h \
  /usr/include/lo/lo_endian.h /usr/include/netinet/in.h \
  /usr/include/x86_64-linux-gnu/sys/socket.h \
@@ -263,9 +265,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/15/bits/c++io.h \
  /usr/include/c++/15/bits/fstream.tcc \
  /home/aaa/beat-analyzer/include/util/logging.h \
- /usr/include/c++/15/iostream /usr/include/c++/15/thread \
- /usr/include/c++/15/bits/std_thread.h \
- /usr/include/c++/15/bits/this_thread_sleep.h /usr/include/c++/15/chrono \
+ /usr/include/c++/15/iostream /usr/include/c++/15/chrono \
  /usr/include/c++/15/csignal /usr/include/signal.h \
  /usr/include/x86_64-linux-gnu/bits/signum-generic.h \
  /usr/include/x86_64-linux-gnu/bits/signum-arch.h \

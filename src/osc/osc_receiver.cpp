@@ -32,10 +32,11 @@ bool OscReceiver::start() {
     if (m_running) return true;
     
     std::string portStr = std::to_string(m_port);
-    lo_server_thread st = lo_server_thread_new(portStr.c_str(), nullptr);
+    // Explizit UDP erzwingen (LO_UDP) - NIEMALS TCP!
+    lo_server_thread st = lo_server_thread_new_with_proto(portStr.c_str(), LO_UDP, nullptr);
     
     if (!st) {
-        LOG_ERROR("Failed to create OSC server on port " + portStr);
+        LOG_ERROR("Failed to create OSC server (UDP) on port " + portStr);
         return false;
     }
     
