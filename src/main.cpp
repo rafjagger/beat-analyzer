@@ -104,8 +104,11 @@ public:
         // Feature Toggles
         m_enableBeatclock = env.getInt("ENABLE_BEATCLOCK", 1) != 0;
         m_enableVu = env.getInt("ENABLE_VU", 1) != 0;
-        
         m_enableBeat = env.getInt("ENABLE_BEAT", 1) != 0;
+        
+        // Debug: Konsolen-Output
+        m_debugVuConsole = env.getInt("DEBUG_VU_CONSOLE", 0) != 0;
+        m_debugBpmConsole = env.getInt("DEBUG_BPM_CONSOLE", 1) != 0;
         
         // VU-Meter Konfiguration
         m_vuRmsAttack = env.getFloat("VU_RMS_ATTACK", 0.8f);
@@ -177,6 +180,8 @@ public:
             vuMeter->setPeakFalloff(m_vuPeakFalloff);
             m_vuMeters.push_back(std::move(vuMeter));
             m_vuTrackStates.push_back(VuTrackState{});
+            // Vorberechnete OSC-Pfade für lock-free VU-Sending
+            m_vuOscPaths.push_back("/vu/" + std::to_string(i));
         }
         
         LOG_INFO(std::to_string(m_numBpmChannels) + " Beat Tracker, " + 
@@ -316,14 +321,15 @@ public:
         LOG_INFO("Warte auf Audio...");
         
         // VU-Meter Thread: sendet /vu OSC mit konfigurierbarer Rate (komplett unabhängig)
-        // Verwendet sleep_until statt sleep_for für drift-freies, absolutes Timing
+        // Verwendet sleep_until für drift-freies, absolutes Timing
+        // WICHTIG: sleep_until ZUERST, dann senden - für gleichmäßiges Timing
         std::thread vuThread([this]() {
             const auto vuOscInterval = std::chrono::microseconds(1000000 / m_oscSendRate);
-            auto nextSendTime = std::chrono::steady_clock::now();
+            auto nextSendTime = std::chrono::steady_clock::now() + vuOscInterval;
             while (g_running) {
-                nextSendTime += vuOscInterval;
-                sendVuMeterOsc();
                 std::this_thread::sleep_until(nextSendTime);
+                sendVuMeterOsc();
+                nextSendTime += vuOscInterval;
             }
         });
         
@@ -714,7 +720,7 @@ private:
         m_oscSender->sendBeatClock(msg);
         
         // Timing-Analyse: Jeden Beat mit Timestamp + Delta ausgeben
-        {
+        if (m_debugBpmConsole) {
             static auto lastBeatTime = std::chrono::steady_clock::now();
             auto now = std::chrono::steady_clock::now();
             double deltaMs = std::chrono::duration<double, std::milli>(now - lastBeatTime).count();
@@ -737,14 +743,25 @@ private:
         // Sendet /vu/0-N mit [peak, rms] als lineare Werte (0.0-1.0) wie SuperCollider
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
+        // DEBUG: Timing für VU
+        static auto lastVuTime = std::chrono::steady_clock::now();
+        auto now = std::chrono::steady_clock::now();
+        double deltaMs = std::chrono::duration<double, std::milli>(now - lastVuTime).count();
+        lastVuTime = now;
+        
         for (int ch = 0; ch < m_numVuChannels; ++ch) {
             // Immer senden, auch ohne Signal (wie SuperCollider)
             float rmsLinear = m_vuMeters[ch]->getRmsLinear();
             float peakLinear = m_vuMeters[ch]->getPeakLinear();
             
-            // Sende /vu/0, /vu/1, etc. mit [peak, rms] als lineare Werte (wie SuperCollider)
-            std::string vuPath = "/vu/" + std::to_string(ch);
-            m_oscSender->sendFloats(vuPath, peakLinear, rmsLinear);
+            // Vorberechnete Pfade - keine Allokation zur Runtime
+            m_oscSender->sendFloats(m_vuOscPaths[ch], peakLinear, rmsLinear);
+            
+            // DEBUG: /vu/3 auf Konsole (nur wenn aktiviert)
+            if (m_debugVuConsole && ch == 3) {
+                printf("/vu/3 | peak %.3f | rms %.3f | delta %6.1fms\n", peakLinear, rmsLinear, deltaMs);
+                fflush(stdout);
+            }
         }
     }
     
@@ -802,6 +819,7 @@ private:
     // VU-Meter (nur für VU Kanäle)
     std::vector<std::unique_ptr<VuMeter>> m_vuMeters;
     std::vector<VuTrackState> m_vuTrackStates;
+    std::vector<std::string> m_vuOscPaths;  // Vorberechnete OSC-Pfade: /vu/0, /vu/1, ...
     
     // OSC
     std::shared_ptr<OscSender> m_oscSender;
@@ -838,8 +856,11 @@ private:
     // Feature Toggles
     bool m_enableBeatclock = true;
     bool m_enableVu = true;
-    
     bool m_enableBeat = true;
+    
+    // Debug: Konsolen-Output
+    bool m_debugVuConsole = false;
+    bool m_debugBpmConsole = true;
     
     // VU-Meter Konfiguration
     float m_vuRmsAttack = 0.8f;
