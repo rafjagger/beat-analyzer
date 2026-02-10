@@ -1,0 +1,114 @@
+Beat-Analyse Architektur: REALBEAT/GRID/SYNTHBEAT
+==================================================
+
+DATENFLUSS
+----------
+
+Audio-Input (JACK)
+       ↓
+   Kick-Filter (Butterworth 30-150Hz)
+       ↓
+   FFT + Onset Detection
+       ↓
+   REALBEAT (erkannte Beats mit Timestamp)
+       ↓
+   GridCalculator (5s Fenster, 4/4 Takt)
+       ↓
+      GRID (gridBpm, gridPhase, confidence)
+       ↓
+   SYNTHBEAT (korrigierte Beat-Clock)
+       ↓
+   OSC /beat (beat, bar, bpm)
+
+
+KOMPONENTEN-VERHALTEN
+---------------------
+
+REALBEAT (Erkennung)
+- Butterworth-Bandpass filtert Audio auf 30-150Hz (Kick-Isolation)
+- FFT-basierte Onset-Detection erkennt Transienten
+- Jeder erkannte Beat wird mit Timestamp gespeichert
+- Latenz-kompensiert (15ms Default)
+
+GRID (Analyse)
+- Sammelt REALBEAT-Timestamps der letzten 5 Sekunden (konfigurierbar)
+- Analysiert Intervall-Histogram, nimmt 4/4 Takt an
+- Berechnet gridBpm und gridPhase (wo im Takt der Beat liegt: 0.0-1.0)
+- confidence zeigt wie regelmäßig die REALBEATs sind
+- Wenn TAP-Muster vorhanden: Sucht nach REALBEATs die zum TAP-Tempo passen
+
+TAP (Manuelle Eingabe)
+- Erster TAP: Setzt SYNTHBEAT sofort auf Beat 1, Phase-Reset auf TAP-Zeitpunkt
+- Weitere TAPs: Berechnen tapPatternBpm aus Intervallen
+- tapPatternBpm wird an GridCalculator übergeben als Suchmuster
+- GRID sucht dann gezielt nach diesem Tempo in den REALBEATs
+- TAP-Muster verfällt nach 30 Sekunden (konfigurierbar)
+
+SYNTHBEAT (Ausgabe)
+- Synthetische Beat-Clock die kontinuierlich läuft
+- Startet initial synchron zum ersten REALBEAT
+- Wird ständig durch GRID korrigiert (wenn confidence > 0.7)
+- Drift-Korrektur begrenzt auf ±5ms pro Beat (konfigurierbar)
+- Sendet /beat OSC-Message auf jedem Beat
+
+
+ABLAUF BEI PROGRAMMSTART
+------------------------
+
+1. Warte auf Audio-Signal
+2. Kick-Filter + Onset-Detection starten
+3. Erste REALBEATs werden gesammelt
+4. Nach ~5 Sekunden: GRID berechnet erstmals gridBpm + gridPhase
+5. SYNTHBEAT startet synchron zum GRID
+6. Kontinuierliche Korrektur: SYNTHBEAT driftet sanft Richtung GRID
+
+
+ABLAUF BEI TAP
+--------------
+
+1. Erster TAP nach Pause (>1.5s):
+   - SYNTHBEAT springt sofort auf Beat 1
+   - Phase wird auf TAP-Zeitpunkt gesetzt
+   - tapPatternBpm wird zurückgesetzt
+
+2. Weitere TAPs:
+   - Intervall zum vorherigen TAP wird gemessen
+   - tapPatternBpm wird aus Median der Intervalle berechnet
+   - GridCalculator erhält tapPatternBpm als Suchmuster
+   - GRID sucht in REALBEATs nach diesem Tempo
+   - Wenn gefunden: SYNTHBEAT synchronisiert sich dorthin
+
+3. Nach 30 Sekunden ohne TAP:
+   - tapPatternBpm verfällt
+   - GRID analysiert wieder frei ohne Muster-Vorgabe
+
+
+ABLAUF BEI TEMPO-WECHSEL IM TRACK
+---------------------------------
+
+1. REALBEATs ändern sich (neues Tempo)
+2. GRID erkennt neues Tempo nach ~2-3 Sekunden
+3. SYNTHBEAT driftet sanft zum neuen Tempo (max 5ms/Beat)
+4. Kein hörbarer Sprung, smooth transition
+
+
+ABLAUF BEI SCHLECHTER ERKENNUNG
+-------------------------------
+
+1. GRID confidence sinkt unter 0.7
+2. SYNTHBEAT behält letztes bekanntes Tempo bei (free-running)
+3. User kann TAP nutzen um korrektes Tempo vorzugeben
+4. GRID sucht nach TAP-Muster in REALBEATs
+5. Wenn gefunden: Synchronisation, confidence steigt wieder
+
+
+CONFIG-PARAMETER
+----------------
+
+TAP_PATTERN_TIMEOUT_S=30      Sekunden bis TAP-Muster verfällt
+SYNTHBEAT_DRIFT_MAX_MS=5      Max Phase-Korrektur pro Beat in ms
+GRID_WINDOW_S=5               Sekunden REALBEAT-Daten für Grid
+KICK_FILTER_ENABLED=1         Bass-Bandpass an/aus
+KICK_FILTER_LOW_HZ=30         Untere Grenzfrequenz
+KICK_FILTER_HIGH_HZ=150       Obere Grenzfrequenz
+KICK_FILTER_ORDER=2           2=12dB/Oct, 4=24dB/Oct
