@@ -48,6 +48,12 @@ struct BeatDetectorConfig {
     bool agcEnabled = true;         // Dynamische Eingangsverstärkung
     float agcTargetPeak = 0.7f;     // Ziel-Pegelspitze (linear, 0-1)
     
+    // Kick-Filter (Butterworth Bandpass für Bass-Isolation)
+    bool kickFilterEnabled = true;  // Bandpass vor FFT-Analyse
+    float kickFilterLowHz = 30.0f;  // Untere Grenzfrequenz
+    float kickFilterHighHz = 150.0f;// Obere Grenzfrequenz
+    int kickFilterOrder = 2;        // Filter-Order (2=12dB/Oct, 4=24dB/Oct)
+    
     // Berechne Step-Size in Sekunden
     double hopSizeSeconds() const {
         return static_cast<double>(hopSize) / sampleRate;
@@ -100,9 +106,75 @@ public:
 };
 
 /**
+ * Butterworth Bandpass Filter
+ * Minimale Latenz (~2 Samples), sample-by-sample Verarbeitung
+ * Für Kick-Drum Isolation (30-150Hz)
+ */
+class ButterworthBandpass {
+public:
+    /**
+     * Konstruktor
+     * @param sampleRate Sample-Rate in Hz
+     * @param lowFreq Untere Grenzfrequenz in Hz
+     * @param highFreq Obere Grenzfrequenz in Hz
+     * @param order Filter-Order (2 oder 4)
+     */
+    ButterworthBandpass(int sampleRate, float lowFreq, float highFreq, int order = 2);
+    
+    /**
+     * Verarbeitet ein einzelnes Sample
+     * @param input Eingabe-Sample
+     * @return Gefiltertes Sample
+     */
+    double processSample(double input);
+    
+    /**
+     * Verarbeitet einen Buffer in-place
+     * @param buffer Audio-Buffer
+     * @param numSamples Anzahl Samples
+     */
+    void processBuffer(double* buffer, int numSamples);
+    
+    /**
+     * Setzt den Filter-Zustand zurück
+     */
+    void reset();
+    
+private:
+    int m_sampleRate;
+    float m_lowFreq;
+    float m_highFreq;
+    int m_order;
+    
+    // Biquad-Koeffizienten (für 2nd-order Sektion)
+    struct BiquadCoeffs {
+        double b0, b1, b2;  // Numerator
+        double a1, a2;      // Denominator (a0 = 1.0)
+    };
+    
+    // Biquad-Zustand
+    struct BiquadState {
+        double z1 = 0.0, z2 = 0.0;  // Delay-Line
+    };
+    
+    std::vector<BiquadCoeffs> m_sections;  // Kaskadierte Biquad-Sektionen
+    std::vector<BiquadState> m_states;
+    
+    void calculateCoefficients();
+    double processBiquad(double input, const BiquadCoeffs& coeffs, BiquadState& state);
+};
+
+/**
  * Onset Detection Function
  * Erkennt Onsets/Transienten im Audio basierend auf
  * Spectral Difference (Complex Domain)
+ * 
+ * Mehrband-Architektur:
+ * - Low Band (30-150 Hz): Kick - primär
+ * - Mid Band (150-2000 Hz): Snare, Claps, Melodie
+ * - High Band (2000-8000 Hz): Hi-Hats, Percussion
+ * 
+ * Bei schwachem Kick (Intros) automatisches Fallback auf Mid/High
  */
 class OnsetDetector {
 public:
@@ -114,6 +186,12 @@ public:
     
     // Reset den internen Zustand
     void reset();
+    
+    // Getter für Band-Energien (für Debugging/Monitoring)
+    double getLowBandEnergy() const { return m_lowBandEnergy; }
+    double getMidBandEnergy() const { return m_midBandEnergy; }
+    double getHighBandEnergy() const { return m_highBandEnergy; }
+    int getActiveBand() const { return m_activeBand; }  // 0=Low, 1=Mid, 2=High
     
 private:
     BeatDetectorConfig m_config;
@@ -128,8 +206,29 @@ private:
     std::vector<double> m_freqWeights;  // Frequenzgewichtung (Bass betont)
     ComplexBuffer m_spectrum;
     
+    // Kick-Filter für Bass-Isolation
+    std::unique_ptr<ButterworthBandpass> m_kickFilter;
+    std::vector<double> m_filteredFrame;  // Temporärer Buffer für gefiltertes Audio
+    
+    // Mehrband-Onset-Detection
+    double m_lowBandEnergy = 0.0;   // 30-150 Hz (Kick)
+    double m_midBandEnergy = 0.0;   // 150-2000 Hz (Snare, Melodie)
+    double m_highBandEnergy = 0.0;  // 2000-8000 Hz (Hi-Hat)
+    double m_lowBandAvg = 0.0;      // Laufender Durchschnitt Low
+    double m_midBandAvg = 0.0;      // Laufender Durchschnitt Mid
+    double m_highBandAvg = 0.0;     // Laufender Durchschnitt High
+    int m_activeBand = 0;           // Aktives Band (0=Low, 1=Mid, 2=High)
+    int m_lowBandBinStart = 0;      // FFT-Bin Grenzen
+    int m_lowBandBinEnd = 0;
+    int m_midBandBinStart = 0;
+    int m_midBandBinEnd = 0;
+    int m_highBandBinStart = 0;
+    int m_highBandBinEnd = 0;
+    
     double computeSpectralDifference();
     double computeComplexSpectralDifference();
+    double computeLowBandOnset();    // NUR Low-Band (Kick)
+    double computeMultibandOnset();  // Mehrband-Onset (nicht mehr verwendet)
 };
 
 /**

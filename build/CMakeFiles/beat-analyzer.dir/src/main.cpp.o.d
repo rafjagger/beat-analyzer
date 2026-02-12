@@ -230,10 +230,19 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/c++/15/bits/ostream.h /usr/include/c++/15/bits/ostream.tcc \
  /usr/include/c++/15/bits/istream.tcc \
  /usr/include/c++/15/bits/sstream.tcc \
+ /home/aaa/beat-analyzer/include/analysis/btrack_wrapper.h \
+ /home/aaa/beat-analyzer/external/BTrack/src/BTrack.h \
+ /home/aaa/beat-analyzer/external/BTrack/src/OnsetDetectionFunction.h \
+ /home/aaa/beat-analyzer/external/BTrack/libs/kiss_fft130/kiss_fft.h \
+ /usr/include/c++/15/stdlib.h /usr/include/c++/15/math.h \
+ /home/aaa/beat-analyzer/external/BTrack/src/CircularBuffer.h \
+ /usr/include/c++/15/atomic \
+ /home/aaa/beat-analyzer/include/analysis/grid_calculator.h \
+ /usr/include/c++/15/deque /usr/include/c++/15/bits/stl_deque.h \
+ /usr/include/c++/15/bits/deque.tcc \
  /home/aaa/beat-analyzer/include/analysis/vu_meter.h \
  /home/aaa/beat-analyzer/include/osc/osc_sender.h \
- /usr/include/c++/15/atomic /usr/include/c++/15/thread \
- /usr/include/c++/15/bits/std_thread.h \
+ /usr/include/c++/15/thread /usr/include/c++/15/bits/std_thread.h \
  /usr/include/c++/15/bits/this_thread_sleep.h \
  /usr/include/c++/15/bits/chrono.h /usr/include/c++/15/ratio \
  /usr/include/c++/15/ctime /usr/include/c++/15/bits/parse_numbers.h \
@@ -294,9 +303,8 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/15/bits/messages_members.h \
  /usr/include/libintl.h /usr/include/c++/15/bits/locale_facets_nonio.tcc \
  /usr/include/c++/15/bits/locale_conv.h /usr/include/c++/15/stack \
- /usr/include/c++/15/deque /usr/include/c++/15/bits/stl_deque.h \
- /usr/include/c++/15/bits/deque.tcc /usr/include/c++/15/bits/stl_stack.h \
- /usr/include/c++/15/bits/stl_tree.h /usr/include/c++/15/bits/stl_map.h \
+ /usr/include/c++/15/bits/stl_stack.h /usr/include/c++/15/bits/stl_tree.h \
+ /usr/include/c++/15/bits/stl_map.h \
  /usr/include/c++/15/bits/regex_constants.h \
  /usr/include/c++/15/bits/regex_error.h \
  /usr/include/c++/15/bits/regex_automaton.h \

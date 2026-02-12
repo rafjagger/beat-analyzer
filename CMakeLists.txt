@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(BeatAnalyzer 
     VERSION 1.0.0
     DESCRIPTION "Real-time beat analysis and OSC synchronization"
-    LANGUAGES CXX)
+    LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,6 +17,7 @@ find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(JACK jack)
 pkg_check_modules(SNDFILE sndfile)
+pkg_check_modules(SAMPLERATE REQUIRED samplerate)
 
 # Try to find in system if pkg-config fails
 if(NOT JACK_FOUND)
@@ -27,6 +28,14 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# BTrack library (submodule)
+set(BTRACK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/BTrack)
+set(BTRACK_SOURCES
+    ${BTRACK_DIR}/src/BTrack.cpp
+    ${BTRACK_DIR}/src/OnsetDetectionFunction.cpp
+    ${BTRACK_DIR}/libs/kiss_fft130/kiss_fft.c
+)
+
 # Source files
 set(BEAT_ANALYZER_SOURCES
     src/main.cpp
@@ -35,11 +44,13 @@ set(BEAT_ANALYZER_SOURCES
     src/analysis/beat_detection.cpp
     src/analysis/beat_tracker.cpp
     src/analysis/vu_meter.cpp
+    src/analysis/grid_calculator.cpp
     src/osc/osc_sender.cpp
     src/osc/osc_receiver.cpp
     src/osc/osc_messages.cpp
     src/config/config_loader.cpp
     src/util/logging.cpp
+    ${BTRACK_SOURCES}
 )
 
 set(BEAT_ANALYZER_HEADERS
@@ -50,6 +61,7 @@ set(BEAT_ANALYZER_HEADERS
     include/analysis/beat_tracker.h
     include/analysis/beat_info.h
     include/analysis/vu_meter.h
+    include/analysis/grid_calculator.h
     include/osc/osc_sender.h
     include/osc/osc_receiver.h
     include/osc/osc_messages.h
@@ -60,9 +72,17 @@ set(BEAT_ANALYZER_HEADERS
 # Main executable
 add_executable(beat-analyzer ${BEAT_ANALYZER_SOURCES} ${BEAT_ANALYZER_HEADERS})
 
+# BTrack compile definitions and includes
+target_compile_definitions(beat-analyzer PRIVATE USE_KISS_FFT)
+target_include_directories(beat-analyzer PRIVATE
+    ${BTRACK_DIR}/src
+    ${BTRACK_DIR}/libs/kiss_fft130
+)
+
 # Link libraries
 target_link_libraries(beat-analyzer PRIVATE
     ${JACK_LIBRARIES}
+    ${SAMPLERATE_LIBRARIES}
     pthread
     m
 )
@@ -79,6 +99,7 @@ endif()
 target_include_directories(beat-analyzer PRIVATE
     ${JACK_INCLUDE_DIRS}
     ${SNDFILE_INCLUDE_DIRS}
+    ${SAMPLERATE_INCLUDE_DIRS}
 )
 
 # Compiler flags

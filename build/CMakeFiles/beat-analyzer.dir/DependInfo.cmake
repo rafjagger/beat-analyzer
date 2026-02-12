@@ -8,8 +8,12 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/aaa/beat-analyzer/external/BTrack/libs/kiss_fft130/kiss_fft.c" "CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.o" "gcc" "CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.o.d"
+  "/home/aaa/beat-analyzer/external/BTrack/src/BTrack.cpp" "CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.o.d"
+  "/home/aaa/beat-analyzer/external/BTrack/src/OnsetDetectionFunction.cpp" "CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.o.d"
   "/home/aaa/beat-analyzer/src/analysis/beat_detection.cpp" "CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o.d"
   "/home/aaa/beat-analyzer/src/analysis/beat_tracker.cpp" "CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o.d"
+  "/home/aaa/beat-analyzer/src/analysis/grid_calculator.cpp" "CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.o.d"
   "/home/aaa/beat-analyzer/src/analysis/vu_meter.cpp" "CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o.d"
   "/home/aaa/beat-analyzer/src/audio/audio_buffer.cpp" "CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o.d"
   "/home/aaa/beat-analyzer/src/audio/jack_client.cpp" "CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o" "gcc" "CMakeFiles/beat-analyzer.dir/src/audio/jack_client.cpp.o.d"

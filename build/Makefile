@@ -197,6 +197,78 @@ beat_detection_test/fast:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/beat_detection_test.dir/build.make tests/CMakeFiles/beat_detection_test.dir/build
 .PHONY : beat_detection_test/fast
 
+external/BTrack/libs/kiss_fft130/kiss_fft.o: external/BTrack/libs/kiss_fft130/kiss_fft.c.o
+.PHONY : external/BTrack/libs/kiss_fft130/kiss_fft.o
+
+# target to build an object file
+external/BTrack/libs/kiss_fft130/kiss_fft.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.o
+.PHONY : external/BTrack/libs/kiss_fft130/kiss_fft.c.o
+
+external/BTrack/libs/kiss_fft130/kiss_fft.i: external/BTrack/libs/kiss_fft130/kiss_fft.c.i
+.PHONY : external/BTrack/libs/kiss_fft130/kiss_fft.i
+
+# target to preprocess a source file
+external/BTrack/libs/kiss_fft130/kiss_fft.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.i
+.PHONY : external/BTrack/libs/kiss_fft130/kiss_fft.c.i
+
+external/BTrack/libs/kiss_fft130/kiss_fft.s: external/BTrack/libs/kiss_fft130/kiss_fft.c.s
+.PHONY : external/BTrack/libs/kiss_fft130/kiss_fft.s
+
+# target to generate assembly for a file
+external/BTrack/libs/kiss_fft130/kiss_fft.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.s
+.PHONY : external/BTrack/libs/kiss_fft130/kiss_fft.c.s
+
+external/BTrack/src/BTrack.o: external/BTrack/src/BTrack.cpp.o
+.PHONY : external/BTrack/src/BTrack.o
+
+# target to build an object file
+external/BTrack/src/BTrack.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.o
+.PHONY : external/BTrack/src/BTrack.cpp.o
+
+external/BTrack/src/BTrack.i: external/BTrack/src/BTrack.cpp.i
+.PHONY : external/BTrack/src/BTrack.i
+
+# target to preprocess a source file
+external/BTrack/src/BTrack.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.i
+.PHONY : external/BTrack/src/BTrack.cpp.i
+
+external/BTrack/src/BTrack.s: external/BTrack/src/BTrack.cpp.s
+.PHONY : external/BTrack/src/BTrack.s
+
+# target to generate assembly for a file
+external/BTrack/src/BTrack.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.s
+.PHONY : external/BTrack/src/BTrack.cpp.s
+
+external/BTrack/src/OnsetDetectionFunction.o: external/BTrack/src/OnsetDetectionFunction.cpp.o
+.PHONY : external/BTrack/src/OnsetDetectionFunction.o
+
+# target to build an object file
+external/BTrack/src/OnsetDetectionFunction.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.o
+.PHONY : external/BTrack/src/OnsetDetectionFunction.cpp.o
+
+external/BTrack/src/OnsetDetectionFunction.i: external/BTrack/src/OnsetDetectionFunction.cpp.i
+.PHONY : external/BTrack/src/OnsetDetectionFunction.i
+
+# target to preprocess a source file
+external/BTrack/src/OnsetDetectionFunction.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.i
+.PHONY : external/BTrack/src/OnsetDetectionFunction.cpp.i
+
+external/BTrack/src/OnsetDetectionFunction.s: external/BTrack/src/OnsetDetectionFunction.cpp.s
+.PHONY : external/BTrack/src/OnsetDetectionFunction.s
+
+# target to generate assembly for a file
+external/BTrack/src/OnsetDetectionFunction.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.s
+.PHONY : external/BTrack/src/OnsetDetectionFunction.cpp.s
+
 src/analysis/beat_detection.o: src/analysis/beat_detection.cpp.o
 .PHONY : src/analysis/beat_detection.o
 
@@ -244,6 +316,30 @@ src/analysis/beat_tracker.s: src/analysis/beat_tracker.cpp.s
 src/analysis/beat_tracker.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.s
 .PHONY : src/analysis/beat_tracker.cpp.s
+
+src/analysis/grid_calculator.o: src/analysis/grid_calculator.cpp.o
+.PHONY : src/analysis/grid_calculator.o
+
+# target to build an object file
+src/analysis/grid_calculator.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.o
+.PHONY : src/analysis/grid_calculator.cpp.o
+
+src/analysis/grid_calculator.i: src/analysis/grid_calculator.cpp.i
+.PHONY : src/analysis/grid_calculator.i
+
+# target to preprocess a source file
+src/analysis/grid_calculator.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.i
+.PHONY : src/analysis/grid_calculator.cpp.i
+
+src/analysis/grid_calculator.s: src/analysis/grid_calculator.cpp.s
+.PHONY : src/analysis/grid_calculator.s
+
+# target to generate assembly for a file
+src/analysis/grid_calculator.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.s
+.PHONY : src/analysis/grid_calculator.cpp.s
 
 src/analysis/vu_meter.o: src/analysis/vu_meter.cpp.o
 .PHONY : src/analysis/vu_meter.o
@@ -476,12 +572,24 @@ help:
 	@echo "... test"
 	@echo "... beat-analyzer"
 	@echo "... beat_detection_test"
+	@echo "... external/BTrack/libs/kiss_fft130/kiss_fft.o"
+	@echo "... external/BTrack/libs/kiss_fft130/kiss_fft.i"
+	@echo "... external/BTrack/libs/kiss_fft130/kiss_fft.s"
+	@echo "... external/BTrack/src/BTrack.o"
+	@echo "... external/BTrack/src/BTrack.i"
+	@echo "... external/BTrack/src/BTrack.s"
+	@echo "... external/BTrack/src/OnsetDetectionFunction.o"
+	@echo "... external/BTrack/src/OnsetDetectionFunction.i"
+	@echo "... external/BTrack/src/OnsetDetectionFunction.s"
 	@echo "... src/analysis/beat_detection.o"
 	@echo "... src/analysis/beat_detection.i"
 	@echo "... src/analysis/beat_detection.s"
 	@echo "... src/analysis/beat_tracker.o"
 	@echo "... src/analysis/beat_tracker.i"
 	@echo "... src/analysis/beat_tracker.s"
+	@echo "... src/analysis/grid_calculator.o"
+	@echo "... src/analysis/grid_calculator.i"
+	@echo "... src/analysis/grid_calculator.s"
 	@echo "... src/analysis/vu_meter.o"
 	@echo "... src/analysis/vu_meter.i"
 	@echo "... src/analysis/vu_meter.s"

@@ -8,12 +8,17 @@ beat-analyzer: \
   CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o \
   CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o \
   CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o \
+  CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.o \
   CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o \
   CMakeFiles/beat-analyzer.dir/src/osc/osc_receiver.cpp.o \
   CMakeFiles/beat-analyzer.dir/src/osc/osc_messages.cpp.o \
   CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o \
   CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o \
+  CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.o \
+  CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.o \
+  CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.o \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libjack.so \
+  /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libsamplerate.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libpthread.a \
   /usr/lib/gcc/x86_64-linux-gnu/15/libstdc++.so \
   /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libm.so \
@@ -62,6 +67,8 @@ CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o:
 
 CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o:
 
+CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.o:
+
 CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o:
 
 CMakeFiles/beat-analyzer.dir/src/osc/osc_receiver.cpp.o:
@@ -72,7 +79,15 @@ CMakeFiles/beat-analyzer.dir/src/config/config_loader.cpp.o:
 
 CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o:
 
+CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.o:
+
+CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.o:
+
+CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.o:
+
 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libjack.so:
+
+/usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libsamplerate.so:
 
 /usr/lib/gcc/x86_64-linux-gnu/15/../../../x86_64-linux-gnu/libpthread.a:
 

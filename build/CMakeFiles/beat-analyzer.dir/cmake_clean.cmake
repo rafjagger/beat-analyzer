@@ -1,9 +1,17 @@
 file(REMOVE_RECURSE
   "CMakeFiles/beat-analyzer.dir/link.d"
+  "CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.o"
+  "CMakeFiles/beat-analyzer.dir/external/BTrack/libs/kiss_fft130/kiss_fft.c.o.d"
+  "CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/external/BTrack/src/BTrack.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/external/BTrack/src/OnsetDetectionFunction.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o"
   "CMakeFiles/beat-analyzer.dir/src/analysis/beat_detection.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o"
   "CMakeFiles/beat-analyzer.dir/src/analysis/beat_tracker.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/analysis/grid_calculator.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o"
   "CMakeFiles/beat-analyzer.dir/src/analysis/vu_meter.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/audio/audio_buffer.cpp.o"
@@ -27,6 +35,6 @@ file(REMOVE_RECURSE
 )
 
 # Per-language clean rules from dependency scanning.
-foreach(lang CXX)
+foreach(lang C CXX)
   include(CMakeFiles/beat-analyzer.dir/cmake_clean_${lang}.cmake OPTIONAL)
 endforeach()

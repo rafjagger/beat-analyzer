@@ -168,10 +168,35 @@ OnsetDetector::OnsetDetector(const BeatDetectorConfig& config)
     m_prevPrevPhase.resize(halfSize, 0.0);
     m_spectrum.resize(config.frameSize);
     
+    // Kick-Filter initialisieren (falls aktiviert)
+    if (config.kickFilterEnabled) {
+        m_kickFilter = std::make_unique<ButterworthBandpass>(
+            config.sampleRate,
+            config.kickFilterLowHz,
+            config.kickFilterHighHz,
+            config.kickFilterOrder
+        );
+        m_filteredFrame.resize(config.frameSize);
+    }
+    
+    // Frequenz-Bin-Grenzen für Mehrband-Analyse berechnen
+    double binFreqStep = static_cast<double>(config.sampleRate) / config.frameSize;
+    m_lowBandBinStart = static_cast<int>(30.0 / binFreqStep);
+    m_lowBandBinEnd = static_cast<int>(150.0 / binFreqStep);
+    m_midBandBinStart = static_cast<int>(150.0 / binFreqStep);
+    m_midBandBinEnd = static_cast<int>(2000.0 / binFreqStep);
+    m_highBandBinStart = static_cast<int>(2000.0 / binFreqStep);
+    m_highBandBinEnd = static_cast<int>(8000.0 / binFreqStep);
+    
+    // Grenzen validieren
+    if (m_lowBandBinStart < 1) m_lowBandBinStart = 1;
+    if (m_lowBandBinEnd >= halfSize) m_lowBandBinEnd = halfSize - 1;
+    if (m_midBandBinEnd >= halfSize) m_midBandBinEnd = halfSize - 1;
+    if (m_highBandBinEnd >= halfSize) m_highBandBinEnd = halfSize - 1;
+    
     // Frequenzgewichtung: Bass (Kick/Snare) betonen, Höhen dämpfen
     // Bin-Frequenz = bin * sampleRate / frameSize
     m_freqWeights.resize(halfSize);
-    double binFreqStep = static_cast<double>(config.sampleRate) / config.frameSize;
     for (int i = 0; i < halfSize; ++i) {
         double freq = i * binFreqStep;
         if (freq < 30.0) {
@@ -202,8 +227,20 @@ double OnsetDetector::process(const double* frame) {
     // Fensterung
     WindowFunction::apply(m_window, frame, m_windowed.data());
     
-    // FFT
-    m_fft->forward(m_windowed.data(), m_spectrum.data());
+    // Optional: Kick-Filter anwenden (30-150 Hz Bandpass)
+    if (m_kickFilter && m_config.kickFilterEnabled) {
+        // Filter auf gefenstertes Signal anwenden
+        for (int i = 0; i < m_config.frameSize; ++i) {
+            m_filteredFrame[i] = m_windowed[i];
+        }
+        m_kickFilter->processBuffer(m_filteredFrame.data(), m_config.frameSize);
+        
+        // FFT vom gefilterten Signal
+        m_fft->forward(m_filteredFrame.data(), m_spectrum.data());
+    } else {
+        // FFT vom Original
+        m_fft->forward(m_windowed.data(), m_spectrum.data());
+    }
     
     // Magnitude und Phase extrahieren
     int halfSize = m_config.frameSize / 2 + 1;
@@ -212,8 +249,9 @@ double OnsetDetector::process(const double* frame) {
         m_phase[i] = std::arg(m_spectrum[i]);
     }
     
-    // Onset Detection berechnen
-    double onset = computeComplexSpectralDifference();
+    // NUR Low-Band (Kick) für Onset-Erkennung
+    // Ignoriere Mid/High komplett - wir wollen nur Kicks!
+    double onset = computeLowBandOnset();
     
     // History updaten
     std::copy(m_prevPhase.begin(), m_prevPhase.end(), m_prevPrevPhase.begin());
@@ -268,10 +306,242 @@ double OnsetDetector::computeComplexSpectralDifference() {
     return std::sqrt(sum);
 }
 
+double OnsetDetector::computeLowBandOnset() {
+    // NUR Low-Band (30-150 Hz) für Kick-Erkennung
+    // Keine Mehrband-Logik, keine Fallbacks - nur Bass!
+    double onset = 0.0;
+    double energy = 0.0;
+    
+    // Spectral Flux nur im Low-Band (Half-Wave Rectified)
+    for (int i = m_lowBandBinStart; i <= m_lowBandBinEnd && i < static_cast<int>(m_magnitude.size()); ++i) {
+        double diff = m_magnitude[i] - m_prevMagnitude[i];
+        if (diff > 0) {
+            onset += diff * diff;
+        }
+        energy += m_magnitude[i] * m_magnitude[i];
+    }
+    
+    // Normalisiere auf Band-Breite
+    int lowBins = m_lowBandBinEnd - m_lowBandBinStart + 1;
+    onset = std::sqrt(onset) / std::max(1, lowBins);
+    energy = std::sqrt(energy / std::max(1, lowBins));
+    
+    // Speichere für Debug
+    m_lowBandEnergy = energy;
+    m_activeBand = 0;  // Immer Low-Band
+    
+    return onset;
+}
+
+double OnsetDetector::computeMultibandOnset() {
+    // Mehrband-Onset-Detection mit automatischem Fallback
+    // 
+    // Strategie:
+    // 1. Berechne Spectral Flux für jedes Band separat
+    // 2. Tracke durchschnittliche Energie pro Band
+    // 3. Wenn Low-Band schwach (Intro), wechsle zu Mid/High
+    // 4. Gewichte finale Onset-Stärke basierend auf aktivem Band
+    
+    double lowOnset = 0.0, midOnset = 0.0, highOnset = 0.0;
+    double lowEnergy = 0.0, midEnergy = 0.0, highEnergy = 0.0;
+    
+    // Berechne Spectral Flux pro Band (Half-Wave Rectified)
+    for (int i = m_lowBandBinStart; i <= m_lowBandBinEnd && i < static_cast<int>(m_magnitude.size()); ++i) {
+        double diff = m_magnitude[i] - m_prevMagnitude[i];
+        if (diff > 0) lowOnset += diff * diff;
+        lowEnergy += m_magnitude[i] * m_magnitude[i];
+    }
+    
+    for (int i = m_midBandBinStart; i <= m_midBandBinEnd && i < static_cast<int>(m_magnitude.size()); ++i) {
+        double diff = m_magnitude[i] - m_prevMagnitude[i];
+        if (diff > 0) midOnset += diff * diff;
+        midEnergy += m_magnitude[i] * m_magnitude[i];
+    }
+    
+    for (int i = m_highBandBinStart; i <= m_highBandBinEnd && i < static_cast<int>(m_magnitude.size()); ++i) {
+        double diff = m_magnitude[i] - m_prevMagnitude[i];
+        if (diff > 0) highOnset += diff * diff;
+        highEnergy += m_magnitude[i] * m_magnitude[i];
+    }
+    
+    // Normalisiere auf Band-Breite
+    int lowBins = m_lowBandBinEnd - m_lowBandBinStart + 1;
+    int midBins = m_midBandBinEnd - m_midBandBinStart + 1;
+    int highBins = m_highBandBinEnd - m_highBandBinStart + 1;
+    
+    lowOnset = std::sqrt(lowOnset) / std::max(1, lowBins);
+    midOnset = std::sqrt(midOnset) / std::max(1, midBins);
+    highOnset = std::sqrt(highOnset) / std::max(1, highBins);
+    
+    lowEnergy = std::sqrt(lowEnergy / std::max(1, lowBins));
+    midEnergy = std::sqrt(midEnergy / std::max(1, midBins));
+    highEnergy = std::sqrt(highEnergy / std::max(1, highBins));
+    
+    // Speichere aktuelle Band-Energien
+    m_lowBandEnergy = lowEnergy;
+    m_midBandEnergy = midEnergy;
+    m_highBandEnergy = highEnergy;
+    
+    // Update laufende Durchschnitte (langsam, ~5s Time Constant bei 172 fps)
+    const double avgAlpha = 0.002;
+    m_lowBandAvg = m_lowBandAvg * (1.0 - avgAlpha) + lowEnergy * avgAlpha;
+    m_midBandAvg = m_midBandAvg * (1.0 - avgAlpha) + midEnergy * avgAlpha;
+    m_highBandAvg = m_highBandAvg * (1.0 - avgAlpha) + highEnergy * avgAlpha;
+    
+    // Band-Switching Logik
+    // Kriterium: Low-Band ist "schwach" wenn es < 30% des Mid-Bands ist
+    // Das passiert bei Intros mit Hi-Hats/Synths aber ohne Kick
+    double lowMidRatio = (m_midBandAvg > 1e-8) ? (m_lowBandAvg / m_midBandAvg) : 1.0;
+    
+    // Hysterese: Band wechselt nur bei deutlicher Änderung
+    if (m_activeBand == 0) {  // Aktuell auf Low
+        if (lowMidRatio < 0.25) {
+            // Low sehr schwach → wechsle zu Mid
+            m_activeBand = 1;
+        }
+    } else if (m_activeBand == 1) {  // Aktuell auf Mid
+        if (lowMidRatio > 0.5) {
+            // Low ist wieder stark → zurück zu Low
+            m_activeBand = 0;
+        } else if (m_midBandAvg < m_highBandAvg * 0.3) {
+            // Mid auch schwach → wechsle zu High (sehr selten)
+            m_activeBand = 2;
+        }
+    } else {  // Aktuell auf High
+        if (lowMidRatio > 0.5) {
+            m_activeBand = 0;
+        } else if (m_midBandAvg > m_highBandAvg * 0.5) {
+            m_activeBand = 1;
+        }
+    }
+    
+    // Finale Onset-Berechnung basierend auf aktivem Band
+    // Mit Boost für das aktive Band und leichtem Beitrag der anderen
+    double finalOnset;
+    switch (m_activeBand) {
+        case 0:  // Low-Band (Kick) - primär
+            finalOnset = lowOnset * 3.0 + midOnset * 0.5 + highOnset * 0.1;
+            break;
+        case 1:  // Mid-Band (Snare/Melodie) - Fallback
+            finalOnset = lowOnset * 0.5 + midOnset * 2.5 + highOnset * 0.3;
+            break;
+        case 2:  // High-Band (Hi-Hat) - letzter Fallback
+            finalOnset = lowOnset * 0.3 + midOnset * 0.5 + highOnset * 2.0;
+            break;
+        default:
+            finalOnset = lowOnset * 3.0 + midOnset * 0.5 + highOnset * 0.1;
+    }
+    
+    return finalOnset;
+}
+
 void OnsetDetector::reset() {
     std::fill(m_prevMagnitude.begin(), m_prevMagnitude.end(), 0.0);
     std::fill(m_prevPhase.begin(), m_prevPhase.end(), 0.0);
     std::fill(m_prevPrevPhase.begin(), m_prevPrevPhase.end(), 0.0);
+    if (m_kickFilter) {
+        m_kickFilter->reset();
+    }
+    // Mehrband-Tracking zurücksetzen
+    m_lowBandEnergy = 0.0;
+    m_midBandEnergy = 0.0;
+    m_highBandEnergy = 0.0;
+    m_lowBandAvg = 0.0;
+    m_midBandAvg = 0.0;
+    m_highBandAvg = 0.0;
+    m_activeBand = 0;  // Start mit Low-Band (Kick)
+}
+
+// ============================================================================
+// Butterworth Bandpass Filter
+// ============================================================================
+
+ButterworthBandpass::ButterworthBandpass(int sampleRate, float lowFreq, float highFreq, int order)
+    : m_sampleRate(sampleRate)
+    , m_lowFreq(lowFreq)
+    , m_highFreq(highFreq)
+    , m_order(order)
+{
+    calculateCoefficients();
+}
+
+void ButterworthBandpass::calculateCoefficients() {
+    // Bandpass = Lowpass + Highpass in Serie
+    // Wir implementieren als Biquad-Kaskade
+    // Order 2 = 1 Biquad-Sektion, Order 4 = 2 Biquad-Sektionen
+    
+    m_sections.clear();
+    m_states.clear();
+    
+    const double pi = 3.14159265358979323846;
+    
+    // Anzahl der Sektionen (Order/2, mindestens 1)
+    int numSections = std::max(1, m_order / 2);
+    
+    // Warping für Bilinear-Transformation
+    double centerFreq = std::sqrt(m_lowFreq * m_highFreq);
+    double bandwidth = m_highFreq - m_lowFreq;
+    
+    // Digitale Frequenzen (normalisiert auf Sample-Rate)
+    double wc = 2.0 * pi * centerFreq / m_sampleRate;
+    double bw = 2.0 * pi * bandwidth / m_sampleRate;
+    
+    // Bilinear-Transformation Pre-Warping
+    double w0 = 2.0 * std::tan(wc / 2.0);
+    double bwWarped = 2.0 * std::tan(bw / 2.0);
+    double Q = w0 / bwWarped;
+    
+    for (int s = 0; s < numSections; ++s) {
+        BiquadCoeffs coeffs;
+        
+        // 2nd-Order Bandpass Biquad Koeffizienten
+        // H(s) = (s/Q) / (s^2 + s/Q + 1)
+        
+        double alpha = std::sin(wc) / (2.0 * Q);
+        double cosW0 = std::cos(wc);
+        
+        double a0 = 1.0 + alpha;
+        
+        coeffs.b0 = alpha / a0;
+        coeffs.b1 = 0.0;
+        coeffs.b2 = -alpha / a0;
+        coeffs.a1 = -2.0 * cosW0 / a0;
+        coeffs.a2 = (1.0 - alpha) / a0;
+        
+        m_sections.push_back(coeffs);
+        m_states.push_back(BiquadState());
+    }
+}
+
+double ButterworthBandpass::processSample(double input) {
+    double output = input;
+    
+    for (size_t i = 0; i < m_sections.size(); ++i) {
+        output = processBiquad(output, m_sections[i], m_states[i]);
+    }
+    
+    return output;
+}
+
+void ButterworthBandpass::processBuffer(double* buffer, int numSamples) {
+    for (int i = 0; i < numSamples; ++i) {
+        buffer[i] = processSample(buffer[i]);
+    }
+}
+
+void ButterworthBandpass::reset() {
+    for (auto& state : m_states) {
+        state.z1 = 0.0;
+        state.z2 = 0.0;
+    }
+}
+
+double ButterworthBandpass::processBiquad(double input, const BiquadCoeffs& coeffs, BiquadState& state) {
+    // Direct Form II Transposed
+    double output = coeffs.b0 * input + state.z1;
+    state.z1 = coeffs.b1 * input - coeffs.a1 * output + state.z2;
+    state.z2 = coeffs.b2 * input - coeffs.a2 * output;
+    return output;
 }
 
 // ============================================================================
@@ -643,25 +913,27 @@ void RealTimeBeatTracker::processMonoAudio(const Sample* monoInput, int frameCou
     std::vector<double> monoDouble(frameCount);
     
     if (m_config.agcEnabled) {
-        // Peak-Tracking: schneller Attack, langsamer Release
-        float peak = 0.0f;
+        // RMS-Tracking: stabiler als Peak bei transienten Signalen
+        float sumSquares = 0.0f;
         for (int i = 0; i < frameCount; ++i) {
-            float absVal = std::fabs(monoInput[i]);
-            if (absVal > peak) peak = absVal;
+            sumSquares += monoInput[i] * monoInput[i];
         }
+        float rms = std::sqrt(sumSquares / frameCount);
         
-        // Peak-Tracker aktualisieren
-        if (peak > m_agcPeakTracker) {
-            m_agcPeakTracker = m_agcPeakTracker * 0.3f + peak * 0.7f;  // Schneller Attack
+        // RMS-Tracker aktualisieren (schneller Attack, langsamer Release)
+        if (rms > m_agcPeakTracker) {
+            m_agcPeakTracker = m_agcPeakTracker * 0.5f + rms * 0.5f;  // Schneller Attack
         } else {
-            m_agcPeakTracker = m_agcPeakTracker * 0.999f + peak * 0.001f;  // Sehr langsamer Release
+            m_agcPeakTracker = m_agcPeakTracker * 0.995f + rms * 0.005f;  // Langsamer Release
         }
         
-        // Gain berechnen um Ziel-Peak zu erreichen
+        // Gain berechnen um Ziel-RMS zu erreichen
+        // RMS-Ziel ist niedriger als Peak-Ziel (typisch ~0.3 für guten Headroom)
+        float targetRms = m_config.agcTargetPeak * 0.45f;  // ~0.3 bei Target 0.7
         if (m_agcPeakTracker > 1e-6f) {
-            float desiredGain = m_config.agcTargetPeak / m_agcPeakTracker;
-            // Gain begrenzen: min 1x (nie leiser), max 100x (+40dB)
-            desiredGain = std::max(1.0f, std::min(desiredGain, 100.0f));
+            float desiredGain = targetRms / m_agcPeakTracker;
+            // Gain begrenzen: min 1x (nie leiser), max 50x (+34dB)
+            desiredGain = std::max(1.0f, std::min(desiredGain, 50.0f));
             // Sanfte Gain-Änderung
             m_agcGain = m_agcGain * 0.95f + desiredGain * 0.05f;
         }
@@ -902,11 +1174,15 @@ void RealTimeBeatTracker::reset() {
 
 BeatEventDetector::BeatEventDetector(int sampleRate, int hopSize, double maxBpm)
     : m_sampleRate(sampleRate) {
-    // Minimum-Abstand zwischen Beats basierend auf max BPM
-    // minBeatSec = 60/maxBpm, mit 30% Toleranz für frühe Peaks
-    double minBeatSec = (60.0 / maxBpm) * 0.70;
+    // Minimum-Abstand zwischen Beats: 
+    // Bei 200 BPM = 300ms pro Beat, wir erlauben 50% früher = 150ms
+    // Bei hop=256, sr=44100: 150ms = 26 Frames
+    // ABER: Wir wollen lieber zu viele als zu wenige erkennen!
+    // Deshalb: Minimum nur 10 Frames (~58ms) - sehr schnelle Beats erlauben
+    double minBeatSec = (60.0 / maxBpm) * 0.40;  // 40% der Beat-Periode
     m_minBeatInterval = static_cast<int>(minBeatSec * sampleRate / hopSize);
-    if (m_minBeatInterval < 8) m_minBeatInterval = 8;  // Minimum ~93ms bei hop=256
+    if (m_minBeatInterval < 10) m_minBeatInterval = 10;  // Minimum ~58ms bei hop=256
+    if (m_minBeatInterval > 20) m_minBeatInterval = 20;  // Maximum ~116ms (erlaubt bis 517 BPM)
     reset();
 }
 
@@ -926,6 +1202,18 @@ bool BeatEventDetector::process(double onsetValue) {
         m_adaptiveThreshold *= THRESHOLD_DECAY;
     }
     
+    // DEBUG: Onset-Werte alle 50 Frames ausgeben
+    static int debugCounter = 0;
+    static double maxOnset = 0.0;
+    if (onsetValue > maxOnset) maxOnset = onsetValue;
+    if (++debugCounter >= 50) {
+        printf("ONSET | cur=%.2f max=%.2f mean=%.4f dev=%.4f thr=%.4f\n",
+               onsetValue, maxOnset, m_runningMean, m_runningDev, m_threshold);
+        fflush(stdout);
+        debugCounter = 0;
+        maxOnset = 0.0;
+    }
+    
     // Early exit bei sehr kleinem Signal
     if (m_runningMean < 1e-6 && onsetValue < 1e-6) {
         m_prevPrevOnset = m_prevOnset;
@@ -933,18 +1221,29 @@ bool BeatEventDetector::process(double onsetValue) {
         return false;
     }
     
-    // Threshold: Kombination aus adaptivem Maximum und dynamischer Streuung
-    // mean + 2.5*dev filtert Hi-Hats und Snares raus, nur Kicks kommen durch
-    double dynamicThreshold = m_runningMean + (m_runningDev * 2.5);
-    m_threshold = std::max(m_adaptiveThreshold * 0.45, dynamicThreshold);
+    // Threshold: Einfacher relativer Threshold
+    double dynamicThreshold = m_runningMean * 1.8;
+    m_threshold = std::max(dynamicThreshold, 2.0);  // Minimum Threshold = 2.0
     
     // Peak Detection: prevOnset muss größer sein als Nachbarn UND über Threshold
     bool isPeak = (m_prevOnset > m_prevPrevOnset) && 
                   (m_prevOnset > onsetValue) &&
                   (m_prevOnset > m_threshold);
     
-    // Minimum Interval zwischen Beats
-    bool beatDetected = isPeak && (m_framesSinceLastBeat >= m_minBeatInterval);
+    // NEUE LOGIK: Stärke entscheidet!
+    // Starke Peaks werden fast sofort akzeptiert (physikalisches Minimum 3 Frames = ~17ms)
+    // Schwache Peaks müssen länger warten
+    double ratio = m_prevOnset / m_threshold;
+    int requiredInterval;
+    if (ratio > 2.5) {
+        requiredInterval = 3;   // Stark: sofort (~17ms minimum)
+    } else if (ratio > 1.5) {
+        requiredInterval = 8;   // Mittel: ~46ms minimum
+    } else {
+        requiredInterval = 15;  // Schwach: ~87ms minimum
+    }
+    
+    bool beatDetected = isPeak && (m_framesSinceLastBeat >= requiredInterval);
     
     if (beatDetected) {
         m_framesSinceLastBeat = 0;
