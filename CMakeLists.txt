@@ -39,6 +39,8 @@ set(BTRACK_SOURCES
 # Source files
 set(BEAT_ANALYZER_SOURCES
     src/main.cpp
+    src/app/beat_analyzer_app.cpp
+    src/app/beat_processing.cpp
     src/audio/jack_client.cpp
     src/audio/audio_buffer.cpp
     src/analysis/beat_detection.cpp
@@ -55,6 +57,7 @@ set(BEAT_ANALYZER_SOURCES
 )
 
 set(BEAT_ANALYZER_HEADERS
+    include/app/beat_analyzer_app.h
     include/audio/jack_client.h
     include/audio/audio_buffer.h
     include/audio/audio_types.h
