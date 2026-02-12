@@ -43,6 +43,6 @@ Maintainer: Beat Analyzer Development <dev@beat-analyzer.local>
 Depends: libc6 (>= 2.29), libjack0
 Description: Real-time beat analysis with OSC output
  Beat Analyzer ist eine Echtzeit-Anwendung für Beatanalyse mit OSC-Output.
- Sie nutzt die Queen Mary DSP Library aus Mixxx für hochpräzise Beat-Erkennung
+ Sie nutzt die BTrack Library für hochpräzise Beat-Erkennung
  und synchronisiert mit Pro Tools über OSC (Open Sound Control).
 Homepage: https://beat-analyzer.local

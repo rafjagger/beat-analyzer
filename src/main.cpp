@@ -6,7 +6,7 @@
  * - Beat Detection (eigene Implementierung)
  * - OSC Output (Beat Clock + VU-Meter)
  * 
- * Keine Mixxx-Abhängigkeiten - komplett eigenständig!
+ * Keine Pioneer-Abhängigkeiten - komplett eigenständig!
  */
 
 #include "audio/jack_client.h"
@@ -208,23 +208,23 @@ public:
             LOG_INFO("OSC aktiv mit " + std::to_string(m_oscSender->getTargetCount()) + " Ziel(en)");
         }
         
-        // OSC Receiver für externe Beat-Clock initialisieren
-        int oscReceivePort = env.getInt("OSC_RECEIVE_PORT", 7775);
-        m_oscReceiver = std::make_unique<OscReceiver>();
-        m_oscReceiver->setPort(oscReceivePort);
-        m_oscReceiver->setBeatClockPath("/beat");
+        // ================================================================
+        // OSC Receiver: zwei Quellen, ein Steuerkanal
+        // ================================================================
+        // Port 7775: a3motion_osc (Modus 0) — /beat, /clockmode, /tap
+        // Port 7776: Pioneer      (Modus 2) — /beat
+        // /clockmode und /tap kommen immer über Port 7775 (a3motion)
         
-        // Callback für externe Beat-Clock (/beat iii)
-        m_oscReceiver->setCallback([this](const ReceivedBeatClock& clock) {
-            m_lastExternalBeatTime = clock.timestamp;
-            if (clock.bpm > 0) {
-                m_externalBpm = clock.bpm;
-            }
-            if (clock.beatNumber >= 1 && clock.beatNumber <= 4) {
-                m_externalBeatNumber.store(clock.beatNumber);
-            }
-            
-            // EXT=0 (Training): externe /beat direkt weitersenden
+        int portA3motion = env.getInt("OSC_PORT_A3MOTION", 7775);
+        int portPioneer  = env.getInt("OSC_PORT_PIONEER", 7776);
+        
+        // --- a3motion Receiver (Port 7775) ---
+        m_oscReceiverA3motion = std::make_unique<OscReceiver>();
+        m_oscReceiverA3motion->setPort(portA3motion);
+        m_oscReceiverA3motion->setBeatClockPath("/beat");
+        
+        // /beat von a3motion: nur in Modus 0 weiterleiten (an alle AUSSER motion)
+        m_oscReceiverA3motion->setCallback([this](const ReceivedBeatClock& clock) {
             if (m_clockMode.load() == 0 && clock.beatNumber >= 1 && clock.beatNumber <= 4) {
                 {
                     std::lock_guard<std::mutex> lock(m_mutex);
@@ -232,7 +232,56 @@ public:
                         m_bpmTrackStates[ch].beatNumber = clock.beatNumber;
                     }
                 }
-                // Direkt als eigene /beat weiterleiten
+                if (m_oscSender && m_oscSender->isConnected()) {
+                    BeatClockMessage msg;
+                    msg.track_id = 0;
+                    msg.beat_number = clock.beatNumber;
+                    msg.bar_number = clock.bar;
+                    msg.bpm = clock.bpm;
+                    // An alle AUSSER motion (die sendet ja selbst)
+                    m_oscSender->sendBeatClockExcept(msg, "motion");
+                }
+            }
+        });
+        
+        // /clockmode i — Modus wechseln (0=a3motion, 1=intern, 2=pioneer)
+        m_oscReceiverA3motion->setClockModeCallback([this](int mode) {
+            if (mode < 0 || mode > 2) mode = 1;  // Fallback: intern
+            m_clockMode.store(mode);
+            const char* modeNames[] = {"a3motion", "intern", "pioneer"};
+            LOG_INFO("Clock-Modus: " + std::to_string(mode) + " (" + modeNames[mode] + ")");
+        });
+        
+        // /tap i — Beat setzen (funktioniert in allen Modi)
+        m_oscReceiverA3motion->setTapCallback([this](int beat) {
+            auto now = std::chrono::steady_clock::now();
+            int w = m_tapQueueWrite.load(std::memory_order_relaxed);
+            int next = (w + 1) & (TAP_QUEUE_SIZE - 1);
+            if (next != m_tapQueueRead.load(std::memory_order_acquire)) {
+                m_tapQueue[w] = {beat, now};
+                m_tapQueueWrite.store(next, std::memory_order_release);
+            }
+            LOG_INFO("TAP: Beat " + std::to_string(beat));
+        });
+        
+        if (m_oscReceiverA3motion->start()) {
+            LOG_INFO("OSC Receiver a3motion auf Port " + std::to_string(portA3motion));
+        }
+        
+        // --- Pioneer Receiver (Port 7776) ---
+        m_oscReceiverPioneer = std::make_unique<OscReceiver>();
+        m_oscReceiverPioneer->setPort(portPioneer);
+        m_oscReceiverPioneer->setBeatClockPath("/beat");
+        
+        // /beat von Pioneer: nur in Modus 2 weiterleiten (an alle Ziele)
+        m_oscReceiverPioneer->setCallback([this](const ReceivedBeatClock& clock) {
+            if (m_clockMode.load() == 2 && clock.beatNumber >= 1 && clock.beatNumber <= 4) {
+                {
+                    std::lock_guard<std::mutex> lock(m_mutex);
+                    for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                        m_bpmTrackStates[ch].beatNumber = clock.beatNumber;
+                    }
+                }
                 if (m_oscSender && m_oscSender->isConnected()) {
                     BeatClockMessage msg;
                     msg.track_id = 0;
@@ -244,29 +293,8 @@ public:
             }
         });
         
-        // Callback für Clock-Modus Wechsel (/clockmode i)
-        m_oscReceiver->setClockModeCallback([this](int mode) {
-            m_clockMode.store(mode);
-            LOG_INFO("Clock-Modus via OSC: " + std::string(mode ? "EXT=1 EIGENE BEATCLOCK" : "EXT=0 TRAINING"));
-        });
-        
-        // Callback für Tap (/tap i) - setzt Beat sofort (nur bei EXT=1)
-        // Tap wird via SPSC-Ringbuffer an den Beat-Thread übergeben (lock-free, kein Tap geht verloren)
-        m_oscReceiver->setTapCallback([this](int beat) {
-            if (m_clockMode.load() == 1) {
-                auto now = std::chrono::steady_clock::now();
-                int w = m_tapQueueWrite.load(std::memory_order_relaxed);
-                int next = (w + 1) & (TAP_QUEUE_SIZE - 1);
-                if (next != m_tapQueueRead.load(std::memory_order_acquire)) {
-                    m_tapQueue[w] = {beat, now};
-                    m_tapQueueWrite.store(next, std::memory_order_release);
-                }
-                LOG_INFO("TAP: Beat " + std::to_string(beat) + " angefordert");
-            }
-        });
-        
-        if (m_oscReceiver->start()) {
-            LOG_INFO("OSC Receiver gestartet auf Port " + std::to_string(oscReceivePort));
+        if (m_oscReceiverPioneer->start()) {
+            LOG_INFO("OSC Receiver Pioneer auf Port " + std::to_string(portPioneer));
         }
         
         // Audio-Callback setzen
@@ -343,8 +371,11 @@ public:
             }
         }
         
-        if (m_oscReceiver) {
-            m_oscReceiver->stop();
+        if (m_oscReceiverA3motion) {
+            m_oscReceiverA3motion->stop();
+        }
+        if (m_oscReceiverPioneer) {
+            m_oscReceiverPioneer->stop();
         }
         
         // OSC Sender-Thread sauber beenden
@@ -458,7 +489,9 @@ private:
         auto nextWakeTime = std::chrono::steady_clock::now();
         
         while (g_running) {
-            if (m_clockMode.load() == 0) {
+            if (m_clockMode.load() != 1) {
+                // Modus 0 (a3motion) und 2 (pioneer): externe Quelle,
+                // Synthclock pausiert, /beat wird im Receiver-Callback gesendet
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 nextWakeTime = std::chrono::steady_clock::now();
                 continue;
@@ -625,9 +658,9 @@ private:
         if (!m_enableBeatclock) return;
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
-        // Nur bei EXT=1 (eigene Beatclock) senden
-        // Bei EXT=0 wird extern empfangene /beat direkt weitergeleitet
-        if (m_clockMode.load() == 0) return;
+        // Nur bei Modus 1 (intern) senden
+        // Bei Modus 0/2 wird /beat im Receiver-Callback gesendet
+        if (m_clockMode.load() != 1) return;
         
         float effectiveBpm = static_cast<float>(m_bpmTrackStates[ch].currentBpm);
         
@@ -742,13 +775,11 @@ private:
     
     // OSC
     std::shared_ptr<OscSender> m_oscSender;
-    std::unique_ptr<OscReceiver> m_oscReceiver;
+    std::unique_ptr<OscReceiver> m_oscReceiverA3motion;  // Port 7775: a3motion_osc
+    std::unique_ptr<OscReceiver> m_oscReceiverPioneer;   // Port 7776: Pioneer
     
-    // Training-Modus
-    std::atomic<int> m_clockMode{1};  // 0=Training, 1=Eigene Beatclock
-    std::atomic<int> m_externalBeatNumber{0};  // Letzter externer Beat (1-4), 0=keiner
-    int64_t m_lastExternalBeatTime = 0;
-    float m_externalBpm = 0.0f;
+    // Clock-Modus: 0=a3motion, 1=intern, 2=pioneer
+    std::atomic<int> m_clockMode{1};  // Default: eigene Beatclock
     
     // Tap-Queue: SPSC Ringbuffer, Zeitstempel wird im OSC-Thread erfasst
     struct TapEvent {

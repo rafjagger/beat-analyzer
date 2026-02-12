@@ -25,10 +25,14 @@ struct ReceivedBeatClock {
  * OSC Receiver — raw UDP socket, kein liblo.
  * 
  * Eigener Thread mit recvfrom() + minimalem OSC-Parser.
+ * Zwei Instanzen möglich (verschiedene Ports):
+ *   - a3motion (Port 7775): /beat, /clockmode, /tap
+ *   - Pioneer  (Port 7776): /beat
+ * 
  * Empfängt:
- *   /beat iii   beat, bar, bpm
- *   /clockmode i|f  0=Training, 1=Eigene Beatclock
- *   /tap [i]    Setzt Beat (Default: 1)
+ *   /beat iii       beat, bar, bpm
+ *   /clockmode i    0=a3motion, 1=intern, 2=pioneer
+ *   /tap [i]        Setzt Beat (Default: 1)
  */
 class OscReceiver {
 public:

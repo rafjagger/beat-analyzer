@@ -34,6 +34,8 @@ public:
     void shutdown();
     
     bool sendBeatClock(const BeatClockMessage& msg);
+    /** Send /beat to all targets EXCEPT the named one */
+    bool sendBeatClockExcept(const BeatClockMessage& msg, const std::string& excludeTarget);
     bool sendFloat(const std::string& path, float value);
     bool sendFloats(const std::string& path, float value1, float value2);
     bool sendMessage(const OscMessage& msg);
@@ -89,6 +91,7 @@ private:
     static int serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels);
     
     void enqueueAll(const char* data, int len);
+    void enqueueAllExcept(const char* data, int len, const std::string& excludeName);
     static void targetThreadFunc(Target* t);
 };
 

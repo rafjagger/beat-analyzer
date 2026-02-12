@@ -8,6 +8,7 @@
 #include <poll.h>
 #include <cstring>
 #include <chrono>
+#include <algorithm>
 
 namespace BeatAnalyzer {
 namespace OSC {
@@ -214,11 +215,12 @@ void OscReceiver::handlePacket(const char* data, int len) {
             }
         }
         
-        mode = (mode != 0) ? 1 : 0;
+        mode = std::max(0, std::min(mode, 2));  // Clamp 0-2
         int oldMode = m_clockMode.exchange(mode);
         
         if (oldMode != mode) {
-            LOG_INFO("Clock-Modus gewechselt: " + std::string(mode ? "EIGENE BEATCLOCK" : "TRAINING"));
+            const char* names[] = {"a3motion", "intern", "mixxx"};
+            LOG_INFO("Clock-Modus gewechselt: " + std::string(names[mode]));
         }
         
         if (m_clockModeCallback) {

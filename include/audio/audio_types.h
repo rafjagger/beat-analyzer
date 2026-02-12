@@ -7,7 +7,7 @@
 namespace BeatAnalyzer {
 namespace Audio {
 
-// Audio sample type (same as Mixxx)
+// Audio sample type (float, same as JACK)
 using CSAMPLE = float;
 
 // Frame position in samples

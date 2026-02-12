@@ -189,6 +189,22 @@ void OscSender::enqueueAll(const char* data, int len) {
     }
 }
 
+void OscSender::enqueueAllExcept(const char* data, int len, const std::string& excludeName) {
+    for (auto& t : m_targets) {
+        if (t->name == excludeName) continue;  // skip excluded target
+        int w = t->wpos.load(std::memory_order_relaxed);
+        int next = (w + 1) & QMASK;
+        if (next == t->rpos.load(std::memory_order_acquire)) {
+            t->dropped.fetch_add(1, std::memory_order_relaxed);
+            continue;
+        }
+        auto& pkt = t->ring[w];
+        std::memcpy(pkt.data, data, len);
+        pkt.len = len;
+        t->wpos.store(next, std::memory_order_release);
+    }
+}
+
 // ============================================================================
 // Public send methods — serialize + enqueue
 // ============================================================================
@@ -198,6 +214,14 @@ bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
     char buf[256];
     int len = serializeInts(buf, "/beat", msg.beat_number, msg.bar_number, msg.bpm);
     enqueueAll(buf, len);
+    return true;
+}
+
+bool OscSender::sendBeatClockExcept(const BeatClockMessage& msg, const std::string& excludeTarget) {
+    if (!m_connected) return false;
+    char buf[256];
+    int len = serializeInts(buf, "/beat", msg.beat_number, msg.bar_number, msg.bpm);
+    enqueueAllExcept(buf, len, excludeTarget);
     return true;
 }
 

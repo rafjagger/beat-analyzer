@@ -4,14 +4,14 @@
  * Beat Analyzer - Eigenständige Anwendung
  * 
  * Dieser Code ist von Grund auf neu geschrieben und nutzt
- * nur die KONZEPTE aus Mixxx als Vorlage:
+ * nur die KONZEPTE aus BTrack als Vorlage:
  * 
  * - Onset Detection Function (Spectral Difference)
  * - Autocorrelation-based Tempo Tracking
  * - Comb Filter Bank für Periodizität
  * - Viterbi Decoding für optimalen Beat-Pfad
  * 
- * KEINE Mixxx-Abhängigkeiten!
+ * KEINE externen Abhängigkeiten!
  */
 
 #include <vector>
