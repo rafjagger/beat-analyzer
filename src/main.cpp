@@ -14,6 +14,7 @@
 #include "analysis/vu_meter.h"
 #include "osc/osc_sender.h"
 #include "osc/osc_receiver.h"
+#include "osc/pioneer_receiver.h"
 #include "config/config_loader.h"
 #include "config/env_config.h"
 #include "util/logging.h"
@@ -216,7 +217,6 @@ public:
         // /clockmode und /tap kommen immer über Port 7775 (a3motion)
         
         int portA3motion = env.getInt("OSC_PORT_A3MOTION", 7775);
-        int portPioneer  = env.getInt("OSC_PORT_PIONEER", 7776);
         
         // --- a3motion Receiver (Port 7775) ---
         m_oscReceiverA3motion = std::make_unique<OscReceiver>();
@@ -268,33 +268,48 @@ public:
             LOG_INFO("OSC Receiver a3motion auf Port " + std::to_string(portA3motion));
         }
         
-        // --- Pioneer Receiver (Port 7776) ---
-        m_oscReceiverPioneer = std::make_unique<OscReceiver>();
-        m_oscReceiverPioneer->setPort(portPioneer);
-        m_oscReceiverPioneer->setBeatClockPath("/beat");
+        // --- Pioneer Pro DJ Link Receiver (Ports 50000/50001/50002) ---
+        int pioneerDeviceNum = env.getInt("PIONEER_DEVICE_NUM", 7);
+        m_pioneerReceiver = std::make_unique<PioneerReceiver>();
+        m_pioneerReceiver->setDeviceNumber(static_cast<uint8_t>(pioneerDeviceNum));
+        m_pioneerReceiver->setDeviceName("beat-analyzer");
         
-        // /beat von Pioneer: nur in Modus 2 weiterleiten (an alle Ziele)
-        m_oscReceiverPioneer->setCallback([this](const ReceivedBeatClock& clock) {
-            if (m_clockMode.load() == 2 && clock.beatNumber >= 1 && clock.beatNumber <= 4) {
+        // Beat von Pioneer: nur in Modus 2 weiterleiten (an alle Ziele)
+        // PioneerReceiver liefert nur Master-Beats (double BPM, beat_within_bar 1-4)
+        m_pioneerReceiver->setCallback([this](const PioneerBeat& beat) {
+            if (m_clockMode.load() == 2 && beat.beatWithinBar >= 1 && beat.beatWithinBar <= 4) {
                 {
                     std::lock_guard<std::mutex> lock(m_mutex);
                     for (int ch = 0; ch < m_numBpmChannels; ++ch) {
-                        m_bpmTrackStates[ch].beatNumber = clock.beatNumber;
+                        m_bpmTrackStates[ch].beatNumber = beat.beatWithinBar;
                     }
                 }
                 if (m_oscSender && m_oscSender->isConnected()) {
                     BeatClockMessage msg;
                     msg.track_id = 0;
-                    msg.beat_number = clock.beatNumber;
-                    msg.bar_number = clock.bar;
-                    msg.bpm = clock.bpm;
+                    msg.beat_number = beat.beatWithinBar;
+                    msg.bar_number = 0;  // Pioneer zählt keine Takte fortlaufend
+                    msg.bpm = beat.effectiveBpm;
                     m_oscSender->sendBeatClock(msg);
+                }
+                
+                if (m_debugBpmConsole) {
+                    static auto lastPioneerBeat = std::chrono::steady_clock::now();
+                    auto now = std::chrono::steady_clock::now();
+                    double deltaMs = std::chrono::duration<double, std::milli>(now - lastPioneerBeat).count();
+                    lastPioneerBeat = now;
+                    printf("PIONEER_BEAT %d | BPM %5.1f (track=%.1f pitch=%+.1f%%) | delta %5.0fms | dev=%d %s\n",
+                           beat.beatWithinBar, beat.effectiveBpm, beat.trackBpm, beat.pitchPercent,
+                           deltaMs, beat.deviceNumber, beat.isMaster ? "MASTER" : "");
+                    fflush(stdout);
                 }
             }
         });
         
-        if (m_oscReceiverPioneer->start()) {
-            LOG_INFO("OSC Receiver Pioneer auf Port " + std::to_string(portPioneer));
+        if (m_pioneerReceiver->start()) {
+            LOG_INFO("Pioneer Pro DJ Link Receiver aktiv (Virtual CDJ #" + std::to_string(pioneerDeviceNum) + ")");
+        } else {
+            LOG_WARN("Pioneer Receiver konnte nicht gestartet werden (Ports 50000-50002 belegt?)");
         }
         
         // Audio-Callback setzen
@@ -374,8 +389,8 @@ public:
         if (m_oscReceiverA3motion) {
             m_oscReceiverA3motion->stop();
         }
-        if (m_oscReceiverPioneer) {
-            m_oscReceiverPioneer->stop();
+        if (m_pioneerReceiver) {
+            m_pioneerReceiver->stop();
         }
         
         // OSC Sender-Thread sauber beenden
@@ -460,28 +475,27 @@ private:
             m_vuMeters[ch]->processMono(buffer, frameCount);
         }
         
-        // BPM Kanäle: BTrack DIREKT im JACK-Callback verarbeiten!
-        // So bekommt BTrack Audio exakt im Sample-Takt, wie vorgesehen.
+        // BPM Kanäle: Audio nur in Ringbuffer kopieren (billig: ~512 bytes memcpy)
+        // BTrack läuft NICHT im JACK-Callback — zu teuer (FFT + Transzendente)!
         for (int ch = 0; ch < m_numBpmChannels && ch < static_cast<int>(bpmBuffers.size()); ++ch) {
-            const CSAMPLE* buffer = bpmBuffers[ch];
-            
-            bool beat = m_btrackDetectors[ch]->processSamples(buffer, frameCount);
-            
-            if (beat) {
-                // Atomares Flag für den Beat-Thread setzen
-                m_btrackBeatFlag[ch].store(true, std::memory_order_release);
+            auto& ring = m_audioRing[ch];
+            int w = ring.wpos.load(std::memory_order_relaxed);
+            int next = (w + 1) & AUDIO_RING_MASK;
+            if (next != ring.rpos.load(std::memory_order_acquire)) {
+                auto& slot = ring.slots[w];
+                std::memcpy(slot.data, bpmBuffers[ch], frameCount * sizeof(float));
+                slot.frameCount = frameCount;
+                ring.wpos.store(next, std::memory_order_release);
             }
-            
-            // BPM immer updaten (atomic)
-            m_btrackBpmValue[ch].store(m_btrackDetectors[ch]->getBpm(), std::memory_order_release);
+            // Bei Ringbuffer-Overflow: Frame droppen (besser als XRun)
         }
         
         m_frameCount.fetch_add(frameCount, std::memory_order_relaxed);
     }
     
-    // Beat-Processing Thread: Synthclock + TAP + OSC
-    // BTrack läuft jetzt im JACK-Callback. Dieser Thread liest nur
-    // atomare Beat-Flags und BPM-Werte und steuert die Synthclock.
+    // Beat-Processing Thread: BTrack + Synthclock + TAP + OSC
+    // BTrack läuft HIER, nicht im JACK-Callback!
+    // JACK kopiert Audio in lock-free Ringbuffer → dieser Thread pollt und verarbeitet.
     void processBeatThread() {
         const auto interval = std::chrono::microseconds(500);  // 2kHz polling
         int sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
@@ -489,10 +503,33 @@ private:
         auto nextWakeTime = std::chrono::steady_clock::now();
         
         while (g_running) {
+            // ========================================
+            // BTrack: Audio aus Ringbuffer verarbeiten (ALLE Modi)
+            // BTrack muss IMMER laufen, damit BPM-Tracking bereit ist
+            // wenn man in Modus 1 wechselt.
+            // ========================================
+            for (int ch = 0; ch < m_numBpmChannels; ++ch) {
+                auto& ring = m_audioRing[ch];
+                // Alle verfügbaren Frames verarbeiten
+                while (true) {
+                    int r = ring.rpos.load(std::memory_order_relaxed);
+                    if (r == ring.wpos.load(std::memory_order_acquire)) break;
+                    
+                    auto& slot = ring.slots[r];
+                    bool beat = m_btrackDetectors[ch]->processSamples(slot.data, slot.frameCount);
+                    ring.rpos.store((r + 1) & AUDIO_RING_MASK, std::memory_order_release);
+                    
+                    if (beat) {
+                        m_btrackBeatFlag[ch].store(true, std::memory_order_release);
+                    }
+                    m_btrackBpmValue[ch].store(m_btrackDetectors[ch]->getBpm(), std::memory_order_release);
+                }
+            }
+            
             if (m_clockMode.load() != 1) {
                 // Modus 0 (a3motion) und 2 (pioneer): externe Quelle,
                 // Synthclock pausiert, /beat wird im Receiver-Callback gesendet
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
                 nextWakeTime = std::chrono::steady_clock::now();
                 continue;
             }
@@ -662,14 +699,14 @@ private:
         // Bei Modus 0/2 wird /beat im Receiver-Callback gesendet
         if (m_clockMode.load() != 1) return;
         
-        float effectiveBpm = static_cast<float>(m_bpmTrackStates[ch].currentBpm);
+        double effectiveBpm = m_bpmTrackStates[ch].currentBpm;
         
-        // /beat iii  beat(1-4), bar, bpm
+        // /beat iif  beat(1-4), bar, bpm
         BeatClockMessage msg;
         msg.track_id = ch;
         msg.beat_number = m_bpmTrackStates[ch].beatNumber;
         msg.bar_number = m_bpmTrackStates[ch].barNumber;
-        msg.bpm = static_cast<int>(effectiveBpm + 0.5f);
+        msg.bpm = effectiveBpm;
         
         m_oscSender->sendBeatClock(msg);
         
@@ -683,7 +720,7 @@ private:
             double expectedMs = (msg.bpm > 0) ? (60000.0 / msg.bpm) : 0.0;
             double jitterMs = (expectedMs > 0) ? (deltaMs - expectedMs) : 0.0;
             
-            printf("BEAT %d | BPM %3d | delta %7.1fms | expected %7.1fms | jitter %+.1fms | %s\n",
+            printf("BEAT %d | BPM %5.1f | delta %7.1fms | expected %7.1fms | jitter %+.1fms | %s\n",
                    msg.beat_number, msg.bpm, deltaMs, expectedMs, jitterMs,
                    isRealBeat ? "REAL" : "SYNTH");
             fflush(stdout);
@@ -764,6 +801,24 @@ private:
     std::atomic<double> m_btrackBpmValue[MAX_BPM_CHANNELS] = {};  // BPM von BTrack
     int64_t m_lastProcessedFrame[MAX_BPM_CHANNELS] = {};  // Für Synthclock Phase-Tracking
     
+    // Lock-free Audio Ringbuffer: JACK-Callback → BTrack-Thread
+    // JACK kopiert nur Audio hierhin (billig: memcpy 512 bytes).
+    // BTrack-Thread pollt und macht die schwere FFT+Onset-Berechnung.
+    static constexpr int AUDIO_RING_SIZE = 64;  // Slots (Zweierpotenz), ~190ms bei 128/44100
+    static constexpr int AUDIO_RING_MASK = AUDIO_RING_SIZE - 1;
+    static constexpr int MAX_FRAME_SIZE = 1024;  // Max JACK buffer size
+    struct AudioSlot {
+        float data[MAX_FRAME_SIZE];  // Audio-Daten (ein JACK-Buffer)
+        int frameCount = 0;
+    };
+    // Pro BPM-Kanal ein eigener Ringbuffer (SPSC: JACK schreibt, BTrack-Thread liest)
+    struct AudioRing {
+        AudioSlot slots[AUDIO_RING_SIZE];
+        alignas(64) std::atomic<int> wpos{0};
+        alignas(64) std::atomic<int> rpos{0};
+    };
+    AudioRing m_audioRing[MAX_BPM_CHANNELS];
+    
     // Beat Detection (nur für BPM Kanäle)
     std::vector<std::unique_ptr<BTrackWrapper>> m_btrackDetectors;
     std::vector<BpmTrackState> m_bpmTrackStates;
@@ -776,7 +831,7 @@ private:
     // OSC
     std::shared_ptr<OscSender> m_oscSender;
     std::unique_ptr<OscReceiver> m_oscReceiverA3motion;  // Port 7775: a3motion_osc
-    std::unique_ptr<OscReceiver> m_oscReceiverPioneer;   // Port 7776: Pioneer
+    std::unique_ptr<PioneerReceiver> m_pioneerReceiver;   // Pioneer Pro DJ Link (Ports 50000-50002)
     
     // Clock-Modus: 0=a3motion, 1=intern, 2=pioneer
     std::atomic<int> m_clockMode{1};  // Default: eigene Beatclock

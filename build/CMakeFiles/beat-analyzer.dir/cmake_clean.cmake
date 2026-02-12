@@ -28,6 +28,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/beat-analyzer.dir/src/osc/osc_receiver.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o"
   "CMakeFiles/beat-analyzer.dir/src/osc/osc_sender.cpp.o.d"
+  "CMakeFiles/beat-analyzer.dir/src/osc/pioneer_receiver.cpp.o"
+  "CMakeFiles/beat-analyzer.dir/src/osc/pioneer_receiver.cpp.o.d"
   "CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o"
   "CMakeFiles/beat-analyzer.dir/src/util/logging.cpp.o.d"
   "beat-analyzer"

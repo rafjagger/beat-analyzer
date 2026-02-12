@@ -16,7 +16,7 @@ namespace OSC {
 struct ReceivedBeatClock {
     int beatNumber = 0;     // 1-4
     int bar = 1;            // Takt
-    int bpm = 0;            // BPM als int
+    double bpm = 0.0;       // BPM (z.B. 128.53)
     int64_t timestamp = 0;  // ms since epoch
     bool valid = false;
 };

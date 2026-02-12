@@ -57,6 +57,16 @@ int OscSender::serializeInts(char* buf, const char* path, int i1, int i2, int i3
     return pos;
 }
 
+int OscSender::serializeIntIntFloat(char* buf, const char* path, int i1, int i2, float f1) {
+    int pos = 0;
+    pos += writeOscString(buf + pos, path);
+    pos += writeOscString(buf + pos, ",iif");
+    writeInt32(buf + pos, i1); pos += 4;
+    writeInt32(buf + pos, i2); pos += 4;
+    writeFloat32(buf + pos, f1); pos += 4;
+    return pos;
+}
+
 int OscSender::serializeFloat(char* buf, const char* path, float f1) {
     int pos = 0;
     pos += writeOscString(buf + pos, path);
@@ -212,7 +222,7 @@ void OscSender::enqueueAllExcept(const char* data, int len, const std::string& e
 bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
     if (!m_connected) return false;
     char buf[256];
-    int len = serializeInts(buf, "/beat", msg.beat_number, msg.bar_number, msg.bpm);
+    int len = serializeIntIntFloat(buf, "/beat", msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
     enqueueAll(buf, len);
     return true;
 }
@@ -220,7 +230,7 @@ bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
 bool OscSender::sendBeatClockExcept(const BeatClockMessage& msg, const std::string& excludeTarget) {
     if (!m_connected) return false;
     char buf[256];
-    int len = serializeInts(buf, "/beat", msg.beat_number, msg.bar_number, msg.bpm);
+    int len = serializeIntIntFloat(buf, "/beat", msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
     enqueueAllExcept(buf, len, excludeTarget);
     return true;
 }

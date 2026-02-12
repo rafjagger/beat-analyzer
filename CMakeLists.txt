@@ -48,6 +48,7 @@ set(BEAT_ANALYZER_SOURCES
     src/osc/osc_sender.cpp
     src/osc/osc_receiver.cpp
     src/osc/osc_messages.cpp
+    src/osc/pioneer_receiver.cpp
     src/config/config_loader.cpp
     src/util/logging.cpp
     ${BTRACK_SOURCES}
@@ -65,6 +66,7 @@ set(BEAT_ANALYZER_HEADERS
     include/osc/osc_sender.h
     include/osc/osc_receiver.h
     include/osc/osc_messages.h
+    include/osc/pioneer_receiver.h
     include/config/config_loader.h
     include/util/logging.h
 )

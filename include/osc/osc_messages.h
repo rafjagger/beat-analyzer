@@ -26,13 +26,13 @@ struct OscMessage {
 
 /**
  * Beat clock message.
- * OSC Format: /beat iii  beat(1-4), bar, bpm
+ * OSC Format: /beat iif  beat(1-4), bar, bpm
  */
 struct BeatClockMessage {
     int track_id;           // Kanal-Index (0-based)
     int beat_number;        // 1-4 (Schlag im Takt)
     int bar_number;         // Takt-Nummer (ab 1, fortlaufend)
-    int bpm;                // Aktuelles BPM (gerundet)
+    double bpm;             // Aktuelles BPM (z.B. 128.53)
     
     OscMessage toOscMessage() const;
 };

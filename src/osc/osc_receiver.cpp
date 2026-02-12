@@ -184,13 +184,13 @@ void OscReceiver::handlePacket(const char* data, int len) {
                 int32_t val = readInt32(data + argPos);
                 if (i == 0) clock.beatNumber = val;
                 else if (i == 1) clock.bar = val;
-                else if (i == 2) clock.bpm = val;
+                else if (i == 2) clock.bpm = static_cast<double>(val);
                 argPos += 4;
             } else if (typeChars[i] == 'f') {
                 float val = readFloat32(data + argPos);
                 if (i == 0) clock.beatNumber = static_cast<int>(val);
                 else if (i == 1) clock.bar = static_cast<int>(val);
-                else if (i == 2) clock.bpm = static_cast<int>(val);
+                else if (i == 2) clock.bpm = static_cast<double>(val);
                 argPos += 4;
             }
         }
@@ -219,7 +219,7 @@ void OscReceiver::handlePacket(const char* data, int len) {
         int oldMode = m_clockMode.exchange(mode);
         
         if (oldMode != mode) {
-            const char* names[] = {"a3motion", "intern", "mixxx"};
+            const char* names[] = {"a3motion", "intern", "pioneer"};
             LOG_INFO("Clock-Modus gewechselt: " + std::string(names[mode]));
         }
         

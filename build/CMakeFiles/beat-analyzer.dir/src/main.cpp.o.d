@@ -235,6 +235,7 @@ CMakeFiles/beat-analyzer.dir/src/main.cpp.o: \
  /usr/include/c++/15/mutex /usr/include/c++/15/bits/std_mutex.h \
  /usr/include/c++/15/bits/unique_lock.h \
  /usr/include/x86_64-linux-gnu/c++/15/bits/error_constants.h \
+ /home/aaa/beat-analyzer/include/osc/pioneer_receiver.h \
  /home/aaa/beat-analyzer/include/config/config_loader.h \
  /home/aaa/beat-analyzer/include/config/env_config.h \
  /usr/include/c++/15/fstream /usr/include/c++/15/istream \

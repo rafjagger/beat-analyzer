@@ -107,12 +107,12 @@ tests/clean: tests/CMakeFiles/beat_detection_test.dir/clean
 CMakeFiles/beat-analyzer.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 "Built target beat-analyzer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 "Built target beat-analyzer"
 .PHONY : CMakeFiles/beat-analyzer.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/beat-analyzer.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/aaa/beat-analyzer/build/CMakeFiles 16
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/aaa/beat-analyzer/build/CMakeFiles 17
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/beat-analyzer.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/aaa/beat-analyzer/build/CMakeFiles 0
 .PHONY : CMakeFiles/beat-analyzer.dir/rule
@@ -124,7 +124,7 @@ beat-analyzer: CMakeFiles/beat-analyzer.dir/rule
 # codegen rule for target.
 CMakeFiles/beat-analyzer.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/beat-analyzer.dir/build.make CMakeFiles/beat-analyzer.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 "Finished codegen for target beat-analyzer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17 "Finished codegen for target beat-analyzer"
 .PHONY : CMakeFiles/beat-analyzer.dir/codegen
 
 # clean rule for target.
@@ -139,7 +139,7 @@ CMakeFiles/beat-analyzer.dir/clean:
 tests/CMakeFiles/beat_detection_test.dir/all:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/beat_detection_test.dir/build.make tests/CMakeFiles/beat_detection_test.dir/depend
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/beat_detection_test.dir/build.make tests/CMakeFiles/beat_detection_test.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=17,18,19 "Built target beat_detection_test"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=18,19,20 "Built target beat_detection_test"
 .PHONY : tests/CMakeFiles/beat_detection_test.dir/all
 
 # Build rule for subdir invocation for target.
@@ -156,7 +156,7 @@ beat_detection_test: tests/CMakeFiles/beat_detection_test.dir/rule
 # codegen rule for target.
 tests/CMakeFiles/beat_detection_test.dir/codegen:
 	$(MAKE) $(MAKESILENT) -f tests/CMakeFiles/beat_detection_test.dir/build.make tests/CMakeFiles/beat_detection_test.dir/codegen
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=17,18,19 "Finished codegen for target beat_detection_test"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/aaa/beat-analyzer/build/CMakeFiles --progress-num=18,19,20 "Finished codegen for target beat_detection_test"
 .PHONY : tests/CMakeFiles/beat_detection_test.dir/codegen
 
 # clean rule for target.

@@ -35,11 +35,11 @@ std::string OscMessage::toString() const {
 }
 
 OscMessage BeatClockMessage::toOscMessage() const {
-    // /beat iii  beat(1-4), bar, bpm
+    // /beat iif  beat(1-4), bar, bpm
     OscMessage msg("/beat");
     msg.addInt(beat_number);
     msg.addInt(bar_number);
-    msg.addInt(bpm);
+    msg.addFloat(static_cast<float>(bpm));
     return msg;
 }
 

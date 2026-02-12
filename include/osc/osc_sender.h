@@ -86,6 +86,7 @@ private:
     static int padLen(int len);  // round up to multiple of 4
     static int writeOscString(char* buf, const char* str);
     static int serializeInts(char* buf, const char* path, int i1, int i2, int i3);
+    static int serializeIntIntFloat(char* buf, const char* path, int i1, int i2, float f1);
     static int serializeFloat(char* buf, const char* path, float f1);
     static int serializeFloats(char* buf, const char* path, float f1, float f2);
     static int serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels);
