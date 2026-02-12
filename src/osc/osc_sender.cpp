@@ -262,6 +262,43 @@ bool OscSender::sendMessage(const OscMessage& msg) {
     return true;
 }
 
+bool OscSender::sendVuBundle(const std::string* paths, const float* peaks, const float* rms, int numChannels) {
+    if (!m_connected || numChannels <= 0) return false;
+    char buf[512];
+    int len = serializeBundle(buf, sizeof(buf), paths, peaks, rms, numChannels);
+    if (len <= 0) return false;
+    enqueueAll(buf, len);
+    return true;
+}
+
+int OscSender::serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels) {
+    int pos = 0;
+    
+    // OSC Bundle header: "#bundle\0" + 8-byte timetag (1 = immediately)
+    const char bundleId[] = "#bundle";
+    std::memcpy(buf + pos, bundleId, 8);  // includes null terminator
+    pos += 8;
+    
+    // Timetag: 1 = process immediately (OSC spec)
+    writeInt32(buf + pos, 0); pos += 4;  // seconds
+    writeInt32(buf + pos, 1); pos += 4;  // fraction (1 = immediately)
+    
+    // Each element: 4-byte size prefix + OSC message
+    for (int ch = 0; ch < numChannels; ++ch) {
+        // Serialize the message into a temp area after the size field
+        int msgStart = pos + 4;  // leave room for size
+        if (msgStart >= bufSize - 32) break;  // safety
+        
+        int msgLen = serializeFloats(buf + msgStart, paths[ch].c_str(), peaks[ch], rms[ch]);
+        
+        // Write the size prefix
+        writeInt32(buf + pos, msgLen);
+        pos = msgStart + msgLen;
+    }
+    
+    return pos;
+}
+
 bool OscSender::broadcastBeatClock(int64_t, float bpm, int beatNumber, float) {
     BeatClockMessage msg;
     msg.track_id = 0;

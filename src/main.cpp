@@ -717,28 +717,28 @@ private:
     
     void sendVuMeterOsc() {
         if (!m_enableVu) return;
-        // Sendet /vu/0-N mit [peak, rms] als lineare Werte (0.0-1.0) wie SuperCollider
         if (!m_oscSender || !m_oscSender->isConnected()) return;
         
-        // DEBUG: Timing für VU
-        static auto lastVuTime = std::chrono::steady_clock::now();
-        auto now = std::chrono::steady_clock::now();
-        double deltaMs = std::chrono::duration<double, std::milli>(now - lastVuTime).count();
-        lastVuTime = now;
+        // Alle VU-Werte sammeln und als ein OSC Bundle senden
+        // 1 UDP-Paket statt 12 — atomar, effizient
+        float peaks[MAX_VU_CHANNELS];
+        float rms[MAX_VU_CHANNELS];
         
         for (int ch = 0; ch < m_numVuChannels; ++ch) {
-            // Immer senden, auch ohne Signal (wie SuperCollider)
-            float rmsLinear = m_vuMeters[ch]->getRmsLinear();
-            float peakLinear = m_vuMeters[ch]->getPeakLinear();
-            
-            // Vorberechnete Pfade - keine Allokation zur Runtime
-            m_oscSender->sendFloats(m_vuOscPaths[ch], peakLinear, rmsLinear);
-            
-            // DEBUG: /vu/3 auf Konsole (nur wenn aktiviert)
-            if (m_debugVuConsole && ch == 3) {
-                printf("/vu/3 | peak %.3f | rms %.3f | delta %6.1fms\n", peakLinear, rmsLinear, deltaMs);
-                fflush(stdout);
-            }
+            peaks[ch] = m_vuMeters[ch]->getPeakLinear();
+            rms[ch] = m_vuMeters[ch]->getRmsLinear();
+        }
+        
+        m_oscSender->sendVuBundle(m_vuOscPaths.data(), peaks, rms, m_numVuChannels);
+        
+        // DEBUG: /vu/3 auf Konsole (nur wenn aktiviert)
+        if (m_debugVuConsole && m_numVuChannels > 3) {
+            static auto lastVuTime = std::chrono::steady_clock::now();
+            auto now = std::chrono::steady_clock::now();
+            double deltaMs = std::chrono::duration<double, std::milli>(now - lastVuTime).count();
+            lastVuTime = now;
+            printf("/vu/3 | peak %.3f | rms %.3f | delta %6.1fms\n", peaks[3], rms[3], deltaMs);
+            fflush(stdout);
         }
     }
     
@@ -782,6 +782,7 @@ private:
     
     // Beat-Kommunikation JACK-Callback → Beat-Thread (lock-free)
     static constexpr int MAX_BPM_CHANNELS = 8;
+    static constexpr int MAX_VU_CHANNELS = 16;
     std::atomic<bool> m_btrackBeatFlag[MAX_BPM_CHANNELS] = {};  // Beat erkannt
     std::atomic<double> m_btrackBpmValue[MAX_BPM_CHANNELS] = {};  // BPM von BTrack
     int64_t m_lastProcessedFrame[MAX_BPM_CHANNELS] = {};  // Für Synthclock Phase-Tracking

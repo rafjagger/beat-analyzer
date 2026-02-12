@@ -39,6 +39,11 @@ public:
     bool sendMessage(const OscMessage& msg);
     bool broadcastBeatClock(int64_t framePos, float bpm, int beatNumber, float strength);
     
+    /** Send all VU channels as a single OSC bundle.
+     *  One UDP packet instead of N. Atomic delivery, less overhead.
+     *  paths[i] = "/vu/0" etc, peaks[i]/rms[i] = values per channel. */
+    bool sendVuBundle(const std::string* paths, const float* peaks, const float* rms, int numChannels);
+    
     bool isConnected() const { return m_connected; }
     size_t getTargetCount() const { return m_targets.size(); }
     
@@ -47,7 +52,7 @@ public:
     
 private:
     struct Packet {
-        char data[256];
+        char data[512];   // 512 for VU bundle (12ch ≈ 304 bytes)
         int len = 0;
     };
     
@@ -81,6 +86,7 @@ private:
     static int serializeInts(char* buf, const char* path, int i1, int i2, int i3);
     static int serializeFloat(char* buf, const char* path, float f1);
     static int serializeFloats(char* buf, const char* path, float f1, float f2);
+    static int serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels);
     
     void enqueueAll(const char* data, int len);
     static void targetThreadFunc(Target* t);
