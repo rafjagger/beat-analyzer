@@ -10,9 +10,7 @@
  */
 
 #include "audio/jack_client.h"
-#include "analysis/beat_detection.h"
 #include "analysis/btrack_wrapper.h"
-#include "analysis/grid_calculator.h"
 #include "analysis/vu_meter.h"
 #include "osc/osc_sender.h"
 #include "osc/osc_receiver.h"
@@ -125,58 +123,14 @@ public:
         LOG_INFO("OSC Sende-Rate: " + std::to_string(m_oscSendRate) + " Hz (" + std::to_string(m_oscSendIntervalMs) + "ms)");
         
         // Beat Detection Latenz-Kompensation
-        // Latenz-Quellen bei frameSize=512, hopSize=256:
-        //   JACK Buffer (128 frames): 2.9ms
-        //   FFT Analyse-Zentrum: frameSize/2 = 256 samples = 5.8ms
-        //   Peak Detection Delay: 1 hop = 256 samples = 5.8ms
-        //   Thread-Polling (~0.25ms avg)
-        //   Gesamt: ~15ms
-        m_beatLatencyMs = env.getFloat("BEAT_LATENCY_MS", 15.0f);
-        m_beatLatencyFrames = static_cast<int64_t>(m_beatLatencyMs / 1000.0f * 44100.0f);  // samples
+        m_bpmMin = env.getFloat("BPM_MIN", 60.0f);
+        m_bpmMax = env.getFloat("BPM_MAX", 200.0f);
         
         LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
                  " VU=" + std::string(m_enableVu ? "ON" : "OFF") +
                  " Beat=" + std::string(m_enableBeat ? "ON" : "OFF") +
-                 " Latenz-Kompensation=" + std::to_string(static_cast<int>(m_beatLatencyMs)) + "ms");
-        
-        // Beat Detector Konfiguration
-        BeatDetectorConfig beatConfig;
-        beatConfig.sampleRate = 44100;
-        beatConfig.frameSize = 512;   // Kleinere FFT für tightere Zeitauflösung (~5.8ms/hop)
-        beatConfig.hopSize = 256;     // 256 samples = 5.8ms Zeitauflösung
-        m_bpmMin = env.getFloat("BPM_MIN", 60.0f);
-        m_bpmMax = env.getFloat("BPM_MAX", 200.0f);
-        beatConfig.minBpm = m_bpmMin;
-        beatConfig.maxBpm = m_bpmMax;
-        beatConfig.defaultBpm = 120.0;
-        
-        // Auto Gain Control
-        beatConfig.agcEnabled = env.getInt("AGC_ENABLED", 1) != 0;
-        beatConfig.agcTargetPeak = env.getFloat("AGC_TARGET_PEAK", 0.7f);
-        
-        // Kick-Filter für REALBEAT
-        beatConfig.kickFilterEnabled = env.getInt("KICK_FILTER_ENABLED", 1) != 0;
-        beatConfig.kickFilterLowHz = env.getFloat("KICK_FILTER_LOW_HZ", 30.0f);
-        beatConfig.kickFilterHighHz = env.getFloat("KICK_FILTER_HIGH_HZ", 150.0f);
-        beatConfig.kickFilterOrder = env.getInt("KICK_FILTER_ORDER", 2);
-        
-        // GRID / SYNTHBEAT Konfiguration
-        m_gridWindowS = env.getFloat("GRID_WINDOW_S", 5.0f);
-        m_tapPatternTimeoutS = env.getFloat("TAP_PATTERN_TIMEOUT_S", 30.0f);
-        m_synthbeatDriftMaxMs = env.getFloat("SYNTHBEAT_DRIFT_MAX_MS", 5.0f);
-        m_maskSlotCount = env.getInt("MASK_SLOTS", 8);  // 8 Beats = 2 Takte
-        
-        LOG_INFO("Beat Detection: FFT=" + std::to_string(beatConfig.frameSize) +
-                 " Hop=" + std::to_string(beatConfig.hopSize) +
-                 " AGC=" + std::string(beatConfig.agcEnabled ? "ON" : "OFF") +
-                 " KickFilter=" + std::string(beatConfig.kickFilterEnabled ? "ON" : "OFF") +
                  " BPM=" + std::to_string(static_cast<int>(m_bpmMin)) + 
                  "-" + std::to_string(static_cast<int>(m_bpmMax)));
-        
-        LOG_INFO("Grid: Window=" + std::to_string(static_cast<int>(m_gridWindowS)) + "s" +
-                 " TapTimeout=" + std::to_string(static_cast<int>(m_tapPatternTimeoutS)) + "s" +
-                 " DriftMax=" + std::to_string(static_cast<int>(m_synthbeatDriftMaxMs)) + "ms" +
-                 " MaskSlots=" + std::to_string(m_maskSlotCount));
         
         // VU-Meter für VU Kanäle
         for (int i = 0; i < m_numVuChannels; ++i) {
@@ -218,16 +172,6 @@ public:
             auto btrack = std::make_unique<BTrackWrapper>(btHopSize, btFrameSize);
             m_btrackDetectors.push_back(std::move(btrack));
             m_bpmTrackStates.push_back(BpmTrackState{});
-            
-            // GridCalculator für diesen Kanal (optional, für SOLL-GRID)
-            auto gridCalc = std::make_unique<GridCalculator>(
-                beatConfig.sampleRate,
-                m_gridWindowS,
-                m_bpmMin,
-                m_bpmMax
-            );
-            gridCalc->setMaskSlotCount(m_maskSlotCount);
-            m_gridCalculators.push_back(std::move(gridCalc));
         }
         
         LOG_INFO(std::to_string(m_numBpmChannels) + " Beat Tracker, " + 
@@ -846,22 +790,9 @@ private:
     int m_oscSendRate = 25;         // Hz
     int m_oscSendIntervalMs = 40;   // 1000/rate ms
     
-    // Beat-Latenz-Kompensation
-    float m_beatLatencyMs = 15.0f;
-    int64_t m_beatLatencyFrames = 662;  // ~15ms bei 44.1kHz
-    
     // BPM-Limits aus Konfiguration
     float m_bpmMin = 60.0f;
     float m_bpmMax = 200.0f;
-    
-    // GRID / SYNTHBEAT Konfiguration
-    float m_gridWindowS = 5.0f;           // Fenster für REALBEAT-Sammlung
-    float m_tapPatternTimeoutS = 30.0f;   // Timeout für TAP-Muster
-    float m_synthbeatDriftMaxMs = 5.0f;   // Max Drift-Korrektur pro Beat
-    int m_maskSlotCount = 8;              // Anzahl Masken-Slots (8 = 2 Takte)
-    
-    // GridCalculator pro Kanal
-    std::vector<std::unique_ptr<GridCalculator>> m_gridCalculators;
 };
 
 // ============================================================================
