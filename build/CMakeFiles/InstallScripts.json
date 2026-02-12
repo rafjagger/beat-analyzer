@@ -1,8 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/home/aaa/beat-analyzer/build/cmake_install.cmake",
-		"/home/aaa/beat-analyzer/build/tests/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

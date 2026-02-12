@@ -124,10 +124,6 @@ install(TARGETS beat-analyzer
     RUNTIME DESTINATION bin
 )
 
-install(FILES config/config.yaml
-    DESTINATION etc/beat-analyzer
-)
-
 # Print summary
 message(STATUS "BeatAnalyzer Configuration:")
 message(STATUS "  JACK support: ${JACK_FOUND}")

@@ -1,1 +1,0 @@
-/usr/bin/c++ -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/beat_detection_test.dir/link.d CMakeFiles/beat_detection_test.dir/beat_detection_test.cpp.o CMakeFiles/beat_detection_test.dir/__/src/analysis/beat_detection.cpp.o -o beat_detection_test  -lpthread -lm

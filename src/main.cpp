@@ -15,7 +15,6 @@
 #include "osc/osc_sender.h"
 #include "osc/osc_receiver.h"
 #include "osc/pioneer_receiver.h"
-#include "config/config_loader.h"
 #include "config/env_config.h"
 #include "util/logging.h"
 
@@ -34,7 +33,6 @@
 using namespace BeatAnalyzer;
 using namespace BeatAnalyzer::Audio;
 using namespace BeatAnalyzer::OSC;
-using namespace BeatAnalyzer::Config;
 using namespace BeatAnalyzer::Util;
 
 // ============================================================================
