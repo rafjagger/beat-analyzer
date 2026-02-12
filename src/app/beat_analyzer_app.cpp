@@ -284,6 +284,22 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
         m_oscSender->addTarget("default", oscHost, oscPort);
     }
     
+    // Separate VU-Ports: OSC_VU_Name=host:port
+    // Wenn definiert, gehen /vu Bundles an diese Ports statt an die Haupt-Ports.
+    // /beat bleibt auf den Haupt-Ports → kein gegenseitiges Stören.
+    auto oscVuKeys = env.getKeysWithPrefix("OSC_VU_");
+    for (const auto& key : oscVuKeys) {
+        std::string value = env.getString(key, "");
+        if (value.empty()) continue;
+        
+        std::string host;
+        int port;
+        if (parseHostPort(value, host, port)) {
+            std::string name = key.substr(7);  // Nach "OSC_VU_"
+            m_oscSender->addVuTarget(name, host, port);
+        }
+    }
+    
     if (!m_oscSender->initialize()) {
         LOG_WARN("OSC Sender konnte nicht initialisiert werden - OSC deaktiviert");
     } else {

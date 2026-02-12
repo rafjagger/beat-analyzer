@@ -106,6 +106,14 @@ void OscSender::addTarget(const std::string& name, const std::string& host, int 
     m_targets.push_back(std::move(t));
 }
 
+void OscSender::addVuTarget(const std::string& name, const std::string& host, int port) {
+    auto t = std::make_unique<Target>();
+    t->name = name;
+    t->host = host;
+    t->port = port;
+    m_vuTargets.push_back(std::move(t));
+}
+
 bool OscSender::initialize() {
     if (m_targets.empty()) {
         LOG_WARN("No OSC targets configured");
@@ -155,11 +163,48 @@ bool OscSender::initialize() {
     }
     
     m_connected = anyOk;
+    
+    // VU-Targets initialisieren (separate Ports für /vu)
+    if (!m_vuTargets.empty()) {
+        for (auto& t : m_vuTargets) {
+            std::string ip = t->host;
+            struct addrinfo hints{}, *res = nullptr;
+            hints.ai_family = AF_INET;
+            hints.ai_socktype = SOCK_DGRAM;
+            if (getaddrinfo(t->host.c_str(), nullptr, &hints, &res) == 0 && res) {
+                char ipStr[INET_ADDRSTRLEN];
+                auto* sa = reinterpret_cast<struct sockaddr_in*>(res->ai_addr);
+                inet_ntop(AF_INET, &sa->sin_addr, ipStr, sizeof(ipStr));
+                ip = ipStr;
+                freeaddrinfo(res);
+            }
+            t->sockfd = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, 0);
+            if (t->sockfd < 0) {
+                LOG_ERROR("OSC: VU-Socket-Fehler für " + t->name);
+                continue;
+            }
+            int sndbuf = 262144;
+            setsockopt(t->sockfd, SOL_SOCKET, SO_SNDBUF, &sndbuf, sizeof(sndbuf));
+            std::memset(&t->addr, 0, sizeof(t->addr));
+            t->addr.sin_family = AF_INET;
+            t->addr.sin_port = htons(static_cast<uint16_t>(t->port));
+            inet_pton(AF_INET, ip.c_str(), &t->addr.sin_addr);
+            t->running = true;
+            t->thread = std::thread(targetThreadFunc, t.get());
+            LOG_INFO("OSC VU target (UDP): " + t->name + " -> " + ip + ":" + std::to_string(t->port));
+        }
+        m_vuSeparate = true;
+        LOG_INFO("VU auf separatem Port (" + std::to_string(m_vuTargets.size()) + " Ziel(e))");
+    }
+    
     return anyOk;
 }
 
 void OscSender::shutdown() {
     for (auto& t : m_targets) {
+        t->running = false;
+    }
+    for (auto& t : m_vuTargets) {
         t->running = false;
     }
     for (auto& t : m_targets) {
@@ -171,6 +216,17 @@ void OscSender::shutdown() {
         uint32_t d = t->dropped.load();
         if (d > 0) {
             LOG_WARN("OSC " + t->name + ": " + std::to_string(d) + " packets dropped");
+        }
+    }
+    for (auto& t : m_vuTargets) {
+        if (t->thread.joinable()) t->thread.join();
+        if (t->sockfd >= 0) {
+            close(t->sockfd);
+            t->sockfd = -1;
+        }
+        uint32_t d = t->dropped.load();
+        if (d > 0) {
+            LOG_WARN("OSC VU " + t->name + ": " + std::to_string(d) + " packets dropped");
         }
     }
 }
@@ -202,6 +258,24 @@ void OscSender::enqueueAll(const char* data, int len) {
 void OscSender::enqueueAllExcept(const char* data, int len, const std::string& excludeName) {
     for (auto& t : m_targets) {
         if (t->name == excludeName) continue;  // skip excluded target
+        int w = t->wpos.load(std::memory_order_relaxed);
+        int next = (w + 1) & QMASK;
+        if (next == t->rpos.load(std::memory_order_acquire)) {
+            t->dropped.fetch_add(1, std::memory_order_relaxed);
+            continue;
+        }
+        auto& pkt = t->ring[w];
+        std::memcpy(pkt.data, data, len);
+        pkt.len = len;
+        t->wpos.store(next, std::memory_order_release);
+    }
+}
+
+void OscSender::enqueueVu(const char* data, int len) {
+    // Wenn separate VU-Targets konfiguriert: nur dahin senden
+    // Sonst Fallback: an alle normalen Targets
+    auto& targets = m_vuSeparate ? m_vuTargets : m_targets;
+    for (auto& t : targets) {
         int w = t->wpos.load(std::memory_order_relaxed);
         int next = (w + 1) & QMASK;
         if (next == t->rpos.load(std::memory_order_acquire)) {
@@ -301,7 +375,7 @@ bool OscSender::sendVuBundle(const std::string* paths, const float* peaks, const
     char buf[512];
     int len = serializeBundle(buf, sizeof(buf), paths, peaks, rms, numChannels);
     if (len <= 0) return false;
-    enqueueAll(buf, len);
+    enqueueVu(buf, len);
     return true;
 }
 

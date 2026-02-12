@@ -73,6 +73,11 @@ OSC_HOST_radla=192.168.43.96:9000
 OSC_HOST_mixer=192.168.43.55:7771
 OSC_HOST_motion=192.168.43.54:7771
 
+# Separate VU-Ports (optional — /beat und /vu auf getrennten Ports)
+OSC_VU_radla=192.168.43.96:9001
+OSC_VU_mixer=192.168.43.55:7772
+OSC_VU_motion=192.168.43.54:7772
+
 # OSC Empfang
 OSC_PORT_A3MOTION=7775          # /beat, /clockmode, /tap
 
@@ -86,7 +91,9 @@ VU_PEAK_FALLOFF=20.0            # dB/s
 OSC_SEND_RATE=25                # Hz (1-100)
 
 # Debug
-DEBUG_BPM_CONSOLE=1
+DEBUG_BEAT_CONSOLE=1
+DEBUG_BTRACK_CONSOLE=0
+DEBUG_PIONEER_CONSOLE=0
 DEBUG_VU_CONSOLE=0
 LOG_LEVEL=1                     # 0=DEBUG 1=INFO 2=WARN 3=ERROR
 ```
@@ -103,6 +110,9 @@ Alle Variablen mit Defaults: siehe `.env.example`.
 | `/vu/0` .. `/vu/11` | `ff` | peak, rms (linear 0.0-1.0) |
 
 VU wird als OSC Bundle gesendet (1 UDP-Paket für alle Kanäle).
+
+Wenn `OSC_VU_*` konfiguriert: `/vu` geht auf separaten Port, `/beat` bleibt auf Hauptport.
+Ohne `OSC_VU_*`: Alles auf einem Port.
 
 ### Eingehend (Port 7775)
 
@@ -122,7 +132,10 @@ Kein OSC nötig — reines UDP nach Pro DJ Link Protokoll.
 
 ```
 src/
-├── main.cpp                    App-Klasse, JACK-Callback, Beat/VU-Threads
+├── main.cpp                    Entry-Point, Signal-Handler
+├── app/
+│   ├── beat_analyzer_app.cpp     Konfiguration, Init, Lifecycle
+│   └── beat_processing.cpp       JACK-Callback, BTrack, Synthclock, VU
 ├── audio/
 │   ├── jack_client.cpp         JACK I/O (BPM + VU Ports)
 │   └── audio_buffer.cpp        Circular Buffer
@@ -132,7 +145,7 @@ src/
 │   ├── beat_detection.cpp      Onset Detection (nur Tests)
 │   └── beat_tracker.cpp        Beat Tracking (nur Tests)
 ├── osc/
-│   ├── osc_sender.cpp          Lock-free Ringbuffer → UDP Threads
+│   ├── osc_sender.cpp          Lock-free Ringbuffer → UDP Threads (/beat + /vu getrennt)
 │   ├── osc_receiver.cpp        OSC Empfang (/beat, /clockmode, /tap)
 │   ├── osc_messages.cpp        Serialisierung (raw binary, kein liblo)
 │   └── pioneer_receiver.cpp    Pro DJ Link (Virtual CDJ, 3 Sockets)

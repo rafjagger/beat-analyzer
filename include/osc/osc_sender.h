@@ -30,6 +30,8 @@ public:
     OscSender& operator=(const OscSender&) = delete;
     
     void addTarget(const std::string& name, const std::string& host, int port);
+    /// Separater VU-Port pro Ziel (optional — Fallback: normaler Port)
+    void addVuTarget(const std::string& name, const std::string& host, int port);
     bool initialize();
     void shutdown();
     
@@ -79,7 +81,9 @@ private:
     };
     
     std::vector<std::unique_ptr<Target>> m_targets;
+    std::vector<std::unique_ptr<Target>> m_vuTargets;  // Separate VU-Ports (optional)
     bool m_connected = false;
+    bool m_vuSeparate = false;  // true wenn mindestens 1 VU-Target existiert
     ErrorCallback m_errorCallback;
     
     // OSC binary serialization helpers
@@ -93,6 +97,7 @@ private:
     
     void enqueueAll(const char* data, int len);
     void enqueueAllExcept(const char* data, int len, const std::string& excludeName);
+    void enqueueVu(const char* data, int len);  // An VU-Targets (oder Fallback alle)
     static void targetThreadFunc(Target* t);
 };
 
