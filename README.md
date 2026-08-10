@@ -111,6 +111,40 @@ Alle Variablen mit Defaults: siehe `.env.example`.
 
 VU wird als OSC Bundle gesendet (1 UDP-Paket für alle Kanäle).
 
+#### JACK-Port → OSC-Index
+
+**Die JACK-Ports sind 1-basiert, die OSC-Adressen 0-basiert.** Port `vu_N` sendet also auf
+`/vu/(N-1)` (`jack_client.cpp` registriert `vu_(i+1)`, `beat_analyzer_app.cpp` erzeugt `/vu/i`):
+
+| JACK-Port | OSC-Adresse |
+|---|---|
+| `vu_1` | `/vu/0` |
+| `vu_2` | `/vu/1` |
+| … | … |
+| `vu_12` | `/vu/11` |
+
+Wer beim Patchen in OSC-Indizes denkt, landet sonst um eins verschoben — und der Fehler fällt
+nicht auf, weil alle Kanäle plausibel aussehende Pegel liefern.
+
+#### Belegung im A³-System
+
+Der beat-analyzer selbst kennt keine Bedeutung der Kanäle: er meldet je einen VU-Wert pro
+JACK-Eingang, in Portreihenfolge. Was ein Index bedeutet, entsteht ausschließlich durch das
+Patching. Im A³-Setup ist das:
+
+| JACK-Port | OSC-Adresse | Signal | Verwendung in A³ Motion |
+|---|---|---|---|
+| `vu_1` .. `vu_4` | `/vu/0` .. `/vu/3` | Mixer-Kanäle 1-4 | Corona um die Kanal-Blobs |
+| `vu_5` | `/vu/4` | Subwoofer | Sphere-Glow |
+| `vu_6` .. `vu_9` | `/vu/5` .. `/vu/8` | Speaker 1-4 | Speaker-Beams |
+| `vu_10` .. `vu_12` | `/vu/9` .. `/vu/11` | – | derzeit ungenutzt, wird von A³ Motion verworfen |
+
+Auf den ungenutzten Kanälen können trotzdem Pegel anliegen, wenn dort noch etwas gepatcht ist —
+das ist kein Hinweis darauf, dass sie ausgewertet würden.
+
+Änderungen am Patching ändern damit unmittelbar, was die Motion-UI anzeigt, ohne dass irgendwo
+eine Warnung erscheint. Diese Tabelle mitpflegen, wenn sich die Verkabelung ändert.
+
 Wenn `OSC_VU_*` konfiguriert: `/vu` geht auf separaten Port, `/beat` bleibt auf Hauptport.
 Ohne `OSC_VU_*`: Alles auf einem Port.
 
