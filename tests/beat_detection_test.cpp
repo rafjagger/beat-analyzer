@@ -149,7 +149,17 @@ void test_realtime_beat_tracker() {
     config.defaultBpm = 120.0;
     
     RealTimeBeatTracker tracker(config);
-    assert(tracker.initialize());
+
+    // Not inside the assert: Release builds define NDEBUG, which removes the
+    // assert and the call inside it with it. The tracker was then used without
+    // ever being initialised, and the suite segfaulted here in Release while
+    // passing in Debug.
+    const bool initialised = tracker.initialize();
+    assert(initialised);
+    if (!initialised) {
+        std::cerr << "  RealTimeBeatTracker::initialize() failed" << std::endl;
+        std::exit(1);
+    }
     
     // Generiere 5 Sekunden synthetisches Audio mit 120 BPM Clicks
     int totalFrames = 5 * config.sampleRate;
