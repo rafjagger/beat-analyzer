@@ -80,6 +80,19 @@ public:
     /** Tempo-Lock aufheben */
     void unfixTempo() { m_btrack.doNotFixTempo(); }
 
+    /**
+     * Die gemessene Beat-Periode in Samples an BTrack geben, 0 = keine.
+     *
+     * BTrack sagt den nächsten Beat mit der Periode seiner 2-BPM-Tempostufe
+     * voraus. Gemessen 2026-09-17: dadurch liegt die Latenz je nach Tempo
+     * sägezahnförmig zwischen 4 und 17 ms und springt an jeder Stufenkante
+     * um 10 ms. Mit der aus den Beat-Abständen gemessenen Periode liegt sie
+     * bei allen Tempi zwischen -2 und +3 ms.
+     */
+    void setBeatPeriodSamples(double samples) {
+        m_btrack.setMeasuredBeatPeriod(samples);
+    }
+
     int getHopSize() const { return m_hopSize; }
     int getFrameSize() const { return m_frameSize; }
 

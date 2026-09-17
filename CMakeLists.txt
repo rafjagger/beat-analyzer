@@ -30,10 +30,41 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # BTrack library (submodule)
 set(BTRACK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/BTrack)
+# BTrack is upstream code and stays untouched in the submodule. Our changes
+# live in patches/ and are applied to a copy in the build directory, so what
+# differs from upstream is always one readable file away.
+set(BTRACK_PATCHED_DIR ${CMAKE_BINARY_DIR}/btrack-patched)
+file(GLOB BTRACK_PATCHES ${CMAKE_CURRENT_SOURCE_DIR}/patches/btrack-*.patch)
+list(SORT BTRACK_PATCHES)
+file(REMOVE_RECURSE ${BTRACK_PATCHED_DIR})
+file(COPY ${BTRACK_DIR}/src/BTrack.cpp ${BTRACK_DIR}/src/BTrack.h
+     DESTINATION ${BTRACK_PATCHED_DIR}/src)
+foreach(patch_file ${BTRACK_PATCHES})
+    execute_process(
+        COMMAND patch -p1 --forward --input ${patch_file}
+        WORKING_DIRECTORY ${BTRACK_PATCHED_DIR}
+        RESULT_VARIABLE patch_result
+        OUTPUT_VARIABLE patch_output
+        ERROR_VARIABLE patch_output)
+    if(NOT patch_result EQUAL 0)
+        message(FATAL_ERROR "BTrack patch ${patch_file} does not apply:\n${patch_output}")
+    endif()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${patch_file})
+    message(STATUS "BTrack patched: ${patch_file}")
+endforeach()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    ${BTRACK_DIR}/src/BTrack.cpp ${BTRACK_DIR}/src/BTrack.h)
+
 set(BTRACK_SOURCES
-    ${BTRACK_DIR}/src/BTrack.cpp
+    ${BTRACK_PATCHED_DIR}/src/BTrack.cpp
     ${BTRACK_DIR}/src/OnsetDetectionFunction.cpp
     ${BTRACK_DIR}/libs/kiss_fft130/kiss_fft.c
+)
+# The patched copy first, so "BTrack.h" is the patched header.
+set(BTRACK_INCLUDE_DIRS
+    ${BTRACK_PATCHED_DIR}/src
+    ${BTRACK_DIR}/src
+    ${BTRACK_DIR}/libs/kiss_fft130
 )
 
 # Source files
@@ -45,6 +76,7 @@ set(BEAT_ANALYZER_SOURCES
     src/audio/audio_buffer.cpp
     src/analysis/beat_detection.cpp
     src/analysis/beat_tracker.cpp
+    src/analysis/beat_clock_follower.cpp
     src/analysis/vu_meter.cpp
     src/analysis/grid_calculator.cpp
     src/osc/osc_sender.cpp
@@ -79,9 +111,8 @@ add_executable(beat-analyzer ${BEAT_ANALYZER_SOURCES} ${BEAT_ANALYZER_HEADERS})
 
 # BTrack compile definitions and includes
 target_compile_definitions(beat-analyzer PRIVATE USE_KISS_FFT)
-target_include_directories(beat-analyzer PRIVATE
-    ${BTRACK_DIR}/src
-    ${BTRACK_DIR}/libs/kiss_fft130
+target_include_directories(beat-analyzer BEFORE PRIVATE
+    ${BTRACK_INCLUDE_DIRS}
 )
 
 # Link libraries

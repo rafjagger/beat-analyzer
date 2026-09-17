@@ -28,6 +28,18 @@ echo "Creating build directory..."
 mkdir -p "$SCRIPT_DIR/build"
 cd "$SCRIPT_DIR/build"
 
+# A build directory configured for another checkout cannot be reused: CMake
+# refuses it ("CMakeCache.txt directory ... is different"). That happened when
+# the repository moved from ~/beat-analyzer to ~/a3-system/beat-analyzer.
+# Only the cache is dropped; the binary stays until the build replaces it.
+if [ -f CMakeCache.txt ]; then
+    CACHED_SOURCE=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' CMakeCache.txt)
+    if [ -n "$CACHED_SOURCE" ] && [ "$CACHED_SOURCE" != "$SCRIPT_DIR" ]; then
+        echo "Build directory was configured for $CACHED_SOURCE — reconfiguring for $SCRIPT_DIR"
+        rm -rf CMakeCache.txt CMakeFiles
+    fi
+fi
+
 # Configure with CMake
 echo "Configuring CMake..."
 cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
