@@ -11,6 +11,7 @@
  */
 
 #include "audio/jack_client.h"
+#include "analysis/beat_clock_follower.h"
 #include "analysis/btrack_wrapper.h"
 #include "analysis/vu_meter.h"
 #include "osc/osc_sender.h"
@@ -50,9 +51,7 @@ private:
     
     // Track-Status für BPM Kanäle
     struct BpmTrackState {
-        // SYNTHBEAT Clock-State
-        double lastBeatFrame = 0.0;
-        double synthPhase = 0.0;             // Phase-Akkumulator (0.0-1.0)
+        // Beatclock-State (Tempo und Phase: m_beatClocks)
         int beatNumber = 1;                  // 1-4 (Schlag im Takt)
         int barNumber = 1;                   // Takt-Nummer (fortlaufend)
         
@@ -110,6 +109,8 @@ private:
     struct AudioSlot {
         float data[MAX_FRAME_SIZE];
         int frameCount = 0;
+        /** Audio-Frame am Ende dieses Puffers: wo ein Beat darin liegt. */
+        int64_t endFrame = 0;
     };
     
     struct AudioRing {
@@ -167,9 +168,7 @@ private:
     int m_numVuChannels;
     
     // Beat-Kommunikation JACK-Callback → Beat-Thread (lock-free)
-    std::atomic<bool> m_btrackBeatFlag[MAX_BPM_CHANNELS] = {};
     std::atomic<double> m_btrackBpmValue[MAX_BPM_CHANNELS] = {};
-    int64_t m_lastProcessedFrame[MAX_BPM_CHANNELS] = {};
     
     // Audio Ringbuffer (SPSC pro Kanal)
     AudioRing m_audioRing[MAX_BPM_CHANNELS];
@@ -177,6 +176,8 @@ private:
     // Beat Detection
     std::vector<std::unique_ptr<::BTrackWrapper>> m_btrackDetectors;
     std::vector<BpmTrackState> m_bpmTrackStates;
+    /** Die Beatclock pro Kanal: Tempo und Phase aus BTracks Beats. */
+    std::vector<Analysis::BeatClockFollower> m_beatClocks;
     
     // VU-Meter
     std::vector<std::unique_ptr<VuMeter>> m_vuMeters;

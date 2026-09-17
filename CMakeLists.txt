@@ -45,6 +45,7 @@ set(BEAT_ANALYZER_SOURCES
     src/audio/audio_buffer.cpp
     src/analysis/beat_detection.cpp
     src/analysis/beat_tracker.cpp
+    src/analysis/beat_clock_follower.cpp
     src/analysis/vu_meter.cpp
     src/analysis/grid_calculator.cpp
     src/osc/osc_sender.cpp

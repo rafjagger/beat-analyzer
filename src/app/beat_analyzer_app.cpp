@@ -252,10 +252,12 @@ void BeatAnalyzerApp::initVuMeters() {
 }
 
 void BeatAnalyzerApp::initBeatTrackers(int hopSize, int frameSize) {
+    int const sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
     for (int i = 0; i < m_numBpmChannels; ++i) {
         auto btrack = std::make_unique<::BTrackWrapper>(hopSize, frameSize);
         m_btrackDetectors.push_back(std::move(btrack));
         m_bpmTrackStates.push_back(BpmTrackState{});
+        m_beatClocks.emplace_back(static_cast<double>(sampleRate));
     }
     
     LOG_INFO(std::to_string(m_numBpmChannels) + " Beat Tracker, " + 

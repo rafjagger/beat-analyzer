@@ -45,6 +45,7 @@ void BeatAnalyzerApp::processAudio(const std::vector<const CSAMPLE*>& bpmBuffers
             auto& slot = ring.slots[w];
             std::memcpy(slot.data, bpmBuffers[ch], frameCount * sizeof(float));
             slot.frameCount = frameCount;
+            slot.endFrame = m_frameCount.load(std::memory_order_relaxed) + frameCount;
             ring.wpos.store(next, std::memory_order_release);
         }
         // Bei Ringbuffer-Overflow: Frame droppen (besser als XRun)
@@ -61,7 +62,6 @@ void BeatAnalyzerApp::processAudio(const std::vector<const CSAMPLE*>& bpmBuffers
 
 void BeatAnalyzerApp::processBeatThread() {
     const auto interval = std::chrono::microseconds(500);  // 2kHz polling
-    int sampleRate = m_jackClient ? m_jackClient->getSampleRate().value : 44100;
     
     auto nextWakeTime = std::chrono::steady_clock::now();
     
@@ -82,8 +82,18 @@ void BeatAnalyzerApp::processBeatThread() {
                 bool beat = m_btrackDetectors[ch]->processSamples(slot.data, slot.frameCount);
                 ring.rpos.store((r + 1) & AUDIO_RING_MASK, std::memory_order_release);
                 
+                // BTracks Beat mit seiner Position im Audio, nicht mit dem
+                // Zeitpunkt, zu dem dieser Thread ihn abholt. Gemessen
+                // 2026-09-17: diese Beats liegen auf ±3 ms, seine Tempo-Zahl
+                // 1-4 BPM zu niedrig. Die Clock nimmt deshalb die Beats.
                 if (beat) {
-                    m_btrackBeatFlag[ch].store(true, std::memory_order_release);
+                    m_beatClocks[ch].trackerBeat(slot.endFrame);
+                    if (m_debugBtrackConsole && ch == 0) {
+                        printf("BTRACK_BEAT: frame=%lld bpm_btrack=%.1f bpm_clock=%.3f\n",
+                               static_cast<long long>(slot.endFrame),
+                               m_btrackDetectors[ch]->getBpm(), m_beatClocks[ch].bpm());
+                        fflush(stdout);
+                    }
                 }
                 m_btrackBpmValue[ch].store(m_btrackDetectors[ch]->getBpm(), std::memory_order_release);
             }
@@ -123,7 +133,7 @@ void BeatAnalyzerApp::processBeatThread() {
                     // Erster TAP = Downbeat/1 definieren
                     for (int ch = 0; ch < m_numBpmChannels; ++ch) {
                         m_bpmTrackStates[ch].beatNumber = 1;
-                        m_bpmTrackStates[ch].synthPhase = 0.0;
+                        m_beatClocks[ch].reset(m_beatClocks[ch].bpm(), currentFrame);
                     }
                     sendBeatClockForChannel(0, false);
                     
@@ -150,15 +160,14 @@ void BeatAnalyzerApp::processBeatThread() {
                         // BTrack Tempo hard-locken
                         for (int ch = 0; ch < m_numBpmChannels; ++ch) {
                             m_btrackDetectors[ch]->fixTempo(m_tapBpm);
-                            // Synthclock BPM sofort setzen
                             m_bpmTrackStates[ch].currentBpm = m_tapBpm;
                         }
                         
-                        // TAP = Phase-Reset auf 1
+                        // TAP = Tempo und Phase-Reset auf 1
                         if (m_tapIntervalCount >= 2) {
                             for (int ch = 0; ch < m_numBpmChannels; ++ch) {
                                 m_bpmTrackStates[ch].beatNumber = 1;
-                                m_bpmTrackStates[ch].synthPhase = 0.0;
+                                m_beatClocks[ch].reset(m_tapBpm, currentFrame);
                             }
                         }
                         
@@ -176,77 +185,21 @@ void BeatAnalyzerApp::processBeatThread() {
         } // while (tap queue)
         
         // ========================================
-        // BTrack Beat-Flags + BPM abholen
+        // BEATCLOCK
         // ========================================
+        // Tempo und Phase aus BTracks Beats (BeatClockFollower). Die alte
+        // Synthclock nahm nur BTracks Tempo-Zahl und zählte frei weiter —
+        // bei einem 120er Klick mit 117,454 BPM, ein Beat Versatz alle 23 s.
+        // TAP setzt Tempo, Phase und Beat 1 (siehe oben).
         for (int ch = 0; ch < m_numBpmChannels; ++ch) {
-            // Beat-Flag vom JACK-Callback abholen
-            bool beatOccurred = m_btrackBeatFlag[ch].exchange(false, std::memory_order_acq_rel);
-            
-            // BPM von BTrack holen
-            double btrackBpm = m_btrackBpmValue[ch].load(std::memory_order_acquire);
-            
-            if (beatOccurred) {
-                // BTrack hat einen Beat erkannt — BPM übernehmen
-                // Oktav-Korrektur: BTrack arbeitet intern 80-160
-                double correctedBpm = btrackBpm;
-                while (correctedBpm > 140.0) correctedBpm *= 0.5;
-                while (correctedBpm < 60.0) correctedBpm *= 2.0;
-                
-                // TAP-Referenz für Oktav-Korrektur
-                double tapRef = m_tapBpm;
-                if (tapRef > 0 && m_tapIntervalCount >= 2) {
-                    double ratio = correctedBpm / tapRef;
-                    if (ratio > 1.4 && ratio < 2.2) correctedBpm *= 0.5;
-                    else if (ratio > 0.45 && ratio < 0.7) correctedBpm *= 2.0;
-                }
-                
-                // BPM sanft updaten (Synthclock-BPM)
-                if (m_bpmTrackStates[ch].currentBpm <= 0) {
-                    m_bpmTrackStates[ch].currentBpm = correctedBpm;
-                } else {
-                    double diff = correctedBpm - m_bpmTrackStates[ch].currentBpm;
-                    double maxChange = 0.5;  // Nicht zu langsam — BTrack weiß was es tut
-                    if (diff > maxChange) diff = maxChange;
-                    else if (diff < -maxChange) diff = -maxChange;
-                    m_bpmTrackStates[ch].currentBpm += diff;
-                }
-                
-                if (m_debugBtrackConsole && ch == 0) {
-                    static auto lastBtrackBeatTime = std::chrono::steady_clock::now();
-                    auto now = std::chrono::steady_clock::now();
-                    double deltaMs = std::chrono::duration<double, std::milli>(now - lastBtrackBeatTime).count();
-                    lastBtrackBeatTime = now;
-                    printf("BTRACK_BEAT: delta=%5.0fms bpm_raw=%.1f bpm_corr=%.1f synth=%.1f\n",
-                           deltaMs, btrackBpm, correctedBpm, m_bpmTrackStates[ch].currentBpm);
-                    fflush(stdout);
-                }
-            }
-        }
-        
-        // ========================================
-        // SYNTHBEAT CLOCK
-        // ========================================
-        // Die Synthclock tickt unabhängig von BTrack-Beats.
-        // BTrack-Beats liefern nur BPM-Updates.
-        // TAP setzt Phase + Beat 1.
-        for (int ch = 0; ch < m_numBpmChannels; ++ch) {
-            if (m_bpmTrackStates[ch].currentBpm > 0) {
-                double samplesPerBeat = sampleRate * 60.0 / m_bpmTrackStates[ch].currentBpm;
-                int64_t lastFrame = m_lastProcessedFrame[ch];
-                int64_t elapsed = currentFrame - lastFrame;
-                if (elapsed < 0) elapsed = 0;
-                
-                m_bpmTrackStates[ch].synthPhase += static_cast<double>(elapsed) / samplesPerBeat;
-                m_lastProcessedFrame[ch] = currentFrame;
-                
-                if (m_bpmTrackStates[ch].synthPhase >= 1.0) {
-                    m_bpmTrackStates[ch].synthPhase -= 1.0;
-                    m_bpmTrackStates[ch].beatNumber = (m_bpmTrackStates[ch].beatNumber % 4) + 1;
-                    
-                    sendBeatClockForChannel(ch, false);
-                }
-            } else {
-                m_lastProcessedFrame[ch] = currentFrame;
+            auto& clock = m_beatClocks[ch];
+            // Der Zustand bleibt die eine Wahrheit über die Schlagnummer:
+            // Modus 0/2 schreiben sie aus empfangenen Beats.
+            clock.setBeatNumber(m_bpmTrackStates[ch].beatNumber);
+            if (clock.advance(currentFrame)) {
+                m_bpmTrackStates[ch].beatNumber = clock.beatNumber();
+                m_bpmTrackStates[ch].currentBpm = clock.bpm();
+                sendBeatClockForChannel(ch, false);
             }
         }
         
