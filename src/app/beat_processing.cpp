@@ -88,6 +88,11 @@ void BeatAnalyzerApp::processBeatThread() {
                 // 1-4 BPM zu niedrig. Die Clock nimmt deshalb die Beats.
                 if (beat) {
                     m_beatClocks[ch].trackerBeat(slot.endFrame);
+                    // Und die gemessene Periode zurück an BTrack: seine
+                    // Vorhersage mit der 2-BPM-Stufe lag je nach Tempo 4-17 ms
+                    // hinter dem Beat (patches/btrack-measured-beat-period.patch).
+                    m_btrackDetectors[ch]->setBeatPeriodSamples(
+                        m_beatClocks[ch].trackerPeriodSamples());
                     if (m_debugBtrackConsole && ch == 0) {
                         printf("BTRACK_BEAT: frame=%lld bpm_btrack=%.1f bpm_clock=%.3f\n",
                                static_cast<long long>(slot.endFrame),

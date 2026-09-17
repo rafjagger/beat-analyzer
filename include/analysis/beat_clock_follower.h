@@ -46,6 +46,8 @@ public:
     bool advance(int64_t frame);
 
     double bpm() const;
+    /** Abstand der Tracker-Beats in Samples, ungefaltet; 0 = noch keiner. */
+    double trackerPeriodSamples() const { return trackerPeriod(); }
     int64_t lastBeatFrame() const { return m_lastBeatFrame; }
     /** 1–4, wie /beat es zählt. */
     int beatNumber() const { return m_beatNumber; }

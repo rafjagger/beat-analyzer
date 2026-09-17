@@ -1,0 +1,71 @@
+--- a/src/BTrack.h
++++ b/src/BTrack.h
+@@ -101,6 +101,19 @@
+     /** Tell the algorithm to not fix the tempo anymore */
+     void doNotFixTempo();
+     
++    /** Use a beat period measured outside BTrack, in samples; 0 turns it off.
++     *
++     * The tempo estimate works in 2 BPM bins, and the beat prediction used the
++     * bin's period. Between two bins the prediction then lands early or late
++     * by up to ~13 ms depending on the tempo, jumping at every bin edge. A
++     * period measured from the spacing of the beats themselves removes that.
++     * It is only used while it agrees with the estimate to within 4 %, so a
++     * real tempo change still comes through the estimate.
++     *
++     * Added by the a3-system beat-analyzer (patches/), not upstream BTrack.
++     */
++    void setMeasuredBeatPeriod (double samples);
++    
+     //=======================================================================
+     /** Calculates a beat time in seconds, given the frame number, hop size and sampling frequency.
+      * This version uses a long to represent the frame number
+@@ -198,6 +211,7 @@
+     double tightness;                       /**< the tightness of the weighting used to calculate cumulative score */
+     double alpha;                           /**< the mix between the current detection function sample and the cumulative score's "momentum" */
+     double beatPeriod;                      /**< the beat period, in detection function samples */
++    double measuredBeatPeriod;              /**< a measured beat period, in audio samples; 0 = none */
+     double estimatedTempo;                  /**< the current tempo estimation being used by the algorithm */
+     int timeToNextPrediction;               /**< indicates when the next point to predict the next beat is */
+     int timeToNextBeat;                     /**< keeps track of when the next beat is - will be zero when the beat is due, and is set elsewhere in the algorithm to be positive once a beat prediction is made */
+--- a/src/BTrack.cpp
++++ b/src/BTrack.cpp
+@@ -124,6 +124,9 @@
+ 	// tempo is not fixed
+ 	tempoFixed = false;
+     
++    // no measured beat period yet
++    measuredBeatPeriod = 0;
++    
+     // initialise algorithm given the hopsize
+     setHopSize (hop);
+     
+@@ -311,6 +314,12 @@
+ }
+ 
+ //=======================================================================
++void BTrack::setMeasuredBeatPeriod (double samples)
++{
++    measuredBeatPeriod = samples > 0 ? samples : 0;
++}
++
++//=======================================================================
+ void BTrack::fixTempo (double tempo)
+ {	
+ 	// firstly make sure tempo is between 80 and 160 bpm..
+@@ -434,6 +443,15 @@
+ 	
+ 	beatPeriod = round ((60.0 * 44100.0) / (((2 * maxIndex) + 80) * ((double) hopSize)));
+ 	
++	// prefer the measured period while it agrees with the estimate's bin
++	if (measuredBeatPeriod > 0)
++	{
++		double measured = measuredBeatPeriod / ((double) hopSize);
++		
++		if (fabs (measured - beatPeriod) <= 0.04 * beatPeriod)
++			beatPeriod = measured;
++	}
++	
+ 	if (beatPeriod > 0)
+         estimatedTempo = 60.0 / ((((double) hopSize) / 44100.0) * beatPeriod);
+ }
