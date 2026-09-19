@@ -35,6 +35,12 @@ public:
     explicit BeatClockFollower(double sampleRate, double minBpm = 60.0,
                                double maxBpm = 140.0);
 
+    /** Die Oktave, in der diese Clock ein Tempo meldet -- nach der
+     *  Normalisierung im Konstruktor, also nicht zwingend das, was
+     *  hineingereicht wurde. */
+    double minBpm() const { return m_minBpm; }
+    double maxBpm() const { return m_maxBpm; }
+
     /** BTrack hat einen Beat bei `frame` gemeldet. */
     void trackerBeat(int64_t frame);
 

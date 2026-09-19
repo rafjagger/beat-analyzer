@@ -164,7 +164,7 @@ static void aTempoChangeIsFollowed() {
 
 static void doubleTimeIsFoldedIntoTheRange() {
     std::printf("Testing octave folding...\n");
-    BeatClockFollower clock(rate);   // Bereich 60-140 wie bisher
+    BeatClockFollower clock(rate, 60.0, 120.0);
     auto const beats = trackerBeats(150.0, 30.0, 0);
     auto const emitted = run(clock, beats, 30.0);
     CHECK(std::fabs(clock.bpm() - 75.0) < 0.1, "bpm %.3f", clock.bpm());
@@ -175,6 +175,40 @@ static void doubleTimeIsFoldedIntoTheRange() {
     CHECK(off == 0, "%d half-time beats not on a tracker beat", off);
 }
 
+// Gemeldet am 2026-09-19: "tempo 70 und 140 springt". Beides lag im Bereich
+// 60-140, den die Clock mangels durchgereichter Konfiguration immer benutzte,
+// also faltete sie nichts -- BTrack durfte zwischen den Oktaven wechseln und
+// die Periode folgte brav mit.
+static void halfTimeIsFoldedUpIntoTheRange() {
+    std::printf("Testing half-time folding...\n");
+    BeatClockFollower clock(rate, 80.0, 160.0);
+    auto const beats = trackerBeats(70.0, 30.0, 0);
+    run(clock, beats, 30.0);
+    CHECK(std::fabs(clock.bpm() - 140.0) < 0.1, "bpm %.3f", clock.bpm());
+}
+
+// Ein Bereich, der breiter als eine Oktave ist, kann nicht falten: beide
+// Lesarten liegen darin und beide sind "gueltig". Der wirksame Bereich ist
+// deshalb immer genau eine Oktave, verankert am schnellen Ende -- in
+// Tanzmusik ist die gezaehlte Zahl die schnellere, ein 70er Feel wird 140
+// gezaehlt und nicht umgekehrt.
+static void aRangeWiderThanAnOctaveKeepsTheFastEnd() {
+    std::printf("Testing octave normalisation...\n");
+    BeatClockFollower clock(rate, 60.0, 160.0);   // 2,67 Oktaven
+    auto const beats = trackerBeats(70.0, 30.0, 0);
+    run(clock, beats, 30.0);
+    CHECK(std::fabs(clock.bpm() - 140.0) < 0.1, "bpm %.3f", clock.bpm());
+}
+
+// Und die Gegenprobe: was schon in der Oktave liegt, wird nicht angefasst.
+static void aTempoInsideTheOctaveIsLeftAlone() {
+    std::printf("Testing that the octave leaves the tempo alone...\n");
+    BeatClockFollower clock(rate, 60.0, 160.0);
+    auto const beats = trackerBeats(128.0, 30.0, 0);
+    run(clock, beats, 30.0);
+    CHECK(std::fabs(clock.bpm() - 128.0) < 0.1, "bpm %.3f", clock.bpm());
+}
+
 int main() {
     theTempoComesFromTheBeatsNotFromAnEstimate();
     theClockSitsOnTheBeats();
@@ -183,6 +217,9 @@ int main() {
     oneStrayBeatDoesNotMoveTheTempo();
     aTempoChangeIsFollowed();
     doubleTimeIsFoldedIntoTheRange();
+    halfTimeIsFoldedUpIntoTheRange();
+    aRangeWiderThanAnOctaveKeepsTheFastEnd();
+    aTempoInsideTheOctaveIsLeftAlone();
     if (failures) {
         std::printf("%d check(s) failed\n", failures);
         return 1;
