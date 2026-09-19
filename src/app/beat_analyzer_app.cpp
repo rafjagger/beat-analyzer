@@ -6,6 +6,7 @@
  * shutdown():   Alles sauber beenden
  */
 
+#include <cmath>
 #include "app/beat_analyzer_app.h"
 
 #include <iostream>
@@ -257,7 +258,32 @@ void BeatAnalyzerApp::initBeatTrackers(int hopSize, int frameSize) {
         auto btrack = std::make_unique<::BTrackWrapper>(hopSize, frameSize);
         m_btrackDetectors.push_back(std::move(btrack));
         m_bpmTrackStates.push_back(BpmTrackState{});
-        m_beatClocks.emplace_back(static_cast<double>(sampleRate));
+        // Mit dem konfigurierten Bereich, nicht mit den Vorgaben.
+        //
+        // Hier stand `emplace_back(sampleRate)`, also immer 60-140 -- was
+        // BPM_MIN und BPM_MAX in der .env stehen hatten, erreichte die Clock
+        // nie. Die beiden Werte prueften ausschliesslich Tap-Tempi, und dass
+        // sie an der Erkennung nichts aenderten, sagte nichts. Gefunden am
+        // 2026-09-19 beim Nachgehen von "tempo 70 und 140 springt".
+        m_beatClocks.emplace_back(static_cast<double>(sampleRate),
+                                  static_cast<double>(m_bpmMin),
+                                  static_cast<double>(m_bpmMax));
+    }
+
+    // Und was daraus wurde, laut gesagt. Ein Bereich breiter als eine Oktave
+    // schaltet die Oktav-Sperre still ab -- er wird deshalb eingeengt, und
+    // wer BPM_MIN setzt, soll im Log sehen, dass sein Wert nicht gilt.
+    if (!m_beatClocks.empty()) {
+        auto const lo = m_beatClocks.front().minBpm();
+        auto const hi = m_beatClocks.front().maxBpm();
+        if (std::fabs(lo - m_bpmMin) > 0.5) {
+            LOG_INFO("BPM_MIN=" + std::to_string(static_cast<int>(m_bpmMin)) +
+                     " ist mehr als eine Oktave unter BPM_MAX -- die Clock "
+                     "zaehlt in " + std::to_string(static_cast<int>(lo)) +
+                     "-" + std::to_string(static_cast<int>(hi)) + " BPM, sonst "
+                     "koennte sie halbes und doppeltes Tempo nicht "
+                     "auseinanderhalten");
+        }
     }
     
     LOG_INFO(std::to_string(m_numBpmChannels) + " Beat Tracker, " + 

@@ -7,7 +7,22 @@ namespace BeatAnalyzer {
 namespace Analysis {
 
 BeatClockFollower::BeatClockFollower(double sampleRate, double minBpm, double maxBpm)
-    : m_sampleRate(sampleRate), m_minBpm(minBpm), m_maxBpm(maxBpm) {}
+    : m_sampleRate(sampleRate), m_maxBpm(maxBpm) {
+    // Genau eine Oktave, verankert am schnellen Ende.
+    //
+    // clockPeriod() faltet eine Periode in [m_minBpm, m_maxBpm] -- aber nur,
+    // wenn dort genau eine Lesart Platz hat. Ist der Bereich breiter als eine
+    // Oktave, liegen 70 und 140 beide darin, beide sind "gueltig", und die
+    // Sperre sperrt nichts: BTrack darf zwischen den Oktaven wechseln und die
+    // Periode folgt brav mit. Genau das war "tempo 70 und 140 springt",
+    // gemeldet am 2026-09-19, mit dem damaligen Bereich 60-140.
+    //
+    // Am schnellen Ende verankert und nicht am langsamen, weil in Tanzmusik
+    // die gezaehlte Zahl die schnellere ist: ein 70er Feel wird 140 gezaehlt.
+    // Andersherum verankert haette dieselbe Konfiguration jeden 140er Track
+    // auf 70 gezogen.
+    m_minBpm = (minBpm > 0.0 && maxBpm > 2.0 * minBpm) ? maxBpm * 0.5 : minBpm;
+}
 
 void BeatClockFollower::trackerBeat(int64_t frame) {
     if (m_lastTrackerBeat >= 0 && frame > m_lastTrackerBeat) {
