@@ -64,7 +64,18 @@ public:
     static constexpr double lockWindow = 0.25;
     static constexpr double gain = 0.3;
 
+    /** Wie viele Abstaende hintereinander in der anderen Oktave liegen
+     *  muessen, bevor sie als Tempo uebernommen wird.
+     *
+     *  Darunter ist es ein Aussetzer -- BTrack laesst in einem Breakdown jeden
+     *  zweiten Beat aus, und die Periode folgte brav mit. Darueber ist es ein
+     *  Trackwechsel, und den soll die Clock mitmachen: die Sperre haelt das
+     *  Tempo, sie friert es nicht ein. Sechzehn sind bei 140 BPM rund sieben
+     *  Sekunden. */
+    static constexpr int octaveChangeBeats = 16;
+
 private:
+    void keepInterval(double raw);
     double trackerPeriod() const;
     double clockPeriod() const;
 
@@ -77,6 +88,10 @@ private:
     int m_intervalCount = 0;
     int m_intervalIndex = 0;
     double m_fallbackPeriod = 0.0;
+
+    /** Die Oktave, in der die Clock laeuft; 0 = noch keine. */
+    double m_lockedPeriod = 0.0;
+    int m_octaveStreak = 0;
 
     bool m_hasPendingJump = false;
     double m_pendingJump = 0.0;

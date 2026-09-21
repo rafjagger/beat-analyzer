@@ -187,17 +187,51 @@ static void halfTimeIsFoldedUpIntoTheRange() {
     CHECK(std::fabs(clock.bpm() - 140.0) < 0.1, "bpm %.3f", clock.bpm());
 }
 
-// Ein Bereich, der breiter als eine Oktave ist, kann nicht falten: beide
-// Lesarten liegen darin und beide sind "gueltig". Der wirksame Bereich ist
-// deshalb immer genau eine Oktave, verankert am schnellen Ende -- in
-// Tanzmusik ist die gezaehlte Zahl die schnellere, ein 70er Feel wird 140
-// gezaehlt und nicht umgekehrt.
-static void aRangeWiderThanAnOctaveKeepsTheFastEnd() {
-    std::printf("Testing octave normalisation...\n");
-    BeatClockFollower clock(rate, 60.0, 160.0);   // 2,67 Oktaven
-    auto const beats = trackerBeats(70.0, 30.0, 0);
+// Und die Nachforderung, die den ersten Entwurf umgestossen hat: *"aber es
+// sollen auch tempi unter 70 korrekt funktionieren und erkannt werden."* Ein
+// fester Oktavbereich haette das ausgeschlossen -- 65 waere auf 130
+// hochgefaltet worden. Der Bereich bleibt deshalb weit, und die Sperre sitzt
+// auf der Zeit statt auf dem Bereich.
+static void aSlowTempoIsNotPulledUp() {
+    std::printf("Testing that a slow tempo stays slow...\n");
+    BeatClockFollower clock(rate, 60.0, 160.0);
+    auto const beats = trackerBeats(65.0, 40.0, 0);
+    run(clock, beats, 40.0);
+    CHECK(std::fabs(clock.bpm() - 65.0) < 0.2, "bpm %.3f", clock.bpm());
+}
+
+// Der Kern der Sache: BTrack faengt an, jeden zweiten Beat auszulassen. Die
+// Abstaende verdoppeln sich, und ohne Sperre folgt die Periode brav mit -- das
+// war "tempo 70 und 140 springt". Ein Abstand nahe dem Doppelten der
+// eingerasteten Periode ist derselbe Takt, halb gezaehlt, und wird gefaltet.
+static void halfTimeBeatsDoNotHalveTheTempo() {
+    std::printf("Testing octave hysteresis...\n");
+    BeatClockFollower clock(rate, 60.0, 160.0);
+
+    auto beats = trackerBeats(140.0, 20.0, 0);
+    // Ab Sekunde 20 nur noch jeder zweite Beat, zehn Sekunden lang -- etwa
+    // zwoelf Beats, unter der Schwelle, ab der ein Trackwechsel angenommen
+    // wird.
+    auto const halved = trackerBeats(70.0, 30.0, 0, 20.0 * rate);
+    beats.insert(beats.end(), halved.begin(), halved.end());
+
     run(clock, beats, 30.0);
-    CHECK(std::fabs(clock.bpm() - 140.0) < 0.1, "bpm %.3f", clock.bpm());
+    CHECK(std::fabs(clock.bpm() - 140.0) < 0.5, "bpm %.3f", clock.bpm());
+}
+
+// Aber nicht fuer immer: bleibt die andere Oktave bestehen, ist es ein
+// Trackwechsel und kein Aussetzer. Die Sperre haelt das Tempo, sie friert es
+// nicht ein.
+static void aSustainedOctaveChangeIsFollowed() {
+    std::printf("Testing that a lasting octave change is adopted...\n");
+    BeatClockFollower clock(rate, 60.0, 160.0);
+
+    auto beats = trackerBeats(140.0, 20.0, 0);
+    auto const halved = trackerBeats(70.0, 120.0, 0, 20.0 * rate);
+    beats.insert(beats.end(), halved.begin(), halved.end());
+
+    run(clock, beats, 120.0);
+    CHECK(std::fabs(clock.bpm() - 70.0) < 0.5, "bpm %.3f", clock.bpm());
 }
 
 // Und die Gegenprobe: was schon in der Oktave liegt, wird nicht angefasst.
@@ -218,8 +252,10 @@ int main() {
     aTempoChangeIsFollowed();
     doubleTimeIsFoldedIntoTheRange();
     halfTimeIsFoldedUpIntoTheRange();
-    aRangeWiderThanAnOctaveKeepsTheFastEnd();
     aTempoInsideTheOctaveIsLeftAlone();
+    aSlowTempoIsNotPulledUp();
+    halfTimeBeatsDoNotHalveTheTempo();
+    aSustainedOctaveChangeIsFollowed();
     if (failures) {
         std::printf("%d check(s) failed\n", failures);
         return 1;
