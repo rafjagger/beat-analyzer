@@ -1,32 +1,32 @@
 # Beat Analyzer
 
-Echtzeit Beat-Analyse und VU-Metering über JACK/PipeWire mit OSC-Output.
+Real-time beat analysis and VU metering over JACK/PipeWire with OSC output.
 
-## Überblick
+## Overview
 
 ```
 JACK Audio (bpm_1, vu_1..vu_12)
        │
-       ├── BTrack (FFT + Onset + Tempo)  →  Synthclock  →  /beat iif
-       ├── VU-Meter (RMS + Peak)                        →  /vu/0../vu/11 ff
+       ├── BTrack (FFT + onset + tempo)  →  Synthclock  →  /beat iif
+       ├── VU meter (RMS + peak)                        →  /vu/0../vu/11 ff
        │
-       ├── OSC Empfang (Port 7775)       →  /clockmode, /tap, /beat
-       └── Pioneer DJ Link (50000-50002) →  Master-Beat direkt vom Mixer
+       ├── OSC receive (port 7775)       →  /clockmode, /tap, /beat
+       └── Pioneer DJ Link (50000-50002) →  master beat straight from the mixer
 ```
 
-### Clock-Modi
+### Clock modes
 
-| Modus | Quelle | Beschreibung |
+| Mode | Source | What it does |
 |-------|--------|--------------|
-| 0 — a3motion | OSC Port 7775 | `/beat` empfangen, an alle außer motion weiterleiten |
-| 1 — intern | BTrack + Synthclock | Eigene Beat-Erkennung aus Audio, an alle senden |
-| 2 — pioneer | Pro DJ Link | Master-Beat vom Pioneer-Netzwerk, an alle senden |
+| 0 — a3motion | OSC port 7775 | Receives `/beat` and relays it to every target except motion |
+| 1 — internal | BTrack + Synthclock | Detects the beat from audio itself, sends to everyone |
+| 2 — pioneer | Pro DJ Link | Takes the master beat from the Pioneer network, sends to everyone |
 
-Umschalten via OSC: `/clockmode i` (0, 1 oder 2) an Port 7775.
+Switch over OSC: `/clockmode i` (0, 1 or 2) to port 7775.
 
 ## Build
 
-### Voraussetzungen
+### Prerequisites
 
 ```bash
 sudo apt-get install -y \
@@ -34,11 +34,10 @@ sudo apt-get install -y \
     jackd2 libjack-jackd2-dev \
     libsamplerate0-dev
 ```
-
-### Kompilieren
+### Compiling
 
 ```bash
-./build.sh            # oder: mkdir build && cd build && cmake .. && make -j$(nproc)
+./build.sh            # or: mkdir build && cd build && cmake .. && make -j$(nproc)
 ```
 
 Binary: `build/beat-analyzer`
@@ -49,42 +48,42 @@ Binary: `build/beat-analyzer`
 cd build && ctest
 ```
 
-## Konfiguration
+## Configuration
 
-Alle Einstellungen über `.env` im Working Directory (typisch `build/.env`).
-Vorlage: `.env.example` im Projekt-Root.
+Everything is set through `.env` in the working directory (typically `build/.env`).
+Template: `.env.example` in the project root.
 
 ```bash
 cp .env.example build/.env
 ```
 
-### Wichtigste Variablen
+### The variables that matter most
 
 ```bash
 # Audio
 JACK_CLIENT_NAME=beat-analyzer
-NUM_BPM_CHANNELS=1              # JACK Ports: bpm_1 (Beat-Erkennung)
-NUM_VU_CHANNELS=12              # JACK Ports: vu_1..vu_12 (Peakmeter)
+NUM_BPM_CHANNELS=1              # JACK ports: bpm_1 (beat detection)
+NUM_VU_CHANNELS=12              # JACK ports: vu_1..vu_12 (peak meters)
 BPM_MIN=60
 BPM_MAX=140
 
-# OSC Ziele (beliebig viele, Format: Name=host:port)
+# OSC targets (as many as you like, format: name=host:port)
 OSC_HOST_radla=192.168.43.96:9000
 OSC_HOST_mixer=192.168.43.55:7771
 OSC_HOST_motion=192.168.43.54:7771
 
-# Separate VU-Ports (optional — /beat und /vu auf getrennten Ports)
+# Separate VU ports (optional -- /beat and /vu on different ports)
 OSC_VU_radla=192.168.43.96:9001
 OSC_VU_mixer=192.168.43.55:7772
 OSC_VU_motion=192.168.43.54:7772
 
-# OSC Empfang
+# OSC receive
 OSC_PORT_A3MOTION=7775          # /beat, /clockmode, /tap
 
 # Pioneer Pro DJ Link
-PIONEER_DEVICE_NUM=7            # Virtual CDJ Nummer (Standard: 7)
+PIONEER_DEVICE_NUM=7            # virtual CDJ number (default: 7)
 
-# VU-Meter
+# VU meter
 VU_RMS_ATTACK=0.8               # 0.0-1.0
 VU_RMS_RELEASE=0.2              # 0.0-1.0
 VU_PEAK_FALLOFF=20.0            # dB/s
@@ -98,141 +97,142 @@ DEBUG_VU_CONSOLE=0
 LOG_LEVEL=1                     # 0=DEBUG 1=INFO 2=WARN 3=ERROR
 ```
 
-Alle Variablen mit Defaults: siehe `.env.example`.
+Every variable with its default: see `.env.example`.
 
-## OSC Protokoll
+## OSC protocol
 
-### Ausgehend
+### Outgoing
 
-| Adresse | Typ | Inhalt |
+| Address | Type | Carries |
 |---------|-----|--------|
 | `/beat` | `iif` | beat (1-4), bar, bpm |
 | `/vu/0` .. `/vu/11` | `ff` | peak, rms (linear 0.0-1.0) |
 
-VU wird als OSC Bundle gesendet (1 UDP-Paket für alle Kanäle).
+VU is sent as an OSC bundle -- one UDP packet for all channels.
 
-#### JACK-Port → OSC-Index
+#### JACK port → OSC index
 
-**Die JACK-Ports sind 1-basiert, die OSC-Adressen 0-basiert.** Port `vu_N` sendet also auf
-`/vu/(N-1)` (`jack_client.cpp` registriert `vu_(i+1)`, `beat_analyzer_app.cpp` erzeugt `/vu/i`):
+**The JACK ports are 1-based, the OSC addresses are 0-based.** So port `vu_N` sends on
+`/vu/(N-1)` (`jack_client.cpp` registers `vu_(i+1)`, `beat_analyzer_app.cpp` emits `/vu/i`):
 
-| JACK-Port | OSC-Adresse |
+| JACK port | OSC address |
 |---|---|
 | `vu_1` | `/vu/0` |
 | `vu_2` | `/vu/1` |
 | … | … |
 | `vu_12` | `/vu/11` |
 
-Wer beim Patchen in OSC-Indizes denkt, landet sonst um eins verschoben — und der Fehler fällt
-nicht auf, weil alle Kanäle plausibel aussehende Pegel liefern.
+Patch while thinking in OSC indices and everything lands one channel across -- and the mistake
+does not announce itself, because every channel still carries a plausible level.
 
-#### Belegung im A³-System
+#### What the channels mean in the A³ system
 
-Der beat-analyzer selbst kennt keine Bedeutung der Kanäle: er meldet je einen VU-Wert pro
-JACK-Eingang, in Portreihenfolge. Was ein Index bedeutet, entsteht ausschließlich durch das
-Patching. Im A³-Setup ist das:
+The beat-analyzer itself attaches no meaning to a channel: it reports one VU value per JACK
+input, in port order. What an index *means* comes from the patching and from nowhere else. In
+the A³ setup that is:
 
-| JACK-Port | OSC-Adresse | Signal | Verwendung in A³ Motion |
+| JACK port | OSC address | Signal | Used in A³ Motion for |
 |---|---|---|---|
-| `vu_1` .. `vu_4` | `/vu/0` .. `/vu/3` | Mixer-Kanäle 1-4 | Corona um die Kanal-Blobs |
-| `vu_5` | `/vu/4` | Subwoofer | Sphere-Glow |
-| `vu_6` .. `vu_9` | `/vu/5` .. `/vu/8` | Speaker 1-4 | Speaker-Beams |
-| `vu_10` .. `vu_12` | `/vu/9` .. `/vu/11` | – | derzeit ungenutzt, wird von A³ Motion verworfen |
+| `vu_1` .. `vu_4` | `/vu/0` .. `/vu/3` | mixer channels 1-4 | the corona around each channel's blob |
+| `vu_5` | `/vu/4` | subwoofer | sphere glow |
+| `vu_6` .. `vu_9` | `/vu/5` .. `/vu/8` | speakers 1-4 | speaker beams |
+| `vu_10` .. `vu_12` | `/vu/9` .. `/vu/11` | – | currently unused, discarded by A³ Motion |
 
-Auf den ungenutzten Kanälen können trotzdem Pegel anliegen, wenn dort noch etwas gepatcht ist —
-das ist kein Hinweis darauf, dass sie ausgewertet würden.
+The unused channels can still carry a level if something is patched into them. That is not a
+sign that anything reads them.
 
-Änderungen am Patching ändern damit unmittelbar, was die Motion-UI anzeigt, ohne dass irgendwo
-eine Warnung erscheint. Diese Tabelle mitpflegen, wenn sich die Verkabelung ändert.
+A change to the patching therefore changes what the Motion UI shows, immediately and without a
+warning anywhere. Keep this table current when the wiring changes.
 
-Wenn `OSC_VU_*` konfiguriert: `/vu` geht auf separaten Port, `/beat` bleibt auf Hauptport.
-Ohne `OSC_VU_*`: Alles auf einem Port.
+With `OSC_VU_*` configured, `/vu` goes to the separate port and `/beat` stays on the main one.
+Without it, everything shares one port.
 
-### Eingehend (Port 7775)
+### Incoming (port 7775)
 
-| Adresse | Typ | Inhalt |
+| Address | Type | Carries |
 |---------|-----|--------|
 | `/beat` | `iif` | beat (1-4), bar, bpm |
-| `/clockmode` | `i` | 0=a3motion, 1=intern, 2=pioneer |
-| `/tap` | `i` | Beat-Nummer (setzt Phase) |
+| `/clockmode` | `i` | 0=a3motion, 1=internal, 2=pioneer |
+| `/tap` | `i` | beat number (sets the phase) |
 
-### Pioneer Pro DJ Link (Modus 2)
+### Pioneer Pro DJ Link (mode 2)
 
-Lauscht direkt auf dem Pioneer-Netzwerk (UDP Ports 50000/50001/50002).
-Registriert sich als Virtual CDJ und empfängt nur Beats vom **Tempo-Master**.
-Kein OSC nötig — reines UDP nach Pro DJ Link Protokoll.
+Listens directly on the Pioneer network (UDP ports 50000/50001/50002).
+Registers as a virtual CDJ and accepts beats only from the **tempo master**.
+No OSC involved -- plain UDP speaking Pro DJ Link.
 
-## Architektur
+## Architecture
 
 ```
 src/
-├── main.cpp                    Entry-Point, Signal-Handler
+├── main.cpp                    entry point, signal handlers
 ├── app/
-│   ├── beat_analyzer_app.cpp     Konfiguration, Init, Lifecycle
-│   └── beat_processing.cpp       JACK-Callback, BTrack, Synthclock, VU
+│   ├── beat_analyzer_app.cpp     configuration, init, lifecycle
+│   └── beat_processing.cpp       JACK callback, BTrack, Synthclock, VU
 ├── audio/
-│   ├── jack_client.cpp         JACK I/O (BPM + VU Ports)
-│   └── audio_buffer.cpp        Circular Buffer
+│   ├── jack_client.cpp         JACK I/O (BPM + VU ports)
+│   └── audio_buffer.cpp        circular buffer
 ├── analysis/
-│   ├── vu_meter.cpp            RMS + Peak (läuft im JACK-Callback)
-│   ├── grid_calculator.cpp     Grid-Analyse aus Realbeats
-│   ├── beat_detection.cpp      Onset Detection (nur Tests)
-│   └── beat_tracker.cpp        Beat Tracking (nur Tests)
+│   ├── vu_meter.cpp            RMS + peak (runs in the JACK callback)
+│   ├── grid_calculator.cpp     grid analysis from real beats
+│   ├── beat_detection.cpp      onset detection (tests only)
+│   └── beat_tracker.cpp        beat tracking (tests only)
 ├── osc/
-│   ├── osc_sender.cpp          Lock-free Ringbuffer → UDP Threads (/beat + /vu getrennt)
-│   ├── osc_receiver.cpp        OSC Empfang (/beat, /clockmode, /tap)
-│   ├── osc_messages.cpp        Serialisierung (raw binary, kein liblo)
-│   └── pioneer_receiver.cpp    Pro DJ Link (Virtual CDJ, 3 Sockets)
+│   ├── osc_sender.cpp          lock-free ring buffer → UDP threads (/beat and /vu separately)
+│   ├── osc_receiver.cpp        OSC receive (/beat, /clockmode, /tap)
+│   ├── osc_messages.cpp        serialisation (raw binary, no liblo)
+│   └── pioneer_receiver.cpp    Pro DJ Link (virtual CDJ, 3 sockets)
 ├── config/
-│   └── config_loader.cpp       Key-Value Parser
+│   └── config_loader.cpp       key-value parser
 └── util/
-    └── logging.cpp             Log-Levels, Konsole
+    └── logging.cpp             log levels, console
 
 external/
-└── BTrack/                     Git Submodule (adamstark/BTrack)
+└── BTrack/                     git submodule (adamstark/BTrack)
 ```
 
 ### Threading
 
 ```
-JACK Realtime Thread (~2.9ms Budget bei 128 Samples/44.1kHz)
-  ├── VU-Meter:  12× processMono (leichtgewichtig)
-  └── BPM Audio: memcpy in lock-free SPSC Ringbuffer
+JACK realtime thread (~2.9 ms budget at 128 samples / 44.1 kHz)
+  ├── VU meter:  12× processMono (cheap)
+  └── BPM audio: memcpy into a lock-free SPSC ring buffer
 
-Beat-Thread (2kHz Polling)
-  ├── Ringbuffer → BTrack (FFT + Onset + Tempo)
-  ├── Synthclock (Phase-Akkumulator)
-  ├── TAP-Queue verarbeiten
-  └── /beat senden
+Beat thread (2 kHz polling)
+  ├── ring buffer → BTrack (FFT + onset + tempo)
+  ├── Synthclock (phase accumulator)
+  ├── drain the TAP queue
+  └── send /beat
 
-VU-Thread (25Hz)
-  └── /vu Bundle senden
+VU thread (25 Hz)
+  └── send the /vu bundle
 
-OSC-Sender (1 Thread pro Ziel)
-  └── SPSC Ringbuffer → non-blocking sendto()
+OSC senders (one thread per target)
+  └── SPSC ring buffer → non-blocking sendto()
 
-Pioneer-Thread (falls Modus 2)
-  ├── poll() auf 3 Sockets
-  ├── Keep-Alive alle 1.5s (Virtual CDJ)
-  └── Beat/Status Pakete parsen
+Pioneer thread (mode 2 only)
+  ├── poll() on 3 sockets
+  ├── keep-alive every 1.5 s (virtual CDJ)
+  └── parse beat/status packets
 ```
 
-BTrack läuft **nicht** im JACK-Callback — zu teuer (256-pt FFT + Transzendente pro Hop).
-JACK kopiert nur 512 Bytes pro Callback in den Ringbuffer.
+BTrack does **not** run in the JACK callback -- too expensive (a 256-point FFT plus
+transcendentals per hop). JACK copies 512 bytes per callback into the ring buffer and nothing
+more.
 
-### Abhängigkeiten
+### Dependencies
 
-| Library | Zweck | Einbindung |
+| Library | Purpose | How it is pulled in |
 |---------|-------|------------|
-| [BTrack](https://github.com/adamstark/BTrack) | Beat Detection | Git Submodule (`external/BTrack`) |
-| JACK | Audio I/O | System (`libjack-dev`) |
-| libsamplerate | Resampling in BTrack | System (`libsamplerate0-dev`) |
+| [BTrack](https://github.com/adamstark/BTrack) | beat detection | git submodule (`external/BTrack`) |
+| JACK | audio I/O | system (`libjack-dev`) |
+| libsamplerate | resampling inside BTrack | system (`libsamplerate0-dev`) |
 
-Kein liblo — OSC über rohe UDP Sockets.
+No liblo -- OSC goes over raw UDP sockets.
 
 ## Deployment
 
-### Systemd User Service
+### Systemd user service
 
 ```bash
 cp beat-analyzer.service ~/.config/systemd/user/
@@ -240,20 +240,20 @@ systemctl --user enable beat-analyzer
 systemctl --user start beat-analyzer
 ```
 
-### JACK Verbindung
+### JACK connections
 
 ```bash
-jack_lsp                                              # Ports anzeigen
-jack_connect system:capture_1 beat-analyzer:bpm_1     # BPM-Eingang
-jack_connect system:capture_1 beat-analyzer:vu_1      # VU-Eingänge
+jack_lsp                                              # list ports
+jack_connect system:capture_1 beat-analyzer:bpm_1     # BPM input
+jack_connect system:capture_1 beat-analyzer:vu_1      # VU inputs
 ```
 
-### Niedrige Latenz (PipeWire)
+### Low latency (PipeWire)
 
 ```bash
-pw-metadata -n settings 0 clock.force-quantum 128     # 128 Frames = ~2.9ms
+pw-metadata -n settings 0 clock.force-quantum 128     # 128 frames = ~2.9 ms
 ```
 
-## Lizenz
+## License
 
 MIT
