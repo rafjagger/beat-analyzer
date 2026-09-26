@@ -243,6 +243,30 @@ static void aTempoInsideTheOctaveIsLeftAlone() {
     CHECK(std::fabs(clock.bpm() - 128.0) < 0.1, "bpm %.3f", clock.bpm());
 }
 
+// rafjagger/beat-analyzer#1: music at 140 on a clock counting up to 140 --
+// the rig's range. A tracker period a hair faster than 140 folded to 70, a
+// hair slower stayed at 140, and the reported tempo flipped beat by beat
+// (17 % of ten minutes' beats on the rig). Once the clock counts in an
+// octave it stays there until the tempo is clearly outside the range.
+static void aTempoOnTheRangeEdgeDoesNotFlip() {
+    std::printf("Testing a tempo on the edge of the range...\n");
+    BeatClockFollower clock(rate, 60.0, 140.0);
+    auto const beats = trackerBeats(140.0, 60.0, 300);
+
+    double lowest = 1e9, highest = 0.0;
+    size_t next = 0;
+    for (int64_t frame = 0; frame < 60.0 * rate; frame += 256) {
+        while (next < beats.size() && beats[next] < frame + 256)
+            clock.trackerBeat(beats[next++]);
+        if (clock.advance(frame) && frame > 10.0 * rate) {
+            lowest = std::min(lowest, clock.bpm());
+            highest = std::max(highest, clock.bpm());
+        }
+    }
+    CHECK(highest < 1.5 * lowest, "flipped between %.1f and %.1f BPM",
+          lowest, highest);
+}
+
 int main() {
     theTempoComesFromTheBeatsNotFromAnEstimate();
     theClockSitsOnTheBeats();
@@ -256,6 +280,7 @@ int main() {
     aSlowTempoIsNotPulledUp();
     halfTimeBeatsDoNotHalveTheTempo();
     aSustainedOctaveChangeIsFollowed();
+    aTempoOnTheRangeEdgeDoesNotFlip();
     if (failures) {
         std::printf("%d check(s) failed\n", failures);
         return 1;

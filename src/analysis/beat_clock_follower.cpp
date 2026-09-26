@@ -16,6 +16,10 @@ void BeatClockFollower::trackerBeat(int64_t frame) {
     }
     m_lastTrackerBeat = frame;
 
+    // Die Oktave einmal pro Tracker-Beat entscheiden, mit Huerde -- nicht bei
+    // jedem Aufruf neu. Siehe octaveMargin.
+    m_octaveFactor = octaveFactorFor(trackerPeriod());
+
     auto const period = clockPeriod();
     if (period <= 0.0) return;
 
@@ -60,6 +64,7 @@ void BeatClockFollower::trackerBeat(int64_t frame) {
 void BeatClockFollower::reset(double bpm, int64_t frame) {
     if (bpm <= 0.0) return;
     m_fallbackPeriod = m_sampleRate * 60.0 / bpm;
+    m_octaveFactor = 0.0;
     m_intervalCount = 0;
     m_intervalIndex = 0;
     m_lastTrackerBeat = -1;
@@ -154,14 +159,30 @@ double BeatClockFollower::trackerPeriod() const {
     return count > 0 ? sum / count : median;
 }
 
-double BeatClockFollower::clockPeriod() const {
-    auto period = trackerPeriod();
+double BeatClockFollower::octaveFactorFor(double period) const {
     if (period <= 0.0) return 0.0;
     auto const maxPeriod = m_sampleRate * 60.0 / m_minBpm;
     auto const minPeriod = m_sampleRate * 60.0 / m_maxBpm;
-    while (period < minPeriod) period *= 2.0;
-    while (period > maxPeriod) period *= 0.5;
-    return period;
+
+    // Die Oktave, in der sie schon zaehlt, solange das Tempo darin hoechstens
+    // octaveMargin ueber den Rand hinaus liegt.
+    if (m_octaveFactor > 0.0) {
+        auto const kept = period * m_octaveFactor;
+        if (kept >= minPeriod * (1.0 - octaveMargin)
+            && kept <= maxPeriod * (1.0 + octaveMargin))
+            return m_octaveFactor;
+    }
+
+    auto factor = 1.0;
+    while (period * factor < minPeriod) factor *= 2.0;
+    while (period * factor > maxPeriod) factor *= 0.5;
+    return factor;
+}
+
+double BeatClockFollower::clockPeriod() const {
+    auto const period = trackerPeriod();
+    if (period <= 0.0) return 0.0;
+    return period * octaveFactorFor(period);
 }
 
 } // namespace Analysis
