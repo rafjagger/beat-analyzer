@@ -74,10 +74,25 @@ public:
      *  Sekunden. */
     static constexpr int octaveChangeBeats = 16;
 
+    /** Wie weit ein Tempo ueber den Rand des Bereichs hinaus darf, bevor die
+     *  Clock die Oktave wechselt, die sie schon zaehlt.
+     *
+     *  Ohne diese Huerde faltete sie bei jedem Aufruf neu: Musik mit 140 auf
+     *  einer Clock bis 140 lag genau auf dem Rand, ein Hauch schneller wurde
+     *  70, ein Hauch langsamer blieb 140, und das gemeldete Tempo kippte von
+     *  Beat zu Beat (rafjagger/beat-analyzer#1). Fuenf Prozent sind weiter
+     *  als jedes Zittern der Tracker-Periode und enger als jeder hoerbare
+     *  Tempowechsel. */
+    static constexpr double octaveMargin = 0.05;
+
 private:
     void keepInterval(double raw);
     double trackerPeriod() const;
     double clockPeriod() const;
+    /** Der Faktor, mit dem `period` in den Bereich gefaltet wird: 1, 2, 1/2,
+     *  4 ... -- der bisherige, solange die gefaltete Periode hoechstens
+     *  `octaveMargin` ausserhalb liegt. */
+    double octaveFactorFor(double period) const;
 
     double m_sampleRate;
     double m_minBpm;
@@ -92,6 +107,10 @@ private:
     /** Die Oktave, in der die Clock laeuft; 0 = noch keine. */
     double m_lockedPeriod = 0.0;
     int m_octaveStreak = 0;
+
+    /** Die Oktave, in der die Clock zaehlt, als Faktor auf die Tracker-
+     *  Periode; 0 = noch keine. Siehe octaveMargin. */
+    double m_octaveFactor = 0.0;
 
     bool m_hasPendingJump = false;
     double m_pendingJump = 0.0;
