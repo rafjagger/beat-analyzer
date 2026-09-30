@@ -1,5 +1,5 @@
-// Forty VU channels do not fit one 512-byte bundle; they go out as several,
-// each within the queue's slot, together carrying every channel once.
+// Forty VU channels go out as one bundle per block of ten, each within the
+// queue's 512-byte slot, together carrying every channel once.
 #include <cassert>
 #include <cstring>
 #include <iostream>
@@ -27,14 +27,15 @@ static int elementsIn(const char* buf, int len)
     return n;
 }
 
-static void test_forty_channels_go_out_in_three_bundles()
+// One bundle per block of ten (inputs, Main, Booth, stereo): each arrives as
+// one consistent picture of its block -- Main's sub and tops together.
+static void test_forty_channels_go_out_one_bundle_per_block()
 {
     auto const chunks = OscSender::vuBundleChunks(40);
-    assert(chunks.size() == 3);
-    assert(chunks[0] == std::make_pair(0, 16));
-    assert(chunks[1] == std::make_pair(16, 16));
-    assert(chunks[2] == std::make_pair(32, 8));
-    std::cout << "  ✓ 40 channels: 16 + 16 + 8" << std::endl;
+    assert(chunks.size() == 4);
+    for (int b = 0; b < 4; ++b)
+        assert(chunks[static_cast<size_t>(b)] == std::make_pair(b * 10, 10));
+    std::cout << "  ✓ 40 channels: four blocks of ten" << std::endl;
 }
 
 static void test_every_bundle_fits_and_carries_its_channels()
@@ -56,19 +57,20 @@ static void test_every_bundle_fits_and_carries_its_channels()
     std::cout << "  ✓ each bundle fits 512 bytes, 40 messages in all" << std::endl;
 }
 
-static void test_twelve_channels_stay_one_bundle()
+static void test_a_short_last_block_is_its_own_bundle()
 {
     auto const chunks = OscSender::vuBundleChunks(12);
-    assert(chunks.size() == 1 && chunks[0] == std::make_pair(0, 12));
+    assert(chunks.size() == 2);
+    assert(chunks[0] == std::make_pair(0, 10) && chunks[1] == std::make_pair(10, 2));
     assert(OscSender::vuBundleChunks(0).empty());
-    std::cout << "  ✓ 12 channels: one bundle, as before" << std::endl;
+    std::cout << "  ✓ 12 channels: ten, then two" << std::endl;
 }
 
 int main()
 {
     std::cout << "VU bundle tests" << std::endl;
-    test_forty_channels_go_out_in_three_bundles();
+    test_forty_channels_go_out_one_bundle_per_block();
     test_every_bundle_fits_and_carries_its_channels();
-    test_twelve_channels_stay_one_bundle();
+    test_a_short_last_block_is_its_own_bundle();
     return 0;
 }

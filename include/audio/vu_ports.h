@@ -17,6 +17,9 @@ namespace Audio {
 // /vu/i -- the OSC stays positional, the name is for whoever patches.
 constexpr int kVuMapChannels = 40;
 
+// The map's blocks are ten wide; the OSC sends one bundle per block.
+constexpr int kVuMapBlock = 10;
+
 // What the meter arrays hold at most.
 constexpr int kMaxVuChannels = 64;
 

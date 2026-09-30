@@ -10,6 +10,7 @@
 #include <cstring>
 #include <netinet/in.h>
 #include "osc_messages.h"
+#include "audio/vu_ports.h"
 
 namespace BeatAnalyzer {
 namespace OSC {
@@ -24,11 +25,12 @@ namespace OSC {
  */
 class OscSender {
 public:
-    // VU channels per bundle: a bundle and a queue slot are 512 bytes, one
-    // /vu message takes 28, so 16 fit with room to spare (464 bytes). More
-    // channels go out as several bundles -- until 2026-09-30 one bundle took
-    // them all and everything past channel ~17 was silently cut off.
-    static constexpr int kVuChannelsPerBundle = 16;
+    // VU channels per bundle: one block of the channel map (inputs, Main,
+    // Booth, stereo -- see audio/vu_ports.h), so each bundle is one consistent
+    // picture of its block. 10 messages of 28 bytes are 296 bytes, within the
+    // 512 of a bundle and a queue slot. Until 2026-09-30 one bundle took every
+    // channel and everything past the 17th was silently cut off.
+    static constexpr int kVuChannelsPerBundle = Audio::kVuMapBlock;
     // Which channels each bundle carries: (first, count), in order.
     static std::vector<std::pair<int, int>> vuBundleChunks(int numChannels);
     static int serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels);

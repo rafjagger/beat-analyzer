@@ -108,8 +108,8 @@ Every variable with its default: see `.env.example`.
 | `/beat` | `iif` | beat (1-4), bar, bpm |
 | `/vu/0` .. `/vu/39` | `ff` | peak, rms (linear 0.0-1.0) |
 
-VU is sent as OSC bundles of up to 16 channels each -- 40 channels are three UDP packets
-(16 + 16 + 8). A bundle and a slot in the sender's queue are 512 bytes; until 2026-09-30 one
+VU is sent as one OSC bundle per block of ten -- inputs, Main, Booth, stereo, four UDP packets
+of 296 bytes for 40 channels -- so each block arrives as one consistent picture. A bundle and a slot in the sender's queue are 512 bytes; until 2026-09-30 one
 bundle took every channel, and everything past the 17th was silently cut off.
 
 #### JACK port → OSC index
