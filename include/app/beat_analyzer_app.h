@@ -11,6 +11,7 @@
  */
 
 #include "audio/jack_client.h"
+#include "audio/vu_ports.h"
 #include "analysis/beat_clock_follower.h"
 #include "analysis/btrack_wrapper.h"
 #include "analysis/vu_meter.h"
@@ -153,7 +154,7 @@ private:
     // ================================================================
     
     static constexpr int MAX_BPM_CHANNELS = 8;
-    static constexpr int MAX_VU_CHANNELS = 16;
+    static constexpr int MAX_VU_CHANNELS = Audio::kMaxVuChannels;
     static constexpr int TAP_QUEUE_SIZE = 16;
     static constexpr double BEAT_TOLERANCE = 0.20;
     static constexpr int PHASE_LOCK_BEATS = 3;

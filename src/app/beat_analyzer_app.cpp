@@ -44,7 +44,7 @@ static bool parseHostPort(const std::string& value, std::string& host, int& port
 
 BeatAnalyzerApp::BeatAnalyzerApp()
     : m_numBpmChannels(1)
-    , m_numVuChannels(12)
+    , m_numVuChannels(Audio::kVuMapChannels)
     , m_frameCount(0)
 {
 }
@@ -196,7 +196,7 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
     
     // Kanäle
     m_numBpmChannels = std::max(0, env.getInt("NUM_BPM_CHANNELS", 1));
-    m_numVuChannels = std::max(0, env.getInt("NUM_VU_CHANNELS", 12));
+    m_numVuChannels = Audio::clampVuChannels(env.getInt("NUM_VU_CHANNELS", Audio::kVuMapChannels));
     
     LOG_INFO("BPM Kanäle: " + std::to_string(m_numBpmChannels) + 
              ", VU Kanäle: " + std::to_string(m_numVuChannels));

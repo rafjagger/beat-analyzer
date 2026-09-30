@@ -51,6 +51,16 @@ target_compile_definitions(btrack_period_test PRIVATE
 target_link_libraries(btrack_period_test PRIVATE ${SAMPLERATE_LIBRARIES} m)
 add_test(NAME BTrackPeriodTests COMMAND btrack_period_test)
 
+# The VU inputs' names, after REAPER's VU outputs 31-70
+add_executable(vu_ports_test
+    vu_ports_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/audio/vu_ports.cpp
+)
+target_include_directories(vu_ports_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+add_test(NAME VuPortsTests COMMAND vu_ports_test)
+
 # The VU channels, split into bundles that fit the sender's 512-byte slots
 add_executable(vu_bundle_test
     vu_bundle_test.cpp

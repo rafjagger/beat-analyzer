@@ -1,4 +1,5 @@
 #include "audio/jack_client.h"
+#include "audio/vu_ports.h"
 #include "util/logging.h"
 #include <algorithm>
 #include <jack/jack.h>
@@ -49,7 +50,7 @@ bool JackClient::initialize() {
     
     // Create VU input ports (for metering)
     for (int i = 0; i < m_numVuChannels; ++i) {
-        std::string portName = "vu_" + std::to_string(i + 1);
+        std::string portName = vuPortName(i);
         jack_port_t* port = jack_port_register(
             m_client,
             portName.c_str(),

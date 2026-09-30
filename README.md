@@ -5,10 +5,10 @@ Real-time beat analysis and VU metering over JACK/PipeWire with OSC output.
 ## Overview
 
 ```
-JACK Audio (bpm_1, vu_1..vu_12)
+JACK Audio (bpm_1, vu_in1_pre..vu_free70)
        │
        ├── BTrack (FFT + onset + tempo)  →  Synthclock  →  /beat iif
-       ├── VU meter (RMS + peak)                        →  /vu/0../vu/11 ff
+       ├── VU meter (RMS + peak)                        →  /vu/0../vu/39 ff
        │
        ├── OSC receive (port 7775)       →  /clockmode, /tap, /beat
        └── Pioneer DJ Link (50000-50002) →  master beat straight from the mixer
@@ -63,7 +63,7 @@ cp .env.example build/.env
 # Audio
 JACK_CLIENT_NAME=beat-analyzer
 NUM_BPM_CHANNELS=1              # JACK ports: bpm_1 (beat detection)
-NUM_VU_CHANNELS=12              # JACK ports: vu_1..vu_12 (peak meters)
+NUM_VU_CHANNELS=40              # JACK ports: vu_in1_pre..vu_free70 (REAPER VU outs 31-70)
 BPM_MIN=60
 BPM_MAX=140
 
@@ -106,43 +106,44 @@ Every variable with its default: see `.env.example`.
 | Address | Type | Carries |
 |---------|-----|--------|
 | `/beat` | `iif` | beat (1-4), bar, bpm |
-| `/vu/0` .. `/vu/11` | `ff` | peak, rms (linear 0.0-1.0) |
+| `/vu/0` .. `/vu/39` | `ff` | peak, rms (linear 0.0-1.0) |
 
-VU is sent as an OSC bundle -- one UDP packet for all channels.
+VU is sent as OSC bundles of up to 16 channels each -- 40 channels are three UDP packets
+(16 + 16 + 8). A bundle and a slot in the sender's queue are 512 bytes; until 2026-09-30 one
+bundle took every channel, and everything past the 17th was silently cut off.
 
 #### JACK port → OSC index
 
-**The JACK ports are 1-based, the OSC addresses are 0-based.** So port `vu_N` sends on
-`/vu/(N-1)` (`jack_client.cpp` registers `vu_(i+1)`, `beat_analyzer_app.cpp` emits `/vu/i`):
+The VU inputs are named after what REAPER sends them: its outputs **31–70**, one meter each, in
+blocks of ten (the A³ Core manual has the whole channel map). Input `i` (0-based) is fed from
+REAPER out `31 + i` and sends on `/vu/i` -- the OSC stays positional, the name is for whoever
+patches. The names live in `src/audio/vu_ports.cpp`.
 
-| JACK port | OSC address |
-|---|---|
-| `vu_1` | `/vu/0` |
-| `vu_2` | `/vu/1` |
-| … | … |
-| `vu_12` | `/vu/11` |
+| REAPER out | JACK port | OSC |
+|---|---|---|
+| 31–34 | `vu_in1_pre` … `vu_in4_pre` -- channel inputs, pre-fader, post-FX | `/vu/0` … `/vu/3` |
+| 35–38 | `vu_in1_post` … `vu_in4_post` -- channel inputs, post-fader | `/vu/4` … `/vu/7` |
+| 39–40 | `vu_free39`, `vu_free40` | `/vu/8`, `/vu/9` |
+| 41 | `vu_main_sub` | `/vu/10` |
+| 42–50 | `vu_main_top1` … `vu_main_top9` | `/vu/11` … `/vu/19` |
+| 51 | `vu_booth_sub` | `/vu/20` |
+| 52–60 | `vu_booth_top1` … `vu_booth_top9` | `/vu/21` … `/vu/29` |
+| 61–62 | `vu_phones_L`, `vu_phones_R` | `/vu/30`, `/vu/31` |
+| 63–64 | `vu_rec_L`, `vu_rec_R` | `/vu/32`, `/vu/33` |
+| 65–66 | `vu_aux_L`, `vu_aux_R` | `/vu/34`, `/vu/35` |
+| 67–70 | `vu_free67` … `vu_free70` | `/vu/36` … `/vu/39` |
 
-Patch while thinking in OSC indices and everything lands one channel across -- and the mistake
-does not announce itself, because every channel still carries a plausible level.
+`NUM_VU_CHANNELS=40` opens all of them. More than 40 (up to 64) are named `vu_41` and on;
+the count is held to 64, the size of the meter arrays.
 
-#### What the channels mean in the A³ system
+#### What reads them
 
-The beat-analyzer itself attaches no meaning to a channel: it reports one VU value per JACK
-input, in port order. What an index *means* comes from the patching and from nowhere else. In
-the A³ setup that is:
-
-| JACK port | OSC address | Signal | Used in A³ Motion for |
-|---|---|---|---|
-| `vu_1` .. `vu_4` | `/vu/0` .. `/vu/3` | mixer channels 1-4 | the corona around each channel's blob |
-| `vu_5` | `/vu/4` | subwoofer | sphere glow |
-| `vu_6` .. `vu_9` | `/vu/5` .. `/vu/8` | speakers 1-4 | speaker beams |
-| `vu_10` .. `vu_12` | `/vu/9` .. `/vu/11` | – | currently unused, discarded by A³ Motion |
-
-The unused channels can still carry a level if something is patched into them. That is not a
-sign that anything reads them.
-
-A change to the patching therefore changes what the Motion UI shows, immediately and without a
-warning anywhere. Keep this table current when the wiring changes.
+The beat-analyzer attaches no meaning to a channel beyond its name: it reports one value per
+input, in port order. Until 2026-09-30 A³ Motion read `/vu/0..3` as the channel inputs,
+`/vu/4` as the subwoofer (sphere glow) and `/vu/5..8` as four speakers, and the A³ Mixer
+`/vu/0..3` as its input meters and `/vu/4..11` as its eight output meters. **Under the map above
+those positions mean something else** (`/vu/4` is channel 1 post-fader, not the subwoofer); both
+devices have to be moved to the new indices.
 
 With `OSC_VU_*` configured, `/vu` goes to the separate port and `/beat` stays on the main one.
 Without it, everything shares one port.
@@ -245,7 +246,7 @@ systemctl --user start beat-analyzer
 ```bash
 jack_lsp                                              # list ports
 jack_connect system:capture_1 beat-analyzer:bpm_1     # BPM input
-jack_connect system:capture_1 beat-analyzer:vu_1      # VU inputs
+jack_connect REAPER:out31 beat-analyzer:vu_in1_pre   # VU inputs
 ```
 
 ### Low latency (PipeWire)
