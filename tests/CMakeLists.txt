@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
+# The tests are plain assert()s. build.sh builds Release, and Release sets
+# -DNDEBUG, which turns every assert() into nothing: until 2026-09-30 each of
+# these passed without checking anything. Keep them on for the tests.
+add_compile_options(-UNDEBUG)
+
 # Beat Detection Test
 add_executable(beat_detection_test
     beat_detection_test.cpp
