@@ -66,9 +66,9 @@ static void test_the_count_is_held_to_what_fits()
 // channel N, fed from REAPER out 30 + N.
 static void test_the_osc_address_counts_from_one()
 {
-    assert(vuOscPath(0) == "/vu/1");    // vu_in1_pre, REAPER out 31
-    assert(vuOscPath(10) == "/vu/11");  // vu_main_sub, REAPER out 41
-    assert(vuOscPath(39) == "/vu/40");  // vu_free70, REAPER out 70
+    assert(vuOscPath("/vu/{n}", 0) == "/vu/1");    // vu_in1_pre, REAPER out 31
+    assert(vuOscPath("/vu/{n}", 10) == "/vu/11");  // vu_main_sub, REAPER out 41
+    assert(vuOscPath("/vu/{n}", 39) == "/vu/40");  // vu_free70, REAPER out 70
     std::cout << "  ✓ /vu/1 .. /vu/40" << std::endl;
 }
 

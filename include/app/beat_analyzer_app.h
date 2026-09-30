@@ -19,6 +19,7 @@
 #include "osc/osc_receiver.h"
 #include "osc/pioneer_receiver.h"
 #include "config/env_config.h"
+#include "config/osc_words.h"
 #include "util/logging.h"
 
 #include <memory>
@@ -128,7 +129,7 @@ private:
     void initVuMeters();
     void initBeatTrackers(int hopSize, int frameSize);
     void initOscSender(EnvConfig& env);
-    void initOscReceiver(EnvConfig& env);
+    void initOscReceiver();
     void initPioneerReceiver(EnvConfig& env);
     
     // ================================================================
@@ -184,6 +185,9 @@ private:
     std::vector<std::unique_ptr<VuMeter>> m_vuMeters;
     std::vector<VuTrackState> m_vuTrackStates;
     std::vector<std::string> m_vuOscPaths;
+
+    // The OSC words and ports, from the .env's a3-osc block (the one truth).
+    Config::OscWords m_oscWords;
     
     // OSC
     std::shared_ptr<OSC::OscSender> m_oscSender;

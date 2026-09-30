@@ -29,9 +29,13 @@ std::string vuPortName(int index)
     return "vu_" + std::to_string(index + 1);
 }
 
-std::string vuOscPath(int index)
+std::string vuOscPath(const std::string& pattern, int index)
 {
-    return "/vu/" + std::to_string(index + 1);
+    std::string path = pattern;
+    const auto placeholder = path.find("{n}");
+    if (placeholder != std::string::npos)
+        path.replace(placeholder, 3, std::to_string(index + 1));
+    return path;
 }
 
 int clampVuChannels(int requested)

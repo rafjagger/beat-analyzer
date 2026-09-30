@@ -9,6 +9,8 @@
 #include <cmath>
 #include "app/beat_analyzer_app.h"
 
+#include <map>
+
 #include <iostream>
 
 using namespace BeatAnalyzer::Audio;
@@ -88,7 +90,7 @@ bool BeatAnalyzerApp::initialize() {
     
     initBeatTrackers(btHopSize, btFrameSize);
     initOscSender(env);
-    initOscReceiver(env);
+    initOscReceiver();
     initPioneerReceiver(env);
     
     // Audio-Callback setzen
@@ -197,6 +199,16 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
     // Kanäle
     m_numBpmChannels = std::max(0, env.getInt("NUM_BPM_CHANNELS", 1));
     m_numVuChannels = Audio::clampVuChannels(env.getInt("NUM_VU_CHANNELS", Audio::kVuMapChannels));
+
+    // Die OSC-Woerter und Ports: aus dem a3-osc-Block der .env, den das
+    // a3-core-Paket aus der einen Wahrheit (a3-osc.json) schreibt.
+    std::map<std::string, std::string> words;
+    for (const auto& key : Config::oscWordKeys()) {
+        const auto value = env.getString(key, "");
+        if (!value.empty())
+            words[key] = value;
+    }
+    m_oscWords = Config::oscWordsFrom(words);
     
     LOG_INFO("BPM Kanäle: " + std::to_string(m_numBpmChannels) + 
              ", VU Kanäle: " + std::to_string(m_numVuChannels));
@@ -248,7 +260,7 @@ void BeatAnalyzerApp::initVuMeters() {
         vuMeter->setPeakFalloff(m_vuPeakFalloff);
         m_vuMeters.push_back(std::move(vuMeter));
         m_vuTrackStates.push_back(VuTrackState{});
-        m_vuOscPaths.push_back(Audio::vuOscPath(i));
+        m_vuOscPaths.push_back(Audio::vuOscPath(m_oscWords.vuPattern, i));
     }
 }
 
@@ -292,6 +304,7 @@ void BeatAnalyzerApp::initBeatTrackers(int hopSize, int frameSize) {
 
 void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
     m_oscSender = std::make_shared<OscSender>();
+    m_oscSender->setBeatPath(m_oscWords.beat);
     
     auto oscHostKeys = env.getKeysWithPrefix("OSC_HOST_");
     if (!oscHostKeys.empty()) {
@@ -335,12 +348,14 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
     }
 }
 
-void BeatAnalyzerApp::initOscReceiver(EnvConfig& env) {
-    int portA3motion = env.getInt("OSC_PORT_A3MOTION", 7775);
+void BeatAnalyzerApp::initOscReceiver() {
+    int portA3motion = m_oscWords.listenPort;
     
     m_oscReceiverA3motion = std::make_unique<OscReceiver>();
     m_oscReceiverA3motion->setPort(portA3motion);
-    m_oscReceiverA3motion->setBeatClockPath("/beat");
+    m_oscReceiverA3motion->setBeatClockPath(m_oscWords.beat);
+    m_oscReceiverA3motion->setTapPath(m_oscWords.tap);
+    m_oscReceiverA3motion->setClockModePath(m_oscWords.clockMode);
     
     // /beat von a3motion: nur in Modus 0 weiterleiten (an alle AUSSER motion)
     m_oscReceiverA3motion->setCallback([this](const ReceivedBeatClock& clock) {
@@ -392,6 +407,8 @@ void BeatAnalyzerApp::initPioneerReceiver(EnvConfig& env) {
     m_pioneerReceiver = std::make_unique<PioneerReceiver>();
     m_pioneerReceiver->setDeviceNumber(static_cast<uint8_t>(pioneerDeviceNum));
     m_pioneerReceiver->setDeviceName("beat-analyzer");
+    m_pioneerReceiver->setPorts(m_oscWords.pioneerAnnounce, m_oscWords.pioneerBeat,
+                                m_oscWords.pioneerStatus);
     
     // Beat von Pioneer: nur in Modus 2 weiterleiten
     m_pioneerReceiver->setCallback([this](const PioneerBeat& beat) {
@@ -427,7 +444,9 @@ void BeatAnalyzerApp::initPioneerReceiver(EnvConfig& env) {
     if (m_pioneerReceiver->start()) {
         LOG_INFO("Pioneer Pro DJ Link Receiver aktiv (Virtual CDJ #" + std::to_string(pioneerDeviceNum) + ")");
     } else {
-        LOG_WARN("Pioneer Receiver konnte nicht gestartet werden (Ports 50000-50002 belegt?)");
+        LOG_WARN("Pioneer Receiver konnte nicht gestartet werden (Ports "
+                 + std::to_string(m_oscWords.pioneerAnnounce) + "-"
+                 + std::to_string(m_oscWords.pioneerStatus) + " belegt?)");
     }
 }
 

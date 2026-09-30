@@ -53,6 +53,8 @@ OscReceiver::~OscReceiver() {
 
 void OscReceiver::setPort(int port) { m_port = port; }
 void OscReceiver::setBeatClockPath(const std::string& path) { m_beatClockPath = path; }
+void OscReceiver::setTapPath(const std::string& path) { m_tapPath = path; }
+void OscReceiver::setClockModePath(const std::string& path) { m_clockModePath = path; }
 void OscReceiver::setCallback(BeatClockCallback callback) { m_callback = callback; }
 
 ReceivedBeatClock OscReceiver::getLastBeatClock() const {
@@ -95,7 +97,8 @@ bool OscReceiver::start() {
     m_thread = std::thread(&OscReceiver::recvLoop, this);
     
     LOG_INFO("OSC Receiver gestartet auf Port " + std::to_string(m_port) + 
-             " (UDP, listening for " + m_beatClockPath + ", /clockmode, /tap)");
+             " (UDP, listening for " + m_beatClockPath + ", " + m_clockModePath +
+             ", " + m_tapPath + ")");
     return true;
 }
 
@@ -205,7 +208,7 @@ void OscReceiver::handlePacket(const char* data, int len) {
         }
     }
     // ── /clockmode i|f ────────────────────────────────────────
-    else if (std::strcmp(path, "/clockmode") == 0) {
+    else if (m_clockModePath == path) {
         int mode = 0;
         if (argc >= 1 && argPos + 4 <= len) {
             if (typeChars[0] == 'i') {
@@ -228,7 +231,7 @@ void OscReceiver::handlePacket(const char* data, int len) {
         }
     }
     // ── /tap [i] ─────────────────────────────────────────────
-    else if (std::strcmp(path, "/tap") == 0) {
+    else if (m_tapPath == path) {
         int beat = 1;
         if (argc >= 1 && argPos + 4 <= len) {
             if (typeChars[0] == 'i') {

@@ -25,9 +25,10 @@ constexpr int kMaxVuChannels = 64;
 
 std::string vuPortName(int index);
 
-// Where input i (0-based) is sent: /vu/<i+1>. The OSC counts from 1, like the
-// map -- /vu/N is VU channel N, REAPER out 30 + N.
-std::string vuOscPath(int index);
+// Where input i (0-based) is sent: the truth's pattern ("/vu/{n}") with {n}
+// = i+1. The OSC counts from 1, like the map -- /vu/N is VU channel N,
+// REAPER out 30 + N.
+std::string vuOscPath(const std::string& pattern, int index);
 
 // A channel count from the .env, held to what the arrays hold.
 int clampVuChannels(int requested);

@@ -46,6 +46,9 @@ public:
     bool initialize();
     void shutdown();
     
+    // The beat's address, from the one truth (Config::OscWords).
+    void setBeatPath(const std::string& path) { m_beatPath = path; }
+
     bool sendBeatClock(const BeatClockMessage& msg);
     /** Send /beat to all targets EXCEPT the named one */
     bool sendBeatClockExcept(const BeatClockMessage& msg, const std::string& excludeTarget);
@@ -94,6 +97,7 @@ private:
     std::vector<std::unique_ptr<Target>> m_targets;
     std::vector<std::unique_ptr<Target>> m_vuTargets;  // Separate VU-Ports (optional)
     bool m_connected = false;
+    std::string m_beatPath;
     bool m_vuSeparate = false;  // true wenn mindestens 1 VU-Target existiert
     ErrorCallback m_errorCallback;
     

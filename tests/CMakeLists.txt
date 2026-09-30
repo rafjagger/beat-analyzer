@@ -61,6 +61,17 @@ target_include_directories(vu_ports_test PRIVATE
 )
 add_test(NAME VuPortsTests COMMAND vu_ports_test)
 
+# The OSC words and ports from the .env's a3-osc block (the one truth)
+add_executable(osc_words_test
+    osc_words_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/config/osc_words.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/audio/vu_ports.cpp
+)
+target_include_directories(osc_words_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+add_test(NAME OscWordsTests COMMAND osc_words_test)
+
 # The VU channels, split into bundles that fit the sender's 512-byte slots
 add_executable(vu_bundle_test
     vu_bundle_test.cpp

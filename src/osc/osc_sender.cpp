@@ -297,7 +297,7 @@ void OscSender::enqueueVu(const char* data, int len) {
 bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
     if (!m_connected) return false;
     char buf[256];
-    int len = serializeIntIntFloat(buf, "/beat", msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
+    int len = serializeIntIntFloat(buf, m_beatPath.c_str(), msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
     enqueueAll(buf, len);
     return true;
 }
@@ -305,7 +305,7 @@ bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
 bool OscSender::sendBeatClockExcept(const BeatClockMessage& msg, const std::string& excludeTarget) {
     if (!m_connected) return false;
     char buf[256];
-    int len = serializeIntIntFloat(buf, "/beat", msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
+    int len = serializeIntIntFloat(buf, m_beatPath.c_str(), msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
     enqueueAllExcept(buf, len, excludeTarget);
     return true;
 }
