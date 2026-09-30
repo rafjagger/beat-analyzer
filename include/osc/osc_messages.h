@@ -34,7 +34,6 @@ struct BeatClockMessage {
     int bar_number;         // Takt-Nummer (ab 1, fortlaufend)
     double bpm;             // Aktuelles BPM (z.B. 128.53)
     
-    OscMessage toOscMessage() const;
 };
 
 } // namespace OSC

@@ -66,7 +66,7 @@ public:
     void setClockMode(int mode) { m_clockMode.store(mode); }
     
 private:
-    int m_port = 7775;
+    int m_port = -1;   // setPort(), from Config::OscWords
     std::string m_beatClockPath;
     std::string m_tapPath;
     std::string m_clockModePath;

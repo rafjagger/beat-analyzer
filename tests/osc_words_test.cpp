@@ -64,6 +64,19 @@ static void test_every_key_is_listed()
     std::cout << "  ✓ every key is listed" << std::endl;
 }
 
+static void test_a_target_names_its_port()
+{
+    std::string host;
+    int port = 0;
+    assert(parseHostPort("192.168.8.11:7772", host, port));
+    assert(host == "192.168.8.11" && port == 7772);
+    // No port is no target: the port was 9000 by default, a second truth
+    // the block in the .env has no use for.
+    assert(!parseHostPort("192.168.8.11", host, port));
+    assert(!parseHostPort("192.168.8.11:seven", host, port));
+    std::cout << "  ✓ a target names its port" << std::endl;
+}
+
 static void test_a_meter_goes_out_by_the_pattern()
 {
     using BeatAnalyzer::Audio::vuOscPath;
@@ -79,6 +92,7 @@ int main()
     test_an_env_without_the_block_keeps_todays_values();
     test_a_port_that_is_not_a_number_keeps_its_value();
     test_every_key_is_listed();
+    test_a_target_names_its_port();
     test_a_meter_goes_out_by_the_pattern();
     return 0;
 }

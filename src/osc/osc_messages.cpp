@@ -34,14 +34,5 @@ std::string OscMessage::toString() const {
     return oss.str();
 }
 
-OscMessage BeatClockMessage::toOscMessage() const {
-    // /beat iif  beat(1-4), bar, bpm
-    OscMessage msg("/beat");
-    msg.addInt(beat_number);
-    msg.addInt(bar_number);
-    msg.addFloat(static_cast<float>(bpm));
-    return msg;
-}
-
 } // namespace OSC
 } // namespace BeatAnalyzer

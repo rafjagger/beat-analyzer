@@ -31,5 +31,9 @@ std::vector<std::string> oscWordKeys();
 // ones keep their value.
 OscWords oscWordsFrom(const std::map<std::string, std::string>& env);
 
+// "host:port" as the .env writes a target. False without a port: there is
+// no default to fall back on.
+bool parseHostPort(const std::string& value, std::string& host, int& port);
+
 } // namespace Config
 } // namespace BeatAnalyzer

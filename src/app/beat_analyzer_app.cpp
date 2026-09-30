@@ -23,23 +23,6 @@ namespace BeatAnalyzer {
 // Helper
 // ============================================================================
 
-static bool parseHostPort(const std::string& value, std::string& host, int& port) {
-    auto colonPos = value.rfind(':');
-    if (colonPos != std::string::npos) {
-        host = value.substr(0, colonPos);
-        try {
-            port = std::stoi(value.substr(colonPos + 1));
-            return true;
-        } catch (...) {
-            return false;
-        }
-    } else {
-        host = value;
-        port = 9000;
-        return true;
-    }
-}
-
 // ============================================================================
 // Konstruktor
 // ============================================================================
@@ -314,15 +297,15 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
             
             std::string host;
             int port;
-            if (parseHostPort(value, host, port)) {
+            if (Config::parseHostPort(value, host, port)) {
                 std::string name = key.substr(9);  // Nach "OSC_HOST_"
                 m_oscSender->addTarget(name, host, port);
             }
         }
     } else {
-        std::string oscHost = env.getString("OSC_HOST", "127.0.0.1");
-        int oscPort = env.getInt("OSC_PORT", 9000);
-        m_oscSender->addTarget("default", oscHost, oscPort);
+        // Keine Ziele in der .env: der a3-osc-Block fehlt. Kein Ersatzziel --
+        // eine erfundene Adresse waere eine zweite Wahrheit.
+        LOG_WARN("Keine OSC_HOST_-Ziele in der .env -- fehlt der a3-osc-Block?");
     }
     
     // Separate VU-Ports: OSC_VU_Name=host:port
@@ -335,7 +318,7 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
         
         std::string host;
         int port;
-        if (parseHostPort(value, host, port)) {
+        if (Config::parseHostPort(value, host, port)) {
             std::string name = key.substr(7);  // Nach "OSC_VU_"
             m_oscSender->addVuTarget(name, host, port);
         }

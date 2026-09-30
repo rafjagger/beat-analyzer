@@ -50,5 +50,19 @@ OscWords oscWordsFrom(const std::map<std::string, std::string>& env)
     return words;
 }
 
+bool parseHostPort(const std::string& value, std::string& host, int& port)
+{
+    const auto colon = value.rfind(':');
+    if (colon == std::string::npos)
+        return false;
+    int parsed = -1;
+    takePort({{"port", value.substr(colon + 1)}}, "port", parsed);
+    if (parsed < 0)
+        return false;
+    host = value.substr(0, colon);
+    port = parsed;
+    return true;
+}
+
 } // namespace Config
 } // namespace BeatAnalyzer
