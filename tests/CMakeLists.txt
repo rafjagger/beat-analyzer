@@ -50,3 +50,15 @@ target_compile_definitions(btrack_period_test PRIVATE
 )
 target_link_libraries(btrack_period_test PRIVATE ${SAMPLERATE_LIBRARIES} m)
 add_test(NAME BTrackPeriodTests COMMAND btrack_period_test)
+
+# The VU channels, split into bundles that fit the sender's 512-byte slots
+add_executable(vu_bundle_test
+    vu_bundle_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/osc/osc_sender.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/logging.cpp
+)
+target_include_directories(vu_bundle_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+target_link_libraries(vu_bundle_test PRIVATE pthread)
+add_test(NAME VuBundleTests COMMAND vu_bundle_test)

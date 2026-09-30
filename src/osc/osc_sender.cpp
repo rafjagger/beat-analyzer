@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <algorithm>
 #include <cstring>
 #include <cmath>
 #include <chrono>
@@ -370,12 +371,21 @@ bool OscSender::sendMessage(const OscMessage& msg) {
     return true;
 }
 
+std::vector<std::pair<int, int>> OscSender::vuBundleChunks(int numChannels) {
+    std::vector<std::pair<int, int>> chunks;
+    for (int first = 0; first < numChannels; first += kVuChannelsPerBundle)
+        chunks.emplace_back(first, std::min(kVuChannelsPerBundle, numChannels - first));
+    return chunks;
+}
+
 bool OscSender::sendVuBundle(const std::string* paths, const float* peaks, const float* rms, int numChannels) {
     if (!m_connected || numChannels <= 0) return false;
-    char buf[512];
-    int len = serializeBundle(buf, sizeof(buf), paths, peaks, rms, numChannels);
-    if (len <= 0) return false;
-    enqueueVu(buf, len);
+    for (auto const& [first, count] : vuBundleChunks(numChannels)) {
+        char buf[sizeof(Packet::data)];
+        int len = serializeBundle(buf, sizeof(buf), paths + first, peaks + first, rms + first, count);
+        if (len <= 0) return false;
+        enqueueVu(buf, len);
+    }
     return true;
 }
 

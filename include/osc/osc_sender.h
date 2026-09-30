@@ -3,6 +3,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <utility>
 #include <vector>
 #include <atomic>
 #include <thread>
@@ -23,6 +24,14 @@ namespace OSC {
  */
 class OscSender {
 public:
+    // VU channels per bundle: a bundle and a queue slot are 512 bytes, one
+    // /vu message takes 28, so 16 fit with room to spare (464 bytes). More
+    // channels go out as several bundles -- until 2026-09-30 one bundle took
+    // them all and everything past channel ~17 was silently cut off.
+    static constexpr int kVuChannelsPerBundle = 16;
+    // Which channels each bundle carries: (first, count), in order.
+    static std::vector<std::pair<int, int>> vuBundleChunks(int numChannels);
+    static int serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels);
     OscSender();
     ~OscSender();
     
@@ -93,7 +102,6 @@ private:
     static int serializeIntIntFloat(char* buf, const char* path, int i1, int i2, float f1);
     static int serializeFloat(char* buf, const char* path, float f1);
     static int serializeFloats(char* buf, const char* path, float f1, float f2);
-    static int serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels);
     
     void enqueueAll(const char* data, int len);
     void enqueueAllExcept(const char* data, int len, const std::string& excludeName);
