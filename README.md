@@ -67,18 +67,9 @@ NUM_VU_CHANNELS=40              # JACK ports: vu_in1_pre..vu_free70 (REAPER VU o
 BPM_MIN=60
 BPM_MAX=140
 
-# OSC targets (as many as you like, format: name=host:port)
-OSC_HOST_radla=192.168.43.96:9000
-OSC_HOST_mixer=192.168.43.55:7771
-OSC_HOST_motion=192.168.43.54:7771
-
-# Separate VU ports (optional -- /beat and /vu on different ports)
-OSC_VU_radla=192.168.43.96:9001
-OSC_VU_mixer=192.168.43.55:7772
-OSC_VU_motion=192.168.43.54:7772
-
-# OSC receive
-OSC_PORT_A3MOTION=7775          # /beat, /clockmode, /tap
+# OSC targets, receive port, addresses, Pro DJ Link ports: not written here.
+# The a3-core package renders them from the one truth (a3-osc.json) into a
+# block at the end of this file -- see "Addresses and ports" below.
 
 # Pioneer Pro DJ Link
 PIONEER_DEVICE_NUM=7            # virtual CDJ number (default: 7)
@@ -98,6 +89,29 @@ LOG_LEVEL=1                     # 0=DEBUG 1=INFO 2=WARN 3=ERROR
 ```
 
 Every variable with its default: see `.env.example`.
+
+### Addresses and ports
+
+Every OSC address, port and IP of the A³ system is written once, in a3-core's
+`/usr/share/a3/a3-osc.json` (decided 2026-09-30). The a3-core package writes
+what the analyzer needs from it into `build/.env` on every install
+(`a3-osc-render user`), between two marker lines:
+
+```bash
+# >>> a3-osc: rendered from a3-osc.json by a3-osc-render -- edit the truth, not this
+OSC_HOST_core=127.0.0.1:9000        # targets, OSC_VU_* for the meters
+OSC_PORT_A3MOTION=7775              # where /beat, /tap, /clockmode come in
+OSC_ADDRESS_BEAT=/beat              # the words: BEAT, TAP, CLOCKMODE, VU (/vu/{n})
+PIONEER_PORT_ANNOUNCE=50000         # and BEAT, STATUS
+# <<< a3-osc
+```
+
+The rest of the file stays yours. A target line written by hand outside the
+block is commented out (`# was: ...`) on the next install -- it would be a
+second truth. A target needs its port, and without any target the analyzer
+says the block is missing. Words and ports the block does not carry keep
+today's values (`include/config/osc_words.h`), so an `.env` from before the
+block still runs.
 
 ## OSC protocol
 
