@@ -248,7 +248,7 @@ void BeatAnalyzerApp::initVuMeters() {
         vuMeter->setPeakFalloff(m_vuPeakFalloff);
         m_vuMeters.push_back(std::move(vuMeter));
         m_vuTrackStates.push_back(VuTrackState{});
-        m_vuOscPaths.push_back("/vu/" + std::to_string(i));
+        m_vuOscPaths.push_back(Audio::vuOscPath(i));
     }
 }
 

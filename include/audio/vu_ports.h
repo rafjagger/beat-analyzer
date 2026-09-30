@@ -14,7 +14,7 @@ namespace Audio {
 //   61-70  stereo    61-62 phones, 63-64 rec, 65-66 aux, 67-70 free
 //
 // Input i (0-based) is vu_<name>, fed from REAPER out 31 + i, and its OSC is
-// /vu/i -- the OSC stays positional, the name is for whoever patches.
+// /vu/<i+1> -- counted from 1 like the map; the name is for whoever patches.
 constexpr int kVuMapChannels = 40;
 
 // The map's blocks are ten wide; the OSC sends one bundle per block.
@@ -24,6 +24,10 @@ constexpr int kVuMapBlock = 10;
 constexpr int kMaxVuChannels = 64;
 
 std::string vuPortName(int index);
+
+// Where input i (0-based) is sent: /vu/<i+1>. The OSC counts from 1, like the
+// map -- /vu/N is VU channel N, REAPER out 30 + N.
+std::string vuOscPath(int index);
 
 // A channel count from the .env, held to what the arrays hold.
 int clampVuChannels(int requested);

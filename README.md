@@ -8,7 +8,7 @@ Real-time beat analysis and VU metering over JACK/PipeWire with OSC output.
 JACK Audio (bpm_1, vu_in1_pre..vu_free70)
        │
        ├── BTrack (FFT + onset + tempo)  →  Synthclock  →  /beat iif
-       ├── VU meter (RMS + peak)                        →  /vu/0../vu/39 ff
+       ├── VU meter (RMS + peak)                        →  /vu/1../vu/40 ff
        │
        ├── OSC receive (port 7775)       →  /clockmode, /tap, /beat
        └── Pioneer DJ Link (50000-50002) →  master beat straight from the mixer
@@ -106,7 +106,7 @@ Every variable with its default: see `.env.example`.
 | Address | Type | Carries |
 |---------|-----|--------|
 | `/beat` | `iif` | beat (1-4), bar, bpm |
-| `/vu/0` .. `/vu/39` | `ff` | peak, rms (linear 0.0-1.0) |
+| `/vu/1` .. `/vu/40` | `ff` | peak, rms (linear 0.0-1.0) |
 
 VU is sent as one OSC bundle per block of ten -- inputs, Main, Booth, stereo, four UDP packets
 of 296 bytes for 40 channels -- so each block arrives as one consistent picture. A bundle and a slot in the sender's queue are 512 bytes; until 2026-09-30 one
@@ -115,23 +115,23 @@ bundle took every channel, and everything past the 17th was silently cut off.
 #### JACK port → OSC index
 
 The VU inputs are named after what REAPER sends them: its outputs **31–70**, one meter each, in
-blocks of ten (the A³ Core manual has the whole channel map). Input `i` (0-based) is fed from
-REAPER out `31 + i` and sends on `/vu/i` -- the OSC stays positional, the name is for whoever
-patches. The names live in `src/audio/vu_ports.cpp`.
+blocks of ten (the A³ Core manual has the whole channel map). **`/vu/N` is VU channel N, fed
+from REAPER out 30 + N** -- the OSC counts from 1, like the map (until 2026-09-30 it counted from
+0). The names and addresses live in `src/audio/vu_ports.cpp`.
 
 | REAPER out | JACK port | OSC |
 |---|---|---|
-| 31–34 | `vu_in1_pre` … `vu_in4_pre` -- channel inputs, pre-fader, post-FX | `/vu/0` … `/vu/3` |
-| 35–38 | `vu_in1_post` … `vu_in4_post` -- channel inputs, post-fader | `/vu/4` … `/vu/7` |
-| 39–40 | `vu_free39`, `vu_free40` | `/vu/8`, `/vu/9` |
-| 41 | `vu_main_sub` | `/vu/10` |
-| 42–50 | `vu_main_top1` … `vu_main_top9` | `/vu/11` … `/vu/19` |
-| 51 | `vu_booth_sub` | `/vu/20` |
-| 52–60 | `vu_booth_top1` … `vu_booth_top9` | `/vu/21` … `/vu/29` |
-| 61–62 | `vu_phones_L`, `vu_phones_R` | `/vu/30`, `/vu/31` |
-| 63–64 | `vu_rec_L`, `vu_rec_R` | `/vu/32`, `/vu/33` |
-| 65–66 | `vu_aux_L`, `vu_aux_R` | `/vu/34`, `/vu/35` |
-| 67–70 | `vu_free67` … `vu_free70` | `/vu/36` … `/vu/39` |
+| 31–34 | `vu_in1_pre` … `vu_in4_pre` -- channel inputs, pre-fader, post-FX | `/vu/1` … `/vu/4` |
+| 35–38 | `vu_in1_post` … `vu_in4_post` -- channel inputs, post-fader | `/vu/5` … `/vu/8` |
+| 39–40 | `vu_free39`, `vu_free40` | `/vu/9`, `/vu/10` |
+| 41 | `vu_main_sub` | `/vu/11` |
+| 42–50 | `vu_main_top1` … `vu_main_top9` | `/vu/12` … `/vu/20` |
+| 51 | `vu_booth_sub` | `/vu/21` |
+| 52–60 | `vu_booth_top1` … `vu_booth_top9` | `/vu/22` … `/vu/30` |
+| 61–62 | `vu_phones_L`, `vu_phones_R` | `/vu/31`, `/vu/32` |
+| 63–64 | `vu_rec_L`, `vu_rec_R` | `/vu/33`, `/vu/34` |
+| 65–66 | `vu_aux_L`, `vu_aux_R` | `/vu/35`, `/vu/36` |
+| 67–70 | `vu_free67` … `vu_free70` | `/vu/37` … `/vu/40` |
 
 `NUM_VU_CHANNELS=40` opens all of them. More than 40 (up to 64) are named `vu_41` and on;
 the count is held to 64, the size of the meter arrays.
@@ -142,7 +142,7 @@ The beat-analyzer attaches no meaning to a channel beyond its name: it reports o
 input, in port order. Until 2026-09-30 A³ Motion read `/vu/0..3` as the channel inputs,
 `/vu/4` as the subwoofer (sphere glow) and `/vu/5..8` as four speakers, and the A³ Mixer
 `/vu/0..3` as its input meters and `/vu/4..11` as its eight output meters. **Under the map above
-those positions mean something else** (`/vu/4` is channel 1 post-fader, not the subwoofer); both
+those positions mean something else** (`/vu/4` is channel 4 pre-fader, not the subwoofer); both
 devices have to be moved to the new indices.
 
 With `OSC_VU_*` configured, `/vu` goes to the separate port and `/beat` stays on the main one.

@@ -38,7 +38,7 @@ static void printUsage(const char* programName) {
     std::cout << "  Beispiel: OSC_HOST_Protokol=127.0.0.1:9000\n";
     std::cout << "\nOSC Adressen:\n";
     std::cout << "  /beat           Beat Clock: iif beat(1-4), bar, bpm\n";
-    std::cout << "  /vu/0-39        VU-Meter: ff peak, rms\n";
+    std::cout << "  /vu/1-40        VU-Meter: ff peak, rms\n";
     std::cout << "\n";
 }
 

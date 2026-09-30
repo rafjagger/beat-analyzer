@@ -29,6 +29,11 @@ std::string vuPortName(int index)
     return "vu_" + std::to_string(index + 1);
 }
 
+std::string vuOscPath(int index)
+{
+    return "/vu/" + std::to_string(index + 1);
+}
+
 int clampVuChannels(int requested)
 {
     return std::clamp(requested, 0, kMaxVuChannels);

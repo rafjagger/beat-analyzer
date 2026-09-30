@@ -62,6 +62,16 @@ static void test_the_count_is_held_to_what_fits()
     std::cout << "  ✓ the channel count is clamped" << std::endl;
 }
 
+// The OSC counts from 1, like the channel map (2026-09-30): /vu/N is VU
+// channel N, fed from REAPER out 30 + N.
+static void test_the_osc_address_counts_from_one()
+{
+    assert(vuOscPath(0) == "/vu/1");    // vu_in1_pre, REAPER out 31
+    assert(vuOscPath(10) == "/vu/11");  // vu_main_sub, REAPER out 41
+    assert(vuOscPath(39) == "/vu/40");  // vu_free70, REAPER out 70
+    std::cout << "  ✓ /vu/1 .. /vu/40" << std::endl;
+}
+
 int main()
 {
     std::cout << "VU port tests" << std::endl;
@@ -69,5 +79,6 @@ int main()
     test_each_block_by_its_reaper_output();
     test_beyond_the_map_ports_are_numbered();
     test_the_count_is_held_to_what_fits();
+    test_the_osc_address_counts_from_one();
     return 0;
 }
