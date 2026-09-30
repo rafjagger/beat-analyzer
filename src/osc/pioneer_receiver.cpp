@@ -160,7 +160,7 @@ bool PioneerReceiver::start() {
     // ── Socket 1: Port 50000 (Announce / Keep-Alive) ──
     m_sockAnnounce = socket(AF_INET, SOCK_DGRAM, 0);
     if (m_sockAnnounce < 0) {
-        LOG_ERROR("Pioneer: Socket 50000 Fehler");
+        LOG_ERROR("Pioneer: Socket " + std::to_string(m_portAnnounce) + " Fehler");
         return false;
     }
     {
@@ -170,10 +170,10 @@ bool PioneerReceiver::start() {
         
         struct sockaddr_in addr{};
         addr.sin_family = AF_INET;
-        addr.sin_port = htons(PORT_ANNOUNCE);
+        addr.sin_port = htons(static_cast<uint16_t>(m_portAnnounce));
         addr.sin_addr.s_addr = INADDR_ANY;
         if (bind(m_sockAnnounce, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
-            LOG_ERROR("Pioneer: Bind 50000 fehlgeschlagen (Port belegt?)");
+            LOG_ERROR("Pioneer: Bind " + std::to_string(m_portAnnounce) + " fehlgeschlagen (Port belegt?)");
             close(m_sockAnnounce);
             m_sockAnnounce = -1;
             return false;
@@ -183,7 +183,7 @@ bool PioneerReceiver::start() {
     // ── Socket 2: Port 50001 (Beat-Pakete) ──
     m_sockBeat = socket(AF_INET, SOCK_DGRAM, 0);
     if (m_sockBeat < 0) {
-        LOG_ERROR("Pioneer: Socket 50001 Fehler");
+        LOG_ERROR("Pioneer: Socket " + std::to_string(m_portBeat) + " Fehler");
         close(m_sockAnnounce); m_sockAnnounce = -1;
         return false;
     }
@@ -193,10 +193,10 @@ bool PioneerReceiver::start() {
         
         struct sockaddr_in addr{};
         addr.sin_family = AF_INET;
-        addr.sin_port = htons(PORT_BEAT);
+        addr.sin_port = htons(static_cast<uint16_t>(m_portBeat));
         addr.sin_addr.s_addr = INADDR_ANY;
         if (bind(m_sockBeat, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
-            LOG_ERROR("Pioneer: Bind 50001 fehlgeschlagen (Port belegt?)");
+            LOG_ERROR("Pioneer: Bind " + std::to_string(m_portBeat) + " fehlgeschlagen (Port belegt?)");
             close(m_sockAnnounce); m_sockAnnounce = -1;
             close(m_sockBeat); m_sockBeat = -1;
             return false;
@@ -206,7 +206,7 @@ bool PioneerReceiver::start() {
     // ── Socket 3: Port 50002 (Status-Pakete) ──
     m_sockStatus = socket(AF_INET, SOCK_DGRAM, 0);
     if (m_sockStatus < 0) {
-        LOG_ERROR("Pioneer: Socket 50002 Fehler");
+        LOG_ERROR("Pioneer: Socket " + std::to_string(m_portStatus) + " Fehler");
         close(m_sockAnnounce); m_sockAnnounce = -1;
         close(m_sockBeat); m_sockBeat = -1;
         return false;
@@ -217,10 +217,10 @@ bool PioneerReceiver::start() {
         
         struct sockaddr_in addr{};
         addr.sin_family = AF_INET;
-        addr.sin_port = htons(PORT_STATUS);
+        addr.sin_port = htons(static_cast<uint16_t>(m_portStatus));
         addr.sin_addr.s_addr = INADDR_ANY;
         if (bind(m_sockStatus, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
-            LOG_ERROR("Pioneer: Bind 50002 fehlgeschlagen (Port belegt?)");
+            LOG_ERROR("Pioneer: Bind " + std::to_string(m_portStatus) + " fehlgeschlagen (Port belegt?)");
             close(m_sockAnnounce); m_sockAnnounce = -1;
             close(m_sockBeat); m_sockBeat = -1;
             close(m_sockStatus); m_sockStatus = -1;
@@ -232,9 +232,9 @@ bool PioneerReceiver::start() {
     m_thread = std::thread(&PioneerReceiver::recvLoop, this);
     
     LOG_INFO("Pioneer Pro DJ Link Receiver gestartet");
-    LOG_INFO("  Port 50000: Keep-Alive (Virtual CDJ #" + std::to_string(m_deviceNumber) + ")");
-    LOG_INFO("  Port 50001: Beat-Pakete");
-    LOG_INFO("  Port 50002: Status-Pakete (Master-Tracking)");
+    LOG_INFO("  Port " + std::to_string(m_portAnnounce) + ": Keep-Alive (Virtual CDJ #" + std::to_string(m_deviceNumber) + ")");
+    LOG_INFO("  Port " + std::to_string(m_portBeat) + ": Beat-Pakete");
+    LOG_INFO("  Port " + std::to_string(m_portStatus) + ": Status-Pakete (Master-Tracking)");
     
     return true;
 }
@@ -315,7 +315,7 @@ void PioneerReceiver::sendKeepAlive() {
     
     struct sockaddr_in dest{};
     dest.sin_family = AF_INET;
-    dest.sin_port = htons(PORT_ANNOUNCE);
+    dest.sin_port = htons(static_cast<uint16_t>(m_portAnnounce));
     dest.sin_addr.s_addr = m_broadcastAddr;
     
     sendto(m_sockAnnounce, buf, len, 0,

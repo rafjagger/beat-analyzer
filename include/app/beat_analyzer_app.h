@@ -11,6 +11,7 @@
  */
 
 #include "audio/jack_client.h"
+#include "audio/vu_ports.h"
 #include "analysis/beat_clock_follower.h"
 #include "analysis/btrack_wrapper.h"
 #include "analysis/vu_meter.h"
@@ -18,6 +19,7 @@
 #include "osc/osc_receiver.h"
 #include "osc/pioneer_receiver.h"
 #include "config/env_config.h"
+#include "config/osc_words.h"
 #include "util/logging.h"
 
 #include <memory>
@@ -127,7 +129,7 @@ private:
     void initVuMeters();
     void initBeatTrackers(int hopSize, int frameSize);
     void initOscSender(EnvConfig& env);
-    void initOscReceiver(EnvConfig& env);
+    void initOscReceiver();
     void initPioneerReceiver(EnvConfig& env);
     
     // ================================================================
@@ -153,7 +155,7 @@ private:
     // ================================================================
     
     static constexpr int MAX_BPM_CHANNELS = 8;
-    static constexpr int MAX_VU_CHANNELS = 16;
+    static constexpr int MAX_VU_CHANNELS = Audio::kMaxVuChannels;
     static constexpr int TAP_QUEUE_SIZE = 16;
     static constexpr double BEAT_TOLERANCE = 0.20;
     static constexpr int PHASE_LOCK_BEATS = 3;
@@ -183,6 +185,9 @@ private:
     std::vector<std::unique_ptr<VuMeter>> m_vuMeters;
     std::vector<VuTrackState> m_vuTrackStates;
     std::vector<std::string> m_vuOscPaths;
+
+    // The OSC words and ports, from the .env's a3-osc block (the one truth).
+    Config::OscWords m_oscWords;
     
     // OSC
     std::shared_ptr<OSC::OscSender> m_oscSender;

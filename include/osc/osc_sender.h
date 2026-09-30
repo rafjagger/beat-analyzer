@@ -3,12 +3,14 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <utility>
 #include <vector>
 #include <atomic>
 #include <thread>
 #include <cstring>
 #include <netinet/in.h>
 #include "osc_messages.h"
+#include "audio/vu_ports.h"
 
 namespace BeatAnalyzer {
 namespace OSC {
@@ -23,6 +25,15 @@ namespace OSC {
  */
 class OscSender {
 public:
+    // VU channels per bundle: one block of the channel map (inputs, Main,
+    // Booth, stereo -- see audio/vu_ports.h), so each bundle is one consistent
+    // picture of its block. 10 messages of 28 bytes are 296 bytes, within the
+    // 512 of a bundle and a queue slot. Until 2026-09-30 one bundle took every
+    // channel and everything past the 17th was silently cut off.
+    static constexpr int kVuChannelsPerBundle = Audio::kVuMapBlock;
+    // Which channels each bundle carries: (first, count), in order.
+    static std::vector<std::pair<int, int>> vuBundleChunks(int numChannels);
+    static int serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels);
     OscSender();
     ~OscSender();
     
@@ -35,6 +46,9 @@ public:
     bool initialize();
     void shutdown();
     
+    // The beat's address, from the one truth (Config::OscWords).
+    void setBeatPath(const std::string& path) { m_beatPath = path; }
+
     bool sendBeatClock(const BeatClockMessage& msg);
     /** Send /beat to all targets EXCEPT the named one */
     bool sendBeatClockExcept(const BeatClockMessage& msg, const std::string& excludeTarget);
@@ -83,6 +97,7 @@ private:
     std::vector<std::unique_ptr<Target>> m_targets;
     std::vector<std::unique_ptr<Target>> m_vuTargets;  // Separate VU-Ports (optional)
     bool m_connected = false;
+    std::string m_beatPath;
     bool m_vuSeparate = false;  // true wenn mindestens 1 VU-Target existiert
     ErrorCallback m_errorCallback;
     
@@ -93,7 +108,6 @@ private:
     static int serializeIntIntFloat(char* buf, const char* path, int i1, int i2, float f1);
     static int serializeFloat(char* buf, const char* path, float f1);
     static int serializeFloats(char* buf, const char* path, float f1, float f2);
-    static int serializeBundle(char* buf, int bufSize, const std::string* paths, const float* peaks, const float* rms, int numChannels);
     
     void enqueueAll(const char* data, int len);
     void enqueueAllExcept(const char* data, int len, const std::string& excludeName);

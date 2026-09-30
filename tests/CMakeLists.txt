@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.16)
 
+# The tests are plain assert()s. build.sh builds Release, and Release sets
+# -DNDEBUG, which turns every assert() into nothing: until 2026-09-30 each of
+# these passed without checking anything. Keep them on for the tests.
+add_compile_options(-UNDEBUG)
+
 # Beat Detection Test
 add_executable(beat_detection_test
     beat_detection_test.cpp
@@ -45,3 +50,36 @@ target_compile_definitions(btrack_period_test PRIVATE
 )
 target_link_libraries(btrack_period_test PRIVATE ${SAMPLERATE_LIBRARIES} m)
 add_test(NAME BTrackPeriodTests COMMAND btrack_period_test)
+
+# The VU inputs' names, after REAPER's VU outputs 31-70
+add_executable(vu_ports_test
+    vu_ports_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/audio/vu_ports.cpp
+)
+target_include_directories(vu_ports_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+add_test(NAME VuPortsTests COMMAND vu_ports_test)
+
+# The OSC words and ports from the .env's a3-osc block (the one truth)
+add_executable(osc_words_test
+    osc_words_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/config/osc_words.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/audio/vu_ports.cpp
+)
+target_include_directories(osc_words_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+add_test(NAME OscWordsTests COMMAND osc_words_test)
+
+# The VU channels, split into bundles that fit the sender's 512-byte slots
+add_executable(vu_bundle_test
+    vu_bundle_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/osc/osc_sender.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/util/logging.cpp
+)
+target_include_directories(vu_bundle_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+target_link_libraries(vu_bundle_test PRIVATE pthread)
+add_test(NAME VuBundleTests COMMAND vu_bundle_test)

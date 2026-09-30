@@ -76,6 +76,13 @@ public:
     
     /** Setze Virtual CDJ Device-Nummer (default: 0x07, vermeidet Konflikte mit CDJ 1-4) */
     void setDeviceNumber(uint8_t num) { m_deviceNumber = num; }
+    // The Pro DJ Link ports, from the one truth (Config::OscWords).
+    void setPorts(int announce, int beat, int status)
+    {
+        m_portAnnounce = announce;
+        m_portBeat = beat;
+        m_portStatus = status;
+    }
     
     /** Setze Virtual CDJ Name (max 20 Zeichen) */
     void setDeviceName(const std::string& name);
@@ -105,9 +112,9 @@ public:
     
 private:
     // Pioneer Pro DJ Link Ports (Protokoll-Standard, nicht konfigurierbar)
-    static constexpr int PORT_ANNOUNCE = 50000;
-    static constexpr int PORT_BEAT     = 50001;
-    static constexpr int PORT_STATUS   = 50002;
+    int m_portAnnounce = -1;
+    int m_portBeat = -1;
+    int m_portStatus = -1;
     
     // Magic Header: "Qspt1WmJOL"
     static constexpr uint8_t MAGIC_HEADER[10] = {

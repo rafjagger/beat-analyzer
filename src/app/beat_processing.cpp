@@ -272,13 +272,15 @@ void BeatAnalyzerApp::sendVuMeterOsc() {
     
     m_oscSender->sendVuBundle(m_vuOscPaths.data(), peaks, rms, m_numVuChannels);
     
-    // DEBUG: /vu/3 auf Konsole (nur wenn aktiviert)
+    // DEBUG: der vierte Meter (Index 3) auf Konsole, unter seiner Adresse
+    // (seit 2026-09-30 zaehlt /vu ab 1, Index 3 ist also /vu/4)
     if (m_debugVuConsole && m_numVuChannels > 3) {
         static auto lastVuTime = std::chrono::steady_clock::now();
         auto now = std::chrono::steady_clock::now();
         double deltaMs = std::chrono::duration<double, std::milli>(now - lastVuTime).count();
         lastVuTime = now;
-        printf("/vu/3 | peak %.3f | rms %.3f | delta %6.1fms\n", peaks[3], rms[3], deltaMs);
+        printf("%s | peak %.3f | rms %.3f | delta %6.1fms\n", m_vuOscPaths[3].c_str(),
+               peaks[3], rms[3], deltaMs);
         fflush(stdout);
     }
 }

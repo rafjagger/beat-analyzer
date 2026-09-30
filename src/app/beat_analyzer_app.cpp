@@ -9,6 +9,8 @@
 #include <cmath>
 #include "app/beat_analyzer_app.h"
 
+#include <map>
+
 #include <iostream>
 
 using namespace BeatAnalyzer::Audio;
@@ -21,30 +23,13 @@ namespace BeatAnalyzer {
 // Helper
 // ============================================================================
 
-static bool parseHostPort(const std::string& value, std::string& host, int& port) {
-    auto colonPos = value.rfind(':');
-    if (colonPos != std::string::npos) {
-        host = value.substr(0, colonPos);
-        try {
-            port = std::stoi(value.substr(colonPos + 1));
-            return true;
-        } catch (...) {
-            return false;
-        }
-    } else {
-        host = value;
-        port = 9000;
-        return true;
-    }
-}
-
 // ============================================================================
 // Konstruktor
 // ============================================================================
 
 BeatAnalyzerApp::BeatAnalyzerApp()
     : m_numBpmChannels(1)
-    , m_numVuChannels(12)
+    , m_numVuChannels(Audio::kVuMapChannels)
     , m_frameCount(0)
 {
 }
@@ -88,7 +73,7 @@ bool BeatAnalyzerApp::initialize() {
     
     initBeatTrackers(btHopSize, btFrameSize);
     initOscSender(env);
-    initOscReceiver(env);
+    initOscReceiver();
     initPioneerReceiver(env);
     
     // Audio-Callback setzen
@@ -196,7 +181,17 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
     
     // Kanäle
     m_numBpmChannels = std::max(0, env.getInt("NUM_BPM_CHANNELS", 1));
-    m_numVuChannels = std::max(0, env.getInt("NUM_VU_CHANNELS", 12));
+    m_numVuChannels = Audio::clampVuChannels(env.getInt("NUM_VU_CHANNELS", Audio::kVuMapChannels));
+
+    // Die OSC-Woerter und Ports: aus dem a3-osc-Block der .env, den das
+    // a3-core-Paket aus der einen Wahrheit (a3-osc.json) schreibt.
+    std::map<std::string, std::string> words;
+    for (const auto& key : Config::oscWordKeys()) {
+        const auto value = env.getString(key, "");
+        if (!value.empty())
+            words[key] = value;
+    }
+    m_oscWords = Config::oscWordsFrom(words);
     
     LOG_INFO("BPM Kanäle: " + std::to_string(m_numBpmChannels) + 
              ", VU Kanäle: " + std::to_string(m_numVuChannels));
@@ -248,7 +243,7 @@ void BeatAnalyzerApp::initVuMeters() {
         vuMeter->setPeakFalloff(m_vuPeakFalloff);
         m_vuMeters.push_back(std::move(vuMeter));
         m_vuTrackStates.push_back(VuTrackState{});
-        m_vuOscPaths.push_back("/vu/" + std::to_string(i));
+        m_vuOscPaths.push_back(Audio::vuOscPath(m_oscWords.vuPattern, i));
     }
 }
 
@@ -292,6 +287,7 @@ void BeatAnalyzerApp::initBeatTrackers(int hopSize, int frameSize) {
 
 void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
     m_oscSender = std::make_shared<OscSender>();
+    m_oscSender->setBeatPath(m_oscWords.beat);
     
     auto oscHostKeys = env.getKeysWithPrefix("OSC_HOST_");
     if (!oscHostKeys.empty()) {
@@ -301,15 +297,15 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
             
             std::string host;
             int port;
-            if (parseHostPort(value, host, port)) {
+            if (Config::parseHostPort(value, host, port)) {
                 std::string name = key.substr(9);  // Nach "OSC_HOST_"
                 m_oscSender->addTarget(name, host, port);
             }
         }
     } else {
-        std::string oscHost = env.getString("OSC_HOST", "127.0.0.1");
-        int oscPort = env.getInt("OSC_PORT", 9000);
-        m_oscSender->addTarget("default", oscHost, oscPort);
+        // Keine Ziele in der .env: der a3-osc-Block fehlt. Kein Ersatzziel --
+        // eine erfundene Adresse waere eine zweite Wahrheit.
+        LOG_WARN("Keine OSC_HOST_-Ziele in der .env -- fehlt der a3-osc-Block?");
     }
     
     // Separate VU-Ports: OSC_VU_Name=host:port
@@ -322,7 +318,7 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
         
         std::string host;
         int port;
-        if (parseHostPort(value, host, port)) {
+        if (Config::parseHostPort(value, host, port)) {
             std::string name = key.substr(7);  // Nach "OSC_VU_"
             m_oscSender->addVuTarget(name, host, port);
         }
@@ -335,12 +331,14 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
     }
 }
 
-void BeatAnalyzerApp::initOscReceiver(EnvConfig& env) {
-    int portA3motion = env.getInt("OSC_PORT_A3MOTION", 7775);
+void BeatAnalyzerApp::initOscReceiver() {
+    int portA3motion = m_oscWords.listenPort;
     
     m_oscReceiverA3motion = std::make_unique<OscReceiver>();
     m_oscReceiverA3motion->setPort(portA3motion);
-    m_oscReceiverA3motion->setBeatClockPath("/beat");
+    m_oscReceiverA3motion->setBeatClockPath(m_oscWords.beat);
+    m_oscReceiverA3motion->setTapPath(m_oscWords.tap);
+    m_oscReceiverA3motion->setClockModePath(m_oscWords.clockMode);
     
     // /beat von a3motion: nur in Modus 0 weiterleiten (an alle AUSSER motion)
     m_oscReceiverA3motion->setCallback([this](const ReceivedBeatClock& clock) {
@@ -392,6 +390,8 @@ void BeatAnalyzerApp::initPioneerReceiver(EnvConfig& env) {
     m_pioneerReceiver = std::make_unique<PioneerReceiver>();
     m_pioneerReceiver->setDeviceNumber(static_cast<uint8_t>(pioneerDeviceNum));
     m_pioneerReceiver->setDeviceName("beat-analyzer");
+    m_pioneerReceiver->setPorts(m_oscWords.pioneerAnnounce, m_oscWords.pioneerBeat,
+                                m_oscWords.pioneerStatus);
     
     // Beat von Pioneer: nur in Modus 2 weiterleiten
     m_pioneerReceiver->setCallback([this](const PioneerBeat& beat) {
@@ -427,7 +427,9 @@ void BeatAnalyzerApp::initPioneerReceiver(EnvConfig& env) {
     if (m_pioneerReceiver->start()) {
         LOG_INFO("Pioneer Pro DJ Link Receiver aktiv (Virtual CDJ #" + std::to_string(pioneerDeviceNum) + ")");
     } else {
-        LOG_WARN("Pioneer Receiver konnte nicht gestartet werden (Ports 50000-50002 belegt?)");
+        LOG_WARN("Pioneer Receiver konnte nicht gestartet werden (Ports "
+                 + std::to_string(m_oscWords.pioneerAnnounce) + "-"
+                 + std::to_string(m_oscWords.pioneerStatus) + " belegt?)");
     }
 }
 

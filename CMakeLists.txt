@@ -74,6 +74,8 @@ set(BEAT_ANALYZER_SOURCES
     src/app/beat_processing.cpp
     src/audio/jack_client.cpp
     src/audio/audio_buffer.cpp
+    src/audio/vu_ports.cpp
+    src/config/osc_words.cpp
     src/analysis/beat_detection.cpp
     src/analysis/beat_tracker.cpp
     src/analysis/beat_clock_follower.cpp
@@ -92,6 +94,7 @@ set(BEAT_ANALYZER_HEADERS
     include/app/beat_analyzer_app.h
     include/audio/jack_client.h
     include/audio/audio_buffer.h
+    include/audio/vu_ports.h
     include/audio/audio_types.h
     include/analysis/beat_detection.h
     include/analysis/beat_tracker.h

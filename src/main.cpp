@@ -32,13 +32,13 @@ static void printUsage(const char* programName) {
     std::cout << "Verwendung: " << programName << "\n\n";
     std::cout << "Konfiguration via .env Datei:\n";
     std::cout << "  NUM_BPM_CHANNELS=1   Anzahl BPM-Eingänge (bpm_1 bis bpm_N)\n";
-    std::cout << "  NUM_VU_CHANNELS=12   Anzahl VU-Eingänge (vu_1 bis vu_N)\n";
+    std::cout << "  NUM_VU_CHANNELS=40   Anzahl VU-Eingänge (vu_in1_pre … vu_free70, REAPER-Ausgänge 31-70)\n";
     std::cout << "\nOSC Ziele (beliebig viele):\n";
     std::cout << "  OSC_HOST_Name=host:port\n";
     std::cout << "  Beispiel: OSC_HOST_Protokol=127.0.0.1:9000\n";
     std::cout << "\nOSC Adressen:\n";
     std::cout << "  /beat           Beat Clock: iif beat(1-4), bar, bpm\n";
-    std::cout << "  /vu/0-N         VU-Meter: ff peak, rms\n";
+    std::cout << "  /vu/1-40        VU-Meter: ff peak, rms\n";
     std::cout << "\n";
 }
 

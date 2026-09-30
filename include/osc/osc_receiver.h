@@ -48,6 +48,8 @@ public:
     
     void setPort(int port);
     void setBeatClockPath(const std::string& path);
+    void setTapPath(const std::string& path);
+    void setClockModePath(const std::string& path);
     void setCallback(BeatClockCallback callback);
     void setClockModeCallback(ClockModeCallback callback) { m_clockModeCallback = callback; }
     void setTapCallback(TapCallback callback) { m_tapCallback = callback; }
@@ -64,8 +66,10 @@ public:
     void setClockMode(int mode) { m_clockMode.store(mode); }
     
 private:
-    int m_port = 7775;
-    std::string m_beatClockPath = "/beat";
+    int m_port = -1;   // setPort(), from Config::OscWords
+    std::string m_beatClockPath;
+    std::string m_tapPath;
+    std::string m_clockModePath;
     int m_sockfd = -1;
     std::thread m_thread;
     std::atomic<bool> m_running{false};

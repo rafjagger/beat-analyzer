@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <algorithm>
 #include <cstring>
 #include <cmath>
 #include <chrono>
@@ -296,7 +297,7 @@ void OscSender::enqueueVu(const char* data, int len) {
 bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
     if (!m_connected) return false;
     char buf[256];
-    int len = serializeIntIntFloat(buf, "/beat", msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
+    int len = serializeIntIntFloat(buf, m_beatPath.c_str(), msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
     enqueueAll(buf, len);
     return true;
 }
@@ -304,7 +305,7 @@ bool OscSender::sendBeatClock(const BeatClockMessage& msg) {
 bool OscSender::sendBeatClockExcept(const BeatClockMessage& msg, const std::string& excludeTarget) {
     if (!m_connected) return false;
     char buf[256];
-    int len = serializeIntIntFloat(buf, "/beat", msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
+    int len = serializeIntIntFloat(buf, m_beatPath.c_str(), msg.beat_number, msg.bar_number, static_cast<float>(msg.bpm));
     enqueueAllExcept(buf, len, excludeTarget);
     return true;
 }
@@ -370,12 +371,21 @@ bool OscSender::sendMessage(const OscMessage& msg) {
     return true;
 }
 
+std::vector<std::pair<int, int>> OscSender::vuBundleChunks(int numChannels) {
+    std::vector<std::pair<int, int>> chunks;
+    for (int first = 0; first < numChannels; first += kVuChannelsPerBundle)
+        chunks.emplace_back(first, std::min(kVuChannelsPerBundle, numChannels - first));
+    return chunks;
+}
+
 bool OscSender::sendVuBundle(const std::string* paths, const float* peaks, const float* rms, int numChannels) {
     if (!m_connected || numChannels <= 0) return false;
-    char buf[512];
-    int len = serializeBundle(buf, sizeof(buf), paths, peaks, rms, numChannels);
-    if (len <= 0) return false;
-    enqueueVu(buf, len);
+    for (auto const& [first, count] : vuBundleChunks(numChannels)) {
+        char buf[sizeof(Packet::data)];
+        int len = serializeBundle(buf, sizeof(buf), paths + first, peaks + first, rms + first, count);
+        if (len <= 0) return false;
+        enqueueVu(buf, len);
+    }
     return true;
 }
 
