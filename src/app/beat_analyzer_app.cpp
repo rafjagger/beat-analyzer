@@ -186,6 +186,12 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
     m_numBpmChannels = std::max(0, env.getInt("NUM_BPM_CHANNELS", 1));
     m_numVuChannels = Audio::clampVuChannels(env.getInt("NUM_VU_CHANNELS", Audio::kVuMapChannels));
     m_numStemMeters = std::clamp(env.getInt("NUM_STEM_METERS", Audio::kStemMeters), 0, Audio::kStemMeters);
+    if (const int beside = Audio::vuChannelsBesideStems(m_numVuChannels, m_numStemMeters);
+        beside != m_numVuChannels) {
+        LOG_WARN("NUM_VU_CHANNELS=" + std::to_string(m_numVuChannels) + " with stem meters: " +
+                 "only " + std::to_string(beside) + " VU inputs, the stems are /vu/41-48");
+        m_numVuChannels = beside;
+    }
 
     // Die OSC-Woerter und Ports: aus dem a3-osc-Block der .env, den das
     // a3-core-Paket aus der einen Wahrheit (a3-osc.json) schreibt.

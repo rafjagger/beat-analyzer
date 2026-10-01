@@ -41,6 +41,10 @@ std::string stemPortName(int stem, int side);
 // Where stem s sits in the /vu bundle (0-based): after the map's forty.
 int stemOscIndex(int stem);
 
+// With stems on, the VU inputs stop at the map's forty: the stems take
+// /vu/41-48, and more inputs would be overwritten by them.
+int vuChannelsBesideStems(int numVu, int numStems);
+
 // How many values one /vu send carries.
 int vuBundleCount(int numVu, int numStems);
 

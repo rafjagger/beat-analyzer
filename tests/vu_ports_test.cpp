@@ -100,9 +100,21 @@ static void test_no_stem_meters()
     std::cout << "  ✓ the bundle carries the forty, plus the stems when there are any" << std::endl;
 }
 
+// The stems sit at /vu/41-48: with them on, more than the map's forty VU
+// inputs would be overwritten by them and the rest never sent.
+static void test_with_stems_the_vu_inputs_stop_at_the_map()
+{
+    assert(vuChannelsBesideStems(64, 8) == kVuMapChannels);
+    assert(vuChannelsBesideStems(40, 8) == 40);
+    assert(vuChannelsBesideStems(12, 8) == 12);
+    assert(vuChannelsBesideStems(64, 0) == 64);
+    std::cout << "  ✓ with stems, the VU inputs stop at the map's forty" << std::endl;
+}
+
 int main()
 {
     std::cout << "VU port tests" << std::endl;
+    test_with_stems_the_vu_inputs_stop_at_the_map();
     test_the_stem_ports_name_deck_stem_and_side();
     test_the_stems_come_after_the_forty();
     test_no_stem_meters();

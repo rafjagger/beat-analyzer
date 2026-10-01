@@ -50,6 +50,11 @@ int stemOscIndex(int stem)
     return kVuMapChannels + stem;
 }
 
+int vuChannelsBesideStems(int numVu, int numStems)
+{
+    return numStems > 0 ? std::min(numVu, kVuMapChannels) : numVu;
+}
+
 int vuBundleCount(int numVu, int numStems)
 {
     return numStems > 0 ? kVuMapChannels + numStems : numVu;
