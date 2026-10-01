@@ -72,9 +72,40 @@ static void test_the_osc_address_counts_from_one()
     std::cout << "  ✓ /vu/1 .. /vu/40" << std::endl;
 }
 
+// StemDeck's 8 stereo stems, one meter per pair (issue a3-system#71): the
+// ports say deck, stem and side, the OSC follows the forty as /vu/41-48.
+static void test_the_stem_ports_name_deck_stem_and_side()
+{
+    assert(kStemMeters == 8);
+    assert(stemPortName(0, 0) == "vu_stem_a1_L");
+    assert(stemPortName(3, 1) == "vu_stem_a4_R");
+    assert(stemPortName(4, 0) == "vu_stem_b1_L");
+    assert(stemPortName(7, 1) == "vu_stem_b4_R");
+    std::cout << "  ✓ stem ports a1_L … b4_R" << std::endl;
+}
+
+static void test_the_stems_come_after_the_forty()
+{
+    assert(stemOscIndex(0) == 40);   // /vu/41
+    assert(stemOscIndex(7) == 47);   // /vu/48
+    assert(vuOscPath("/vu/{n}", stemOscIndex(7)) == "/vu/48");
+    std::cout << "  ✓ stems are /vu/41-48" << std::endl;
+}
+
+static void test_no_stem_meters()
+{
+    assert(vuBundleCount(40, 0) == 40);
+    assert(vuBundleCount(40, 8) == 48);
+    assert(vuBundleCount(40, 8) <= kMaxVuChannels);
+    std::cout << "  ✓ the bundle carries the forty, plus the stems when there are any" << std::endl;
+}
+
 int main()
 {
     std::cout << "VU port tests" << std::endl;
+    test_the_stem_ports_name_deck_stem_and_side();
+    test_the_stems_come_after_the_forty();
+    test_no_stem_meters();
     test_the_map_names_forty_inputs();
     test_each_block_by_its_reaper_output();
     test_beyond_the_map_ports_are_numbered();

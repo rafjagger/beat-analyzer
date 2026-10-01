@@ -66,9 +66,34 @@ static void test_a_short_last_block_is_its_own_bundle()
     std::cout << "  ✓ 12 channels: ten, then two" << std::endl;
 }
 
+// The forty plus the 8 stem meters (issue a3-system#71): the stems are a
+// fifth bundle of their own and fit like the others.
+static void test_a_bundle_of_forty_eight_fits()
+{
+    std::vector<std::string> paths;
+    std::vector<float> peaks(48, 0.5f), rms(48, 0.25f);
+    for (int i = 0; i < 48; ++i) paths.push_back("/vu/" + std::to_string(i + 1));
+
+    auto const chunks = OscSender::vuBundleChunks(48);
+    assert(chunks.size() == 5);
+    assert(chunks[4] == std::make_pair(40, 8));
+    int total = 0;
+    for (auto const& [first, count] : chunks) {
+        char buf[512];
+        int len = OscSender::serializeBundle(buf, sizeof(buf), paths.data() + first,
+                                             peaks.data() + first, rms.data() + first, count);
+        assert(len > 0 && len <= 512);
+        assert(elementsIn(buf, len) == count);
+        total += count;
+    }
+    assert(total == 48);
+    std::cout << "  ✓ 48 channels: the stems are a fifth bundle that fits" << std::endl;
+}
+
 int main()
 {
     std::cout << "VU bundle tests" << std::endl;
+    test_a_bundle_of_forty_eight_fits();
     test_forty_channels_go_out_one_bundle_per_block();
     test_every_bundle_fits_and_carries_its_channels();
     test_a_short_last_block_is_its_own_bundle();

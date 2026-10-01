@@ -30,6 +30,20 @@ std::string vuPortName(int index);
 // REAPER out 30 + N.
 std::string vuOscPath(const std::string& pattern, int index);
 
+// StemDeck's stems, one meter per stereo pair (issue a3-system#71): deck A's
+// stems 1-4, then deck B's, fed by two inputs each (vu_stem_a1_L/_R ...) and
+// sent after the forty as /vu/41-48. The truth names them stem_a1 ... stem_b4.
+constexpr int kStemMeters = 8;
+
+// Stem s (0-7), side 0 = L, 1 = R.
+std::string stemPortName(int stem, int side);
+
+// Where stem s sits in the /vu bundle (0-based): after the map's forty.
+int stemOscIndex(int stem);
+
+// How many values one /vu send carries.
+int vuBundleCount(int numVu, int numStems);
+
 // A channel count from the .env, held to what the arrays hold.
 int clampVuChannels(int requested);
 
