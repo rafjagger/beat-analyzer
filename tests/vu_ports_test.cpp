@@ -72,61 +72,22 @@ static void test_the_osc_address_counts_from_one()
     std::cout << "  ✓ /vu/1 .. /vu/40" << std::endl;
 }
 
-// StemDeck's 8 stereo stems, one meter per pair (issue a3-system#71): the
-// ports say deck, stem and side, the OSC follows the forty as /vu/41-48.
-static void test_the_stem_ports_name_deck_stem_and_side()
+// /vu/41-48 are StemDeck's own stem meters since spec stemdeck-remote
+// (2026-10-01): whatever NUM_VU_CHANNELS says, the analyzer sends the map's
+// forty at most, so it never speaks on StemDeck's addresses.
+static void test_the_vu_inputs_never_reach_stemdecks_addresses()
 {
-    assert(kStemMeters == 8);
-    assert(stemPortName(0, 0) == "vu_stem_a1_L");
-    assert(stemPortName(3, 1) == "vu_stem_a4_R");
-    assert(stemPortName(4, 0) == "vu_stem_b1_L");
-    assert(stemPortName(7, 1) == "vu_stem_b4_R");
-    std::cout << "  ✓ stem ports a1_L … b4_R" << std::endl;
-}
-
-static void test_the_stems_come_after_the_forty()
-{
-    assert(stemOscIndex(0) == 40);   // /vu/41
-    assert(stemOscIndex(7) == 47);   // /vu/48
-    assert(vuOscPath("/vu/{n}", stemOscIndex(7)) == "/vu/48");
-    std::cout << "  ✓ stems are /vu/41-48" << std::endl;
-}
-
-// StemDeck sends its own stem levels since spec stemdeck-remote
-// (2026-10-01): the analyzer meters no stems unless NUM_STEM_METERS asks.
-static void test_stems_are_off_by_default()
-{
-    assert(kDefaultStemMeters == 0);
-    std::cout << "  ✓ no stem meters by default: StemDeck sends /vu/41-48" << std::endl;
-}
-
-static void test_no_stem_meters()
-{
-    assert(vuBundleCount(40, 0) == 40);
-    assert(vuBundleCount(40, 8) == 48);
-    assert(vuBundleCount(40, 8) <= kMaxVuChannels);
-    std::cout << "  ✓ the bundle carries the forty, plus the stems when there are any" << std::endl;
-}
-
-// The stems sit at /vu/41-48: with them on, more than the map's forty VU
-// inputs would be overwritten by them and the rest never sent.
-static void test_with_stems_the_vu_inputs_stop_at_the_map()
-{
-    assert(vuChannelsBesideStems(64, 8) == kVuMapChannels);
-    assert(vuChannelsBesideStems(40, 8) == 40);
-    assert(vuChannelsBesideStems(12, 8) == 12);
-    assert(vuChannelsBesideStems(64, 0) == 64);
-    std::cout << "  ✓ with stems, the VU inputs stop at the map's forty" << std::endl;
+    assert(vuChannelsSent(64) == kVuMapChannels);
+    assert(vuChannelsSent(40) == 40);
+    assert(vuChannelsSent(12) == 12);
+    assert(vuChannelsSent(0) == 0);
+    std::cout << "  ✓ at most the map's forty: /vu/41-48 are StemDeck's" << std::endl;
 }
 
 int main()
 {
     std::cout << "VU port tests" << std::endl;
-    test_with_stems_the_vu_inputs_stop_at_the_map();
-    test_the_stem_ports_name_deck_stem_and_side();
-    test_the_stems_come_after_the_forty();
-    test_no_stem_meters();
-    test_stems_are_off_by_default();
+    test_the_vu_inputs_never_reach_stemdecks_addresses();
     test_the_map_names_forty_inputs();
     test_each_block_by_its_reaper_output();
     test_beyond_the_map_ports_are_numbered();

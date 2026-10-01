@@ -61,14 +61,6 @@ target_include_directories(vu_ports_test PRIVATE
 )
 add_test(NAME VuPortsTests COMMAND vu_ports_test)
 
-# A stem pair metered as one: the louder side
-add_executable(stem_meter_test
-    stem_meter_test.cpp
-)
-target_include_directories(stem_meter_test PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
-)
-add_test(NAME StemMeterTests COMMAND stem_meter_test)
 
 # The OSC words and ports from the .env's a3-osc block (the one truth)
 add_executable(osc_words_test

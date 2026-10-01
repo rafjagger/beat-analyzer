@@ -8,7 +8,6 @@
  */
 
 #include "app/beat_analyzer_app.h"
-#include "analysis/stem_meter.h"
 
 #include <cstdio>
 #include <algorithm>
@@ -34,13 +33,6 @@ void BeatAnalyzerApp::processAudio(const std::vector<const CSAMPLE*>& bpmBuffers
     for (int ch = 0; ch < m_numVuChannels && ch < static_cast<int>(vuBuffers.size()); ++ch) {
         const CSAMPLE* buffer = vuBuffers[ch];
         m_vuMeters[ch]->processMono(buffer, frameCount);
-    }
-
-    // The stem pairs' L and R: their buffers follow the VU buffers.
-    for (int i = 0; i < static_cast<int>(m_stemMeters.size()); ++i) {
-        const size_t index = static_cast<size_t>(m_numVuChannels + i);
-        if (index < vuBuffers.size())
-            m_stemMeters[static_cast<size_t>(i)]->processMono(vuBuffers[index], frameCount);
     }
     
     // BPM Kanäle: Audio nur in Ringbuffer kopieren (billig: ~512 bytes memcpy)
@@ -278,18 +270,7 @@ void BeatAnalyzerApp::sendVuMeterOsc() {
         rms[ch] = m_vuMeters[ch]->getRmsLinear();
     }
 
-    // One value per stem pair, the louder side (issue a3-system#71).
-    for (int stem = 0; stem < m_numStemMeters; ++stem) {
-        auto const& left = *m_stemMeters[static_cast<size_t>(2 * stem)];
-        auto const& right = *m_stemMeters[static_cast<size_t>(2 * stem + 1)];
-        auto const level = Analysis::louder({left.getPeakLinear(), left.getRmsLinear()},
-                                            {right.getPeakLinear(), right.getRmsLinear()});
-        peaks[Audio::stemOscIndex(stem)] = level.peak;
-        rms[Audio::stemOscIndex(stem)] = level.rms;
-    }
-
-    m_oscSender->sendVuBundle(m_vuOscPaths.data(), peaks, rms,
-                              Audio::vuBundleCount(m_numVuChannels, m_numStemMeters));
+    m_oscSender->sendVuBundle(m_vuOscPaths.data(), peaks, rms, m_numVuChannels);
     
     // DEBUG: der vierte Meter (Index 3) auf Konsole, unter seiner Adresse
     // (seit 2026-09-30 zaehlt /vu ab 1, Index 3 ist also /vu/4)

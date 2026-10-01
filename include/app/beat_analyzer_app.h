@@ -168,7 +168,6 @@ private:
     std::shared_ptr<Audio::JackClient> m_jackClient;
     int m_numBpmChannels;
     int m_numVuChannels;
-    int m_numStemMeters;
     
     // Beat-Kommunikation JACK-Callback → Beat-Thread (lock-free)
     std::atomic<double> m_btrackBpmValue[MAX_BPM_CHANNELS] = {};
@@ -184,7 +183,6 @@ private:
     
     // VU-Meter
     std::vector<std::unique_ptr<VuMeter>> m_vuMeters;
-    std::vector<std::unique_ptr<VuMeter>> m_stemMeters;  // L, R per stem pair
     std::vector<VuTrackState> m_vuTrackStates;
     std::vector<std::string> m_vuOscPaths;
 

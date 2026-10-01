@@ -30,28 +30,10 @@ std::string vuPortName(int index);
 // REAPER out 30 + N.
 std::string vuOscPath(const std::string& pattern, int index);
 
-// StemDeck's stems, one meter per stereo pair (issue a3-system#71): deck A's
-// stems 1-4, then deck B's, fed by two inputs each (vu_stem_a1_L/_R ...) and
-// sent after the forty as /vu/41-48. The truth names them stem_a1 ... stem_b4.
-constexpr int kStemMeters = 8;
-
-// Off unless NUM_STEM_METERS asks: StemDeck sends its own stem levels as
-// /vu/41-48 since spec stemdeck-remote (2026-10-01), and two senders on one
-// address would fight.
-constexpr int kDefaultStemMeters = 0;
-
-// Stem s (0-7), side 0 = L, 1 = R.
-std::string stemPortName(int stem, int side);
-
-// Where stem s sits in the /vu bundle (0-based): after the map's forty.
-int stemOscIndex(int stem);
-
-// With stems on, the VU inputs stop at the map's forty: the stems take
-// /vu/41-48, and more inputs would be overwritten by them.
-int vuChannelsBesideStems(int numVu, int numStems);
-
-// How many values one /vu send carries.
-int vuBundleCount(int numVu, int numStems);
+// How many VU inputs are sent: at most the map's forty. /vu/41-48 are
+// StemDeck's own stem meters since spec stemdeck-remote (2026-10-01), so the
+// analyzer never speaks on them, whatever NUM_VU_CHANNELS asks for.
+int vuChannelsSent(int numVu);
 
 // A channel count from the .env, held to what the arrays hold.
 int clampVuChannels(int requested);
