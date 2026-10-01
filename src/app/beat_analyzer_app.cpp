@@ -31,7 +31,7 @@ namespace BeatAnalyzer {
 BeatAnalyzerApp::BeatAnalyzerApp()
     : m_numBpmChannels(1)
     , m_numVuChannels(Audio::kVuMapChannels)
-    , m_numStemMeters(Audio::kStemMeters)
+    , m_numStemMeters(Audio::kDefaultStemMeters)
     , m_frameCount(0)
 {
 }
@@ -185,7 +185,7 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
     // Kanäle
     m_numBpmChannels = std::max(0, env.getInt("NUM_BPM_CHANNELS", 1));
     m_numVuChannels = Audio::clampVuChannels(env.getInt("NUM_VU_CHANNELS", Audio::kVuMapChannels));
-    m_numStemMeters = std::clamp(env.getInt("NUM_STEM_METERS", Audio::kStemMeters), 0, Audio::kStemMeters);
+    m_numStemMeters = std::clamp(env.getInt("NUM_STEM_METERS", Audio::kDefaultStemMeters), 0, Audio::kStemMeters);
     if (const int beside = Audio::vuChannelsBesideStems(m_numVuChannels, m_numStemMeters);
         beside != m_numVuChannels) {
         LOG_WARN("NUM_VU_CHANNELS=" + std::to_string(m_numVuChannels) + " with stem meters: " +
