@@ -92,6 +92,14 @@ static void test_the_stems_come_after_the_forty()
     std::cout << "  ✓ stems are /vu/41-48" << std::endl;
 }
 
+// StemDeck sends its own stem levels since spec stemdeck-remote
+// (2026-10-01): the analyzer meters no stems unless NUM_STEM_METERS asks.
+static void test_stems_are_off_by_default()
+{
+    assert(kDefaultStemMeters == 0);
+    std::cout << "  ✓ no stem meters by default: StemDeck sends /vu/41-48" << std::endl;
+}
+
 static void test_no_stem_meters()
 {
     assert(vuBundleCount(40, 0) == 40);
@@ -118,6 +126,7 @@ int main()
     test_the_stem_ports_name_deck_stem_and_side();
     test_the_stems_come_after_the_forty();
     test_no_stem_meters();
+    test_stems_are_off_by_default();
     test_the_map_names_forty_inputs();
     test_each_block_by_its_reaper_output();
     test_beyond_the_map_ports_are_numbered();
