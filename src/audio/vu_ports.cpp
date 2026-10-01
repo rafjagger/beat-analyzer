@@ -38,6 +38,28 @@ std::string vuOscPath(const std::string& pattern, int index)
     return path;
 }
 
+std::string stemPortName(int stem, int side)
+{
+    const char deck = stem < kStemMeters / 2 ? 'a' : 'b';
+    return std::string("vu_stem_") + deck + std::to_string(stem % (kStemMeters / 2) + 1)
+         + (side == 0 ? "_L" : "_R");
+}
+
+int stemOscIndex(int stem)
+{
+    return kVuMapChannels + stem;
+}
+
+int vuChannelsBesideStems(int numVu, int numStems)
+{
+    return numStems > 0 ? std::min(numVu, kVuMapChannels) : numVu;
+}
+
+int vuBundleCount(int numVu, int numStems)
+{
+    return numStems > 0 ? kVuMapChannels + numStems : numVu;
+}
+
 int clampVuChannels(int requested)
 {
     return std::clamp(requested, 0, kMaxVuChannels);

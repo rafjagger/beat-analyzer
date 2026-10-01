@@ -24,9 +24,12 @@ public:
         const std::vector<const CSAMPLE*>& vuBuffers,
         int frameCount)>;
     
+    // The stem meters' inputs (two per pair, vu_stem_a1_L ...) are registered
+    // after the VU inputs, so their buffers follow the VU buffers.
     JackClient(const std::string& clientName = "beat-analyzer", 
                int numBpmChannels = 4, 
-               int numVuChannels = 2);
+               int numVuChannels = 2,
+               int numStemMeters = 0);
     ~JackClient();
     
     // Non-copyable
@@ -68,6 +71,7 @@ private:
     std::string m_clientName;
     int m_numBpmChannels;
     int m_numVuChannels;
+    int m_numStemMeters;
     jack_client_t* m_client;
     std::vector<jack_port_t*> m_bpmPorts;
     std::vector<jack_port_t*> m_vuPorts;

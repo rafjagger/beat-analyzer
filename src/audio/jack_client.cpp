@@ -7,10 +7,12 @@
 namespace BeatAnalyzer {
 namespace Audio {
 
-JackClient::JackClient(const std::string& clientName, int numBpmChannels, int numVuChannels)
+JackClient::JackClient(const std::string& clientName, int numBpmChannels, int numVuChannels,
+                       int numStemMeters)
     : m_clientName(clientName),
       m_numBpmChannels(std::max(0, numBpmChannels)),
       m_numVuChannels(std::max(0, numVuChannels)),
+      m_numStemMeters(std::clamp(numStemMeters, 0, Audio::kStemMeters)),
       m_client(nullptr),
       m_connected(false) {
 }
@@ -64,6 +66,26 @@ bool JackClient::initialize() {
         }
         m_vuPorts.push_back(port);
     }
+
+    // The stem pairs' inputs, L and R each: their buffers come after the VU
+    // inputs' in the process callback (issue a3-system#71).
+    for (int stem = 0; stem < m_numStemMeters; ++stem) {
+        for (int side = 0; side < 2; ++side) {
+            std::string portName = stemPortName(stem, side);
+            jack_port_t* port = jack_port_register(
+                m_client,
+                portName.c_str(),
+                JACK_DEFAULT_AUDIO_TYPE,
+                JackPortIsInput,
+                0);
+
+            if (!port) {
+                LOG_ERROR("Failed to create JACK port: " + portName);
+                return false;
+            }
+            m_vuPorts.push_back(port);
+        }
+    }
     
     // Set process callback
     jack_set_process_callback(m_client, processCallback, this);
@@ -71,7 +93,8 @@ bool JackClient::initialize() {
     
     m_connected = true;
     LOG_INFO("JACK client initialized: " + std::to_string(m_numBpmChannels) + 
-             " BPM channels, " + std::to_string(m_numVuChannels) + " VU channels");
+             " BPM channels, " + std::to_string(m_numVuChannels) + " VU channels, " +
+             std::to_string(m_numStemMeters) + " stem meters");
     return true;
 }
 

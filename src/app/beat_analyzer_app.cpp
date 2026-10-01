@@ -6,6 +6,7 @@
  * shutdown():   Alles sauber beenden
  */
 
+#include <algorithm>
 #include <cmath>
 #include "app/beat_analyzer_app.h"
 
@@ -30,6 +31,7 @@ namespace BeatAnalyzer {
 BeatAnalyzerApp::BeatAnalyzerApp()
     : m_numBpmChannels(1)
     , m_numVuChannels(Audio::kVuMapChannels)
+    , m_numStemMeters(Audio::kStemMeters)
     , m_frameCount(0)
 {
 }
@@ -54,7 +56,8 @@ bool BeatAnalyzerApp::initialize() {
     
     // JACK Client initialisieren — MUSS vor BTrack passieren (braucht Buffer Size)
     std::string jackName = env.getString("JACK_CLIENT_NAME", "beat-analyzer");
-    m_jackClient = std::make_shared<JackClient>(jackName, m_numBpmChannels, m_numVuChannels);
+    m_jackClient = std::make_shared<JackClient>(jackName, m_numBpmChannels, m_numVuChannels,
+                                                m_numStemMeters);
     
     if (!m_jackClient->initialize()) {
         LOG_ERROR("JACK Client konnte nicht initialisiert werden");
@@ -182,6 +185,13 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
     // Kanäle
     m_numBpmChannels = std::max(0, env.getInt("NUM_BPM_CHANNELS", 1));
     m_numVuChannels = Audio::clampVuChannels(env.getInt("NUM_VU_CHANNELS", Audio::kVuMapChannels));
+    m_numStemMeters = std::clamp(env.getInt("NUM_STEM_METERS", Audio::kStemMeters), 0, Audio::kStemMeters);
+    if (const int beside = Audio::vuChannelsBesideStems(m_numVuChannels, m_numStemMeters);
+        beside != m_numVuChannels) {
+        LOG_WARN("NUM_VU_CHANNELS=" + std::to_string(m_numVuChannels) + " with stem meters: " +
+                 "only " + std::to_string(beside) + " VU inputs, the stems are /vu/41-48");
+        m_numVuChannels = beside;
+    }
 
     // Die OSC-Woerter und Ports: aus dem a3-osc-Block der .env, den das
     // a3-core-Paket aus der einen Wahrheit (a3-osc.json) schreibt.
@@ -245,6 +255,19 @@ void BeatAnalyzerApp::initVuMeters() {
         m_vuTrackStates.push_back(VuTrackState{});
         m_vuOscPaths.push_back(Audio::vuOscPath(m_oscWords.vuPattern, i));
     }
+
+    // The stem pairs: two meters each (L, R), sent as one, the louder side,
+    // after the forty (/vu/41-48). The paths cover the whole bundle.
+    for (int i = 0; i < 2 * m_numStemMeters; ++i) {
+        auto meter = std::make_unique<VuMeter>();
+        meter->setRmsAttack(m_vuRmsAttack);
+        meter->setRmsRelease(m_vuRmsRelease);
+        meter->setPeakFalloff(m_vuPeakFalloff);
+        m_stemMeters.push_back(std::move(meter));
+    }
+    const int bundle = Audio::vuBundleCount(m_numVuChannels, m_numStemMeters);
+    for (int i = static_cast<int>(m_vuOscPaths.size()); i < bundle; ++i)
+        m_vuOscPaths.push_back(Audio::vuOscPath(m_oscWords.vuPattern, i));
 }
 
 void BeatAnalyzerApp::initBeatTrackers(int hopSize, int frameSize) {
