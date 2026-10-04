@@ -2,8 +2,8 @@
 
 The beat clock and the level meters of the [A³ Audio](https://github.com/a3-audio/a3-system)
 system. It runs on the A³ Core machine, listens on JACK and sends `/beat` and `/vu/N` over OSC.
-Its beat comes from A³ Motion, from its own analysis of the music (BTrack), or from a
-Pioneer Pro DJ Link tempo master.
+Its beat comes from A³ Motion, from its own analysis of the music (BTrack), or from
+the tempo master of a Pro DJ Link network.
 
 **Documentation: [Beat Analyzer](https://a3-audio.github.io/a3-doc/user/beat-analyzer.html)**
 (clock modes, meters, settings, troubleshooting). Its JACK inputs are on the
@@ -42,6 +42,18 @@ a block at the end of `build/.env`.
 
 BTrack never runs in the JACK callback. The callback copies the audio into a lock-free ring
 buffer, and a separate thread does the beat tracking and sends `/beat`.
+
+## Pro DJ Link
+
+Pro DJ Link and rekordbox are trademarks of AlphaTheta Corporation; Pioneer DJ is a trademark
+of Pioneer Corporation; CDJ is a product name of theirs. A³ is not affiliated with, endorsed or
+certified by AlphaTheta or Pioneer. The beat-analyzer's Pro DJ Link support is an independent
+implementation for interoperability, built from public documentation of the protocol:
+Deep Symmetry's [DJ Link analysis](https://djl-analysis.deepsymmetry.org/) and
+[prolink-connect](https://github.com/EvanPurkhiser/prolink-connect).
+
+Using it on a network you do not run is at your own risk: ask the venue before joining their
+DJ Link network. See [Trademarks and Pro DJ Link](https://a3-audio.github.io/a3-doc/ressources/trademarks.html).
 
 ## License
 
