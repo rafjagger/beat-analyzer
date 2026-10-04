@@ -45,4 +45,6 @@ buffer, and a separate thread does the beat tracking and sends `/beat`.
 
 ## License
 
-MIT
+GPL-3.0-or-later. REUSE-compliant: the licenses are in `LICENSES/`, which file has
+which is in `.reuse/dep5`. BTrack, linked in as the `external/BTrack` submodule, is
+GPL-3.0-or-later as well.

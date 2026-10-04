@@ -1,0 +1,22 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: beat-analyzer
+Upstream-Contact: Raphael Eismann
+Source: https://github.com/rafjagger/beat-analyzer
+
+Files: *
+Copyright: 2026 Raphael Eismann
+License: GPL-3.0-or-later
+
+Files: README.md beat-counterplan.txt
+Copyright: 2026 Raphael Eismann
+License: CC-BY-SA-4.0
+
+Files: .gitignore .gitmodules .env.example config/* beat-analyzer.service
+Copyright: 2026 Raphael Eismann
+License: CC0-1.0
+
+Files: patches/btrack-measured-beat-period.patch
+Copyright: 2008-2014 Queen Mary University of London
+           2026 Raphael Eismann
+License: GPL-3.0-or-later
+Comment: Patch against BTrack by Adam Stark (https://github.com/adamstark/BTrack), applied to the external/BTrack submodule at build time.
