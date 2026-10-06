@@ -1,5 +1,5 @@
-// The VU inputs are named after what REAPER sends them (its outputs 31-70,
-// see the A3 Core manual's channel map), so a patchbay reads right and a
+// The VU inputs are named after what REAPER sends them (its outputs 31-70
+// and 51-66, see the A3 Core manual's channel map), so a patchbay reads right and a
 // wrong cable shows at a glance.
 #include <cassert>
 #include <iostream>
@@ -45,9 +45,36 @@ static void test_each_block_by_its_reaper_output()
     std::cout << "  ✓ names follow REAPER's VU outputs" << std::endl;
 }
 
+// The stereo channel meters (spec stereo-channel-meters, 2026-10-06) follow
+// the forty as inputs 40-55: REAPER outs 51-66, sent as /vu/51-66.
+static void test_the_stereo_channel_meters_follow_the_forty()
+{
+    assert(kVuInputs == 56);
+    assert(vuPortName(40) == "vu_in1_pre_L");
+    assert(vuPortName(41) == "vu_in1_pre_R");
+    assert(vuPortName(46) == "vu_in4_pre_L");
+    assert(vuPortName(47) == "vu_in4_pre_R");
+    assert(vuPortName(48) == "vu_in1_post_L");
+    assert(vuPortName(55) == "vu_in4_post_R");
+    std::set<std::string> names;
+    for (int i = 0; i < kVuInputs; ++i)
+        names.insert(vuPortName(i));
+    assert(names.size() == 56);
+    std::cout << "  ✓ inputs 40-55: vu_in1_pre_L .. vu_in4_post_R" << std::endl;
+}
+
+static void test_the_stereo_channel_meters_are_sent_as_51_to_66()
+{
+    assert(vuOscPath("/vu/{n}", 40) == "/vu/51");  // vu_in1_pre_L
+    assert(vuOscPath("/vu/{n}", 47) == "/vu/58");  // vu_in4_pre_R
+    assert(vuOscPath("/vu/{n}", 48) == "/vu/59");  // vu_in1_post_L
+    assert(vuOscPath("/vu/{n}", 55) == "/vu/66");  // vu_in4_post_R
+    std::cout << "  ✓ /vu/51 .. /vu/66" << std::endl;
+}
+
 static void test_beyond_the_map_ports_are_numbered()
 {
-    assert(vuPortName(40) == "vu_41");
+    assert(vuPortName(kVuInputs) == "vu_57");
     std::cout << "  ✓ beyond the map: vu_N" << std::endl;
 }
 
@@ -73,15 +100,21 @@ static void test_the_osc_address_counts_from_one()
 }
 
 // /vu/41-48 are StemDeck's own stem meters since spec stemdeck-remote
-// (2026-10-01): whatever NUM_VU_CHANNELS says, the analyzer sends the map's
-// forty at most, so it never speaks on StemDeck's addresses.
+// (2026-10-01), 49-50 its AUX bus: whatever NUM_VU_CHANNELS says, the
+// analyzer's inputs skip them, so it never speaks on StemDeck's addresses.
 static void test_the_vu_inputs_never_reach_stemdecks_addresses()
 {
-    assert(vuChannelsSent(64) == kVuMapChannels);
+    assert(vuChannelsSent(64) == kVuInputs);
+    assert(vuChannelsSent(56) == 56);
     assert(vuChannelsSent(40) == 40);
+    for (int i = 0; i < vuChannelsSent(kMaxVuChannels); ++i) {
+        const auto path = vuOscPath("/vu/{n}", i);
+        for (int n = 41; n <= 50; ++n)
+            assert(path != "/vu/" + std::to_string(n));
+    }
     assert(vuChannelsSent(12) == 12);
     assert(vuChannelsSent(0) == 0);
-    std::cout << "  ✓ at most the map's forty: /vu/41-48 are StemDeck's" << std::endl;
+    std::cout << "  ✓ never /vu/41-50: those are StemDeck's" << std::endl;
 }
 
 int main()
@@ -90,6 +123,8 @@ int main()
     test_the_vu_inputs_never_reach_stemdecks_addresses();
     test_the_map_names_forty_inputs();
     test_each_block_by_its_reaper_output();
+    test_the_stereo_channel_meters_follow_the_forty();
+    test_the_stereo_channel_meters_are_sent_as_51_to_66();
     test_beyond_the_map_ports_are_numbered();
     test_the_count_is_held_to_what_fits();
     test_the_osc_address_counts_from_one();

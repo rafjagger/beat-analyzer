@@ -20,12 +20,29 @@ const std::array<const char*, kVuMapChannels> kVuMapNames = {
     "aux_L",     "aux_R",
     "free67",    "free68",    "free69",    "free70",
 };
+
+// The stereo channel meters, REAPER outs 51-66 (see vu_ports.h).
+const std::array<const char*, kVuStereoChannels> kVuStereoNames = {
+    "in1_pre_L",  "in1_pre_R",  "in2_pre_L",  "in2_pre_R",
+    "in3_pre_L",  "in3_pre_R",  "in4_pre_L",  "in4_pre_R",
+    "in1_post_L", "in1_post_R", "in2_post_L", "in2_post_R",
+    "in3_post_L", "in3_post_R", "in4_post_L", "in4_post_R",
+};
+
+int vuNumber(int index)
+{
+    if (index < kVuMapChannels)
+        return index + 1;
+    return kVuStereoFirstNumber + (index - kVuMapChannels);
+}
 } // namespace
 
 std::string vuPortName(int index)
 {
     if (index >= 0 && index < kVuMapChannels)
         return std::string("vu_") + kVuMapNames[static_cast<size_t>(index)];
+    if (index >= kVuMapChannels && index < kVuInputs)
+        return std::string("vu_") + kVuStereoNames[static_cast<size_t>(index - kVuMapChannels)];
     return "vu_" + std::to_string(index + 1);
 }
 
@@ -34,13 +51,13 @@ std::string vuOscPath(const std::string& pattern, int index)
     std::string path = pattern;
     const auto placeholder = path.find("{n}");
     if (placeholder != std::string::npos)
-        path.replace(placeholder, 3, std::to_string(index + 1));
+        path.replace(placeholder, 3, std::to_string(vuNumber(index)));
     return path;
 }
 
 int vuChannelsSent(int numVu)
 {
-    return std::min(numVu, kVuMapChannels);
+    return std::min(numVu, kVuInputs);
 }
 
 int clampVuChannels(int requested)

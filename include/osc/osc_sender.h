@@ -29,7 +29,8 @@ public:
     // Booth, stereo -- see audio/vu_ports.h), so each bundle is one consistent
     // picture of its block. 10 messages of 28 bytes are 296 bytes, within the
     // 512 of a bundle and a queue slot. Until 2026-09-30 one bundle took every
-    // channel and everything past the 17th was silently cut off.
+    // channel and everything past the 17th was silently cut off. The stereo
+    // channel meters after the forty go in blocks of Audio::kVuStereoBlock.
     static constexpr int kVuChannelsPerBundle = Audio::kVuMapBlock;
     // Which channels each bundle carries: (first, count), in order.
     static std::vector<std::pair<int, int>> vuBundleChunks(int numChannels);
