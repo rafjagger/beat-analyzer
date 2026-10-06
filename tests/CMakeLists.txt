@@ -84,3 +84,10 @@ target_include_directories(vu_bundle_test PRIVATE
 )
 target_link_libraries(vu_bundle_test PRIVATE pthread)
 add_test(NAME VuBundleTests COMMAND vu_bundle_test)
+
+# The unit leaves real-time to JACK's process thread
+add_executable(unit_scheduling_test unit_scheduling_test.cpp)
+target_compile_definitions(unit_scheduling_test PRIVATE
+    BEAT_ANALYZER_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/.."
+)
+add_test(NAME UnitSchedulingTests COMMAND unit_scheduling_test)
