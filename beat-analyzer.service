@@ -9,10 +9,9 @@ Type=idle
 WorkingDirectory=/home/aaa/beat-analyzer/build
 ExecStartPre=/bin/sleep 2
 ExecStart=/home/aaa/beat-analyzer/build/beat-analyzer
-#LimitRTPRIO=2
 CPUAffinity=1 2 3
-CPUSchedulingPolicy=rr
-CPUSchedulingPriority=65
+# No real-time for the whole process: it put the OSC and BTrack threads above
+# JACK's and made JACK report late clients. JACK raises its process thread.
 
 [Install]
 WantedBy=default.target
