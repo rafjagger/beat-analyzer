@@ -373,8 +373,14 @@ bool OscSender::sendMessage(const OscMessage& msg) {
 
 std::vector<std::pair<int, int>> OscSender::vuBundleChunks(int numChannels) {
     std::vector<std::pair<int, int>> chunks;
-    for (int first = 0; first < numChannels; first += kVuChannelsPerBundle)
-        chunks.emplace_back(first, std::min(kVuChannelsPerBundle, numChannels - first));
+    int first = 0;
+    while (first < numChannels) {
+        const int block = first < Audio::kVuMapChannels ? kVuChannelsPerBundle
+                                                       : Audio::kVuStereoBlock;
+        const int count = std::min(block, numChannels - first);
+        chunks.emplace_back(first, count);
+        first += count;
+    }
     return chunks;
 }
 

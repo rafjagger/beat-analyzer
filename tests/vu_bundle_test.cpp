@@ -90,10 +90,37 @@ static void test_a_bundle_of_forty_eight_fits()
     std::cout << "  ✓ 48 channels: the stems are a fifth bundle that fits" << std::endl;
 }
 
+// The stereo channel meters (/vu/51-66, spec stereo-channel-meters) go out
+// as two bundles of eight: all four channels' pre-fader sides together, then
+// all four post-fader -- a block each, like Main's sub and tops.
+static void test_the_stereo_channel_meters_are_two_bundles_of_eight()
+{
+    auto const chunks = OscSender::vuBundleChunks(56);
+    assert(chunks.size() == 6);
+    assert(chunks[4] == std::make_pair(40, 8));
+    assert(chunks[5] == std::make_pair(48, 8));
+
+    std::vector<std::string> paths;
+    std::vector<float> peaks(56, 0.5f), rms(56, 0.25f);
+    for (int i = 0; i < 56; ++i) paths.push_back("/vu/" + std::to_string(i < 40 ? i + 1 : i + 11));
+    int total = 0;
+    for (auto const& [first, count] : chunks) {
+        char buf[512];
+        int len = OscSender::serializeBundle(buf, sizeof(buf), paths.data() + first,
+                                             peaks.data() + first, rms.data() + first, count);
+        assert(len > 0 && len <= 512);
+        assert(elementsIn(buf, len) == count);
+        total += count;
+    }
+    assert(total == 56);
+    std::cout << "  ✓ 56 channels: the stereo meters are two bundles of eight" << std::endl;
+}
+
 int main()
 {
     std::cout << "VU bundle tests" << std::endl;
     test_a_bundle_of_forty_eight_fits();
+    test_the_stereo_channel_meters_are_two_bundles_of_eight();
     test_forty_channels_go_out_one_bundle_per_block();
     test_every_bundle_fits_and_carries_its_channels();
     test_a_short_last_block_is_its_own_bundle();
