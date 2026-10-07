@@ -5,17 +5,21 @@
 namespace BeatAnalyzer {
 namespace Audio {
 
-// The VU inputs as REAPER sends them: its outputs 31-70, one meter each, in
-// blocks of ten (A3 Core manual, channel map, 2026-09-30):
+// The VU inputs, one meter each, named after what they carry (the OSC truth's
+// vu list, a3-osc.json). Which REAPER out feeds which input is the patchbay's
+// call; the REAPER out per /vu range is, since 2026-10-07: 1-20 = out n+30,
+// 21-36 = out n-10 (booth, phones, rec, aux), 51-66 = out n; 41-50 come from
+// StemDeck, not from here.
 //
-//   31-40  inputs    31-38 the analog inputs of ch 1-4, L and R (analog1_L ...
-//                    analog4_R, 2026-10-07), 39-40 free
-//   41-50  Main      41 sub, 42-50 tops 1-9
-//   51-60  Booth     51 sub, 52-60 tops 1-9
-//   61-70  stereo    61-62 phones, 63-64 rec, 65-66 aux, 67-70 free
+//   1-8    the analog inputs of ch 1-4, L and R (analog1_L ... analog4_R)
+//   9-10   free
+//   11-20  Main      11 sub, 12-20 tops 1-9
+//   21-30  Booth     21 sub, 22-30 tops 1-9
+//   31-36  stereo    31-32 phones, 33-34 rec, 35-36 aux
+//   37-40  free
 //
-// Input i (0-based) is vu_<name>, fed from REAPER out 31 + i, and its OSC is
-// /vu/<i+1> -- counted from 1 like the map; the name is for whoever patches.
+// Input i (0-based) is vu_<name>, and its OSC is /vu/<i+1> -- counted from 1
+// like the map; the name is for whoever patches.
 constexpr int kVuMapChannels = 40;
 
 // The map's blocks are ten wide; the OSC sends one bundle per block.
