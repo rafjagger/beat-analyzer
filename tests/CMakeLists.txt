@@ -91,3 +91,13 @@ target_compile_definitions(unit_scheduling_test PRIVATE
     BEAT_ANALYZER_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/.."
 )
 add_test(NAME UnitSchedulingTests COMMAND unit_scheduling_test)
+
+# The VU peak per send is the raw highest sample since the last send
+add_executable(vu_meter_test
+    vu_meter_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/analysis/vu_meter.cpp
+)
+target_include_directories(vu_meter_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+add_test(NAME VuMeterTests COMMAND vu_meter_test)
