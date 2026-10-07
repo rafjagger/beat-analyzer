@@ -8,7 +8,8 @@ namespace Audio {
 // The VU inputs as REAPER sends them: its outputs 31-70, one meter each, in
 // blocks of ten (A3 Core manual, channel map, 2026-09-30):
 //
-//   31-40  inputs    31-34 ch 1-4 pre-fader (post-FX), 35-38 post-fader, 39-40 free
+//   31-40  inputs    31-38 the analog inputs of ch 1-4, L and R (analog1_L ...
+//                    analog4_R, 2026-10-07), 39-40 free
 //   41-50  Main      41 sub, 42-50 tops 1-9
 //   51-60  Booth     51 sub, 52-60 tops 1-9
 //   61-70  stereo    61-62 phones, 63-64 rec, 65-66 aux, 67-70 free
