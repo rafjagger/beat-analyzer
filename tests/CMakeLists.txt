@@ -51,7 +51,7 @@ target_compile_definitions(btrack_period_test PRIVATE
 target_link_libraries(btrack_period_test PRIVATE ${SAMPLERATE_LIBRARIES} m)
 add_test(NAME BTrackPeriodTests COMMAND btrack_period_test)
 
-# The VU inputs' names, after REAPER's VU outputs 31-70
+# The VU inputs' names, after the meters they carry (OSC truth, vu meaning)
 add_executable(vu_ports_test
     vu_ports_test.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/audio/vu_ports.cpp

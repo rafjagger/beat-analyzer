@@ -1,6 +1,5 @@
-// The VU inputs are named after what REAPER sends them (its outputs 31-70
-// and 51-66, see the A3 Core manual's channel map), so a patchbay reads right and a
-// wrong cable shows at a glance.
+// The VU inputs are named after the meter they carry (the OSC truth's vu list),
+// so a patchbay reads right and a wrong cable shows at a glance.
 #include <cassert>
 #include <iostream>
 #include <set>
@@ -97,7 +96,7 @@ static void test_the_osc_address_counts_from_one()
 {
     assert(vuOscPath("/vu/{n}", 0) == "/vu/1");    // vu_analog1_L, REAPER out 31
     assert(vuOscPath("/vu/{n}", 10) == "/vu/11");  // vu_main_sub, REAPER out 41
-    assert(vuOscPath("/vu/{n}", 39) == "/vu/40");  // vu_free70, REAPER out 70
+    assert(vuOscPath("/vu/{n}", 39) == "/vu/40");  // vu_free70, the last meter
     std::cout << "  ✓ /vu/1 .. /vu/40" << std::endl;
 }
 
