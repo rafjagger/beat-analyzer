@@ -22,11 +22,13 @@ static void test_the_map_names_forty_inputs()
 
 static void test_each_block_by_its_reaper_output()
 {
-    // 31-34 inputs pre-fader, 35-38 post-fader, 39-40 free
-    assert(vuPortName(0) == "vu_in1_pre");
-    assert(vuPortName(3) == "vu_in4_pre");
-    assert(vuPortName(4) == "vu_in1_post");
-    assert(vuPortName(7) == "vu_in4_post");
+    // 31-38 the four channels' analog inputs, L and R; 39-40 free
+    assert(vuPortName(0) == "vu_analog1_L");
+    assert(vuPortName(1) == "vu_analog1_R");
+    assert(vuPortName(2) == "vu_analog2_L");
+    assert(vuPortName(5) == "vu_analog3_R");
+    assert(vuPortName(6) == "vu_analog4_L");
+    assert(vuPortName(7) == "vu_analog4_R");
     assert(vuPortName(8) == "vu_free39");
     assert(vuPortName(9) == "vu_free40");
     // 41-50 Main, 51-60 Booth: sub, then nine tops
@@ -93,7 +95,7 @@ static void test_the_count_is_held_to_what_fits()
 // channel N, fed from REAPER out 30 + N.
 static void test_the_osc_address_counts_from_one()
 {
-    assert(vuOscPath("/vu/{n}", 0) == "/vu/1");    // vu_in1_pre, REAPER out 31
+    assert(vuOscPath("/vu/{n}", 0) == "/vu/1");    // vu_analog1_L, REAPER out 31
     assert(vuOscPath("/vu/{n}", 10) == "/vu/11");  // vu_main_sub, REAPER out 41
     assert(vuOscPath("/vu/{n}", 39) == "/vu/40");  // vu_free70, REAPER out 70
     std::cout << "  ✓ /vu/1 .. /vu/40" << std::endl;

@@ -9,8 +9,8 @@ namespace Audio {
 namespace {
 // One name per REAPER VU output, 31 to 70 (see vu_ports.h).
 const std::array<const char*, kVuMapChannels> kVuMapNames = {
-    "in1_pre",   "in2_pre",   "in3_pre",   "in4_pre",
-    "in1_post",  "in2_post",  "in3_post",  "in4_post",
+    "analog1_L", "analog1_R", "analog2_L", "analog2_R",
+    "analog3_L", "analog3_R", "analog4_L", "analog4_R",
     "free39",    "free40",
     "main_sub",  "main_top1", "main_top2", "main_top3", "main_top4",
     "main_top5", "main_top6", "main_top7", "main_top8", "main_top9",
