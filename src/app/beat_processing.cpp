@@ -266,7 +266,7 @@ void BeatAnalyzerApp::sendVuMeterOsc() {
     float rms[MAX_VU_CHANNELS] = {};
     
     for (int ch = 0; ch < m_numVuChannels; ++ch) {
-        peaks[ch] = m_vuMeters[ch]->getPeakLinear();
+        peaks[ch] = m_vuMeters[ch]->takePeakLinear();
         rms[ch] = m_vuMeters[ch]->getRmsLinear();
     }
 

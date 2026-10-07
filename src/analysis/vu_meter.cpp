@@ -11,11 +11,26 @@ VuMeter::VuMeter(int sampleRate)
       m_rmsLinear(0.0f),
       m_rmsDb(-60.0f),
       m_rmsAttack(1.0f),
-      m_rmsRelease(0.5f),
-      m_peakLinear(0.0f),
-      m_peakDb(-60.0f),
-      m_peakHold(0.0f),
-      m_peakFalloff(40.0f) {
+      m_rmsRelease(0.5f) {
+}
+
+void VuMeter::notePeak(float blockPeak) {
+    // Raise the maximum unless the sender reset it meanwhile; then retry
+    // against zero, so a reset never brings back the peak it just took.
+    float current = m_peakSinceTake.load(std::memory_order_relaxed);
+    while (blockPeak > current &&
+           !m_peakSinceTake.compare_exchange_weak(current, blockPeak, std::memory_order_acq_rel)) {
+    }
+}
+
+void VuMeter::followRms(float currentRms) {
+    if (m_rmsAttack >= 1.0f) {
+        m_rmsLinear = currentRms;
+    } else if (currentRms > m_rmsLinear) {
+        m_rmsLinear = m_rmsAttack * currentRms + (1.0f - m_rmsAttack) * m_rmsLinear;
+    } else {
+        m_rmsLinear = m_rmsRelease * currentRms + (1.0f - m_rmsRelease) * m_rmsLinear;
+    }
 }
 
 // Schnelle Mono-Version (kein Stereo-Overhead)
@@ -29,26 +44,8 @@ void VuMeter::processMono(const float* monoInput, int frameCount) {
         sumSquares += monoInput[i] * monoInput[i];
     }
     
-    // RMS direkt (keine Glättung bei Attack=1.0)
-    float currentRms = std::sqrt(sumSquares / frameCount);
-    
-    if (m_rmsAttack >= 1.0f) {
-        m_rmsLinear = currentRms;  // Sofort, keine Interpolation
-    } else if (currentRms > m_rmsLinear) {
-        m_rmsLinear = m_rmsAttack * currentRms + (1.0f - m_rmsAttack) * m_rmsLinear;
-    } else {
-        m_rmsLinear = m_rmsRelease * currentRms + (1.0f - m_rmsRelease) * m_rmsLinear;
-    }
-    
-    // Peak sofort übernehmen
-    if (maxPeak > m_peakLinear) {
-        m_peakLinear = maxPeak;
-    } else {
-        // Falloff
-        float falloff = m_peakFalloff * frameCount / m_sampleRate;
-        m_peakLinear *= std::pow(10.0f, -falloff / 20.0f);
-        if (m_peakLinear < 0.0001f) m_peakLinear = 0.0f;
-    }
+    followRms(std::sqrt(sumSquares / frameCount));
+    notePeak(maxPeak);
 }
 
 void VuMeter::process(const float* stereoInput, int frameCount) {
@@ -65,23 +62,8 @@ void VuMeter::process(const float* stereoInput, int frameCount) {
         sumSquares += mono * mono;
     }
     
-    float currentRms = std::sqrt(sumSquares / frameCount);
-    
-    if (m_rmsAttack >= 1.0f) {
-        m_rmsLinear = currentRms;
-    } else if (currentRms > m_rmsLinear) {
-        m_rmsLinear = m_rmsAttack * currentRms + (1.0f - m_rmsAttack) * m_rmsLinear;
-    } else {
-        m_rmsLinear = m_rmsRelease * currentRms + (1.0f - m_rmsRelease) * m_rmsLinear;
-    }
-    
-    if (maxPeak > m_peakLinear) {
-        m_peakLinear = maxPeak;
-    } else {
-        float falloff = m_peakFalloff * frameCount / m_sampleRate;
-        m_peakLinear *= std::pow(10.0f, -falloff / 20.0f);
-        if (m_peakLinear < 0.0001f) m_peakLinear = 0.0f;
-    }
+    followRms(std::sqrt(sumSquares / frameCount));
+    notePeak(maxPeak);
 }
 
 void VuMeter::reset() {
@@ -89,8 +71,7 @@ void VuMeter::reset() {
     m_rmsSamples = 0;
     m_rmsLinear = 0.0f;
     m_rmsDb = -60.0f;
-    m_peakLinear = 0.0f;
-    m_peakDb = -60.0f;
+    m_peakSinceTake.store(0.0f, std::memory_order_relaxed);
 }
 
 float VuMeter::linearToDb(float linear) {
