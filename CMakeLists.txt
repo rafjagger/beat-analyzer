@@ -11,6 +11,9 @@ set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 # Options
 option(BUILD_TESTS "Build unit tests" ON)
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
+# -march=native ties the binary to the CPU it was built on: right for a build
+# on the machine that runs it, wrong for a package built on another one.
+option(BEAT_ANALYZER_NATIVE "Optimise for the building CPU (-march=native)" ON)
 
 # Find packages
 find_package(PkgConfig REQUIRED)
@@ -28,8 +31,9 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# BTrack library (submodule)
-set(BTRACK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/BTrack)
+# BTrack library (submodule). A package build gets no submodule from git
+# archive; packaging/stage fetches the pinned commit and points this at it.
+set(BTRACK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/BTrack CACHE PATH "BTrack's source tree")
 # BTrack is upstream code and stays untouched in the submodule. Our changes
 # live in patches/ and are applied to a copy in the build directory, so what
 # differs from upstream is always one readable file away.
@@ -86,6 +90,7 @@ set(BEAT_ANALYZER_SOURCES
     src/osc/osc_messages.cpp
     src/osc/pioneer_receiver.cpp
     src/config/config_loader.cpp
+    src/config/config_files.cpp
     src/util/logging.cpp
     ${BTRACK_SOURCES}
 )
@@ -106,6 +111,7 @@ set(BEAT_ANALYZER_HEADERS
     include/osc/osc_messages.h
     include/osc/pioneer_receiver.h
     include/config/config_loader.h
+    include/config/config_files.h
     include/util/logging.h
 )
 
@@ -146,8 +152,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(beat-analyzer PRIVATE
         -Wall -Wextra -Wpedantic
         -O3
-        -march=native
     )
+    if(BEAT_ANALYZER_NATIVE)
+        target_compile_options(beat-analyzer PRIVATE -march=native)
+    endif()
 endif()
 
 # Tests

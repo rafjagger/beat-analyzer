@@ -6,6 +6,7 @@
  */
 
 #include "app/beat_analyzer_app.h"
+#include "config/config_files.h"
 
 #include <iostream>
 #include <csignal>
@@ -29,8 +30,9 @@ static void signalHandler(int signal) {
 
 static void printUsage(const char* programName) {
     std::cout << "\nBeat Analyzer - Echtzeit Beat Detection mit OSC Output\n\n";
-    std::cout << "Verwendung: " << programName << "\n\n";
-    std::cout << "Konfiguration via .env Datei:\n";
+    std::cout << "Usage: " << programName << " [--config FILE]\n\n";
+    std::cout << "Config: FILE, else ~/.config/beat-analyzer/beat-analyzer.env (or ./.env),\n";
+    std::cout << "then ~/.config/beat-analyzer/conf.d/*.env; a later file wins:\n";
     std::cout << "  NUM_BPM_CHANNELS=1   Anzahl BPM-Eingänge (bpm_1 bis bpm_N)\n";
     std::cout << "  NUM_VU_CHANNELS=56   VU inputs (JACK ports vu_analog1_L … vu_in4_post_R; the patchbay wires REAPER outs to them, see the OSC truth's vu meaning)\n";
     std::cout << "\nOSC Ziele (beliebig viele):\n";
@@ -62,9 +64,18 @@ int main(int argc, char* argv[]) {
         return 0;
     }
     
+    std::optional<std::string> configFile;
+    try {
+        configFile = Config::configArgument(argc, argv);
+    } catch (const std::invalid_argument& error) {
+        std::cerr << error.what() << "\n";
+        printUsage(argv[0]);
+        return 2;
+    }
+    
     BeatAnalyzerApp app;
     
-    if (!app.initialize()) {
+    if (!app.initialize(configFile)) {
         LOG_ERROR("Initialisierung fehlgeschlagen");
         return 1;
     }
