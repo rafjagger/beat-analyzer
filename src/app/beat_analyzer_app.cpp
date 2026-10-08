@@ -216,7 +216,6 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
     // VU-Meter Konfiguration
     m_vuRmsAttack = env.getFloat("VU_RMS_ATTACK", 0.8f);
     m_vuRmsRelease = env.getFloat("VU_RMS_RELEASE", 0.2f);
-    m_vuPeakFalloff = env.getFloat("VU_PEAK_FALLOFF", 20.0f);
     
     // OSC Sende-Rate
     m_oscSendRate = env.getInt("OSC_SEND_RATE", 25);
@@ -246,7 +245,6 @@ void BeatAnalyzerApp::initVuMeters() {
         auto vuMeter = std::make_unique<VuMeter>();
         vuMeter->setRmsAttack(m_vuRmsAttack);
         vuMeter->setRmsRelease(m_vuRmsRelease);
-        vuMeter->setPeakFalloff(m_vuPeakFalloff);
         m_vuMeters.push_back(std::move(vuMeter));
         m_vuTrackStates.push_back(VuTrackState{});
         m_vuOscPaths.push_back(Audio::vuOscPath(m_oscWords.vuPattern, i));

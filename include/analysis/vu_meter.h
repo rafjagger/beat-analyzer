@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -21,16 +22,18 @@ public:
     
     // Getter für aktuelle Werte (in dB, 0 = max, negative = leiser)
     float getRmsDb() const { return m_rmsDb; }
-    float getPeakDb() const { return m_peakDb; }
     
     // Getter für lineare Werte (0.0 - 1.0)
     float getRmsLinear() const { return m_rmsLinear; }
-    float getPeakLinear() const { return m_peakLinear; }
+
+    // The highest sample peak since the last call, raw: no fall, no hold.
+    // The sender takes it once per tick; the displays apply the ballistics.
+    // Safe against processMono() on the JACK thread.
+    float takePeakLinear() { return m_peakSinceTake.exchange(0.0f, std::memory_order_acq_rel); }
     
     // Konfiguration
     void setRmsAttack(float attack) { m_rmsAttack = attack; }
     void setRmsRelease(float release) { m_rmsRelease = release; }
-    void setPeakFalloff(float falloff) { m_peakFalloff = falloff; }
     
     // Reset
     void reset();
@@ -46,11 +49,10 @@ private:
     float m_rmsAttack;    // 0.0-1.0, höher = schneller
     float m_rmsRelease;   // 0.0-1.0, höher = schneller
     
-    // Peak mit Falloff
-    float m_peakLinear;
-    float m_peakDb;
-    float m_peakHold;
-    float m_peakFalloff;  // dB pro Sekunde
+    std::atomic<float> m_peakSinceTake{0.0f};
+
+    void notePeak(float blockPeak);
+    void followRms(float currentRms);
     
     // Konvertierung
     static float linearToDb(float linear);

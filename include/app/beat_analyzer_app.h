@@ -228,7 +228,6 @@ private:
     // VU-Meter Konfiguration
     float m_vuRmsAttack = 0.8f;
     float m_vuRmsRelease = 0.2f;
-    float m_vuPeakFalloff = 20.0f;
     
     // OSC Sende-Rate
     int m_oscSendRate = 25;
