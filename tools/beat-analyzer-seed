@@ -1,0 +1,28 @@
+#!/bin/sh
+# The user's config from the shipped example, once:
+#
+#   beat-analyzer-seed <config dir> [example]
+#
+# Creates <config dir>/beat-analyzer.env if there is none and never writes over
+# one: it is the user's file from the first start on. Also makes conf.d/, where
+# another package may put a whole file of its own (a3-core: 50-a3-osc.env).
+set -eu
+
+dir=${1:?usage: beat-analyzer-seed <config dir> [example]}
+example=${2:-/usr/share/beat-analyzer/beat-analyzer.env.example}
+
+file="$dir/beat-analyzer.env"
+mkdir -p "$dir/conf.d"
+if [ -L "$file" ] && [ ! -e "$file" ]; then
+    echo "beat-analyzer: $file points nowhere -- not seeded" >&2
+    exit 1
+fi
+if [ ! -e "$file" ] && [ -f "$example" ]; then
+    # Through a hidden temporary file: a copy cut short (disk full) never
+    # stands as the user's file, which nothing would seed again.
+    partial="$dir/.beat-analyzer.env.seed"
+    if cp "$example" "$partial" && mv -n "$partial" "$file"; then
+        echo "beat-analyzer: wrote $file from $example"
+    fi
+    rm -f "$partial"
+fi

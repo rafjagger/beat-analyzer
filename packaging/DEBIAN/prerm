@@ -1,0 +1,7 @@
+#!/bin/sh
+# Nothing to do: the package enables nothing, so it has no links to remove.
+# A user who enabled the unit keeps a dangling link after a removal, which
+# systemd ignores.
+set -e
+
+exit 0

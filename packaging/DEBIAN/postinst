@@ -1,0 +1,16 @@
+#!/bin/sh
+# Tells every running user manager about the unit, and nothing else: no
+# enable, no write into any home, no restart. Whether an audio client starts
+# at login is the user's choice (on an A3 Core, a3-main.service pulls it in).
+# A running analyzer keeps its old binary until its next start.
+set -e
+
+if [ "$1" = "configure" ] && command -v systemctl >/dev/null 2>&1; then
+	for user in $(loginctl list-users --no-legend 2>/dev/null | awk '{print $2}'); do
+		systemctl --user --machine="$user@" daemon-reload 2>/dev/null || true
+	done
+	echo "beat-analyzer: installed. A running analyzer keeps the old version until"
+	echo "  systemctl --user restart beat-analyzer.service"
+fi
+
+exit 0

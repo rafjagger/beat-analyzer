@@ -1,0 +1,76 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: beat-analyzer
+Upstream-Contact: Raphael Eismann
+Source: https://github.com/rafjagger/beat-analyzer
+Comment: The copyright of what this package installs. The source tree's full
+ licence metadata is .reuse/dep5 in the repository.
+
+Files: *
+Copyright: 2026 Raphael Eismann
+License: GPL-3.0-or-later
+
+Files: usr/lib/systemd/user/beat-analyzer.service
+       usr/share/beat-analyzer/beat-analyzer.env.example
+Copyright: 2026 Raphael Eismann
+License: CC0-1.0
+
+Files: external/BTrack/*
+Copyright: 2008-2014 Queen Mary University of London
+License: GPL-3.0-or-later
+Comment: BTrack by Adam Stark (https://github.com/adamstark/BTrack), compiled
+ into /usr/bin/beat-analyzer. Its licence is BTrack-LICENSE.txt beside this file.
+
+Files: external/BTrack/libs/kiss_fft130/*
+Copyright: 2003-2010 Mark Borgerding
+License: BSD-3-Clause
+Comment: kiss_fft, BTrack's FFT, compiled into /usr/bin/beat-analyzer. Its
+ notice is also kiss_fft-COPYING beside this file.
+
+License: GPL-3.0-or-later
+ This program is free software: you can redistribute it and/or modify it
+ under the terms of the GNU General Public License as published by the Free
+ Software Foundation, either version 3 of the License, or (at your option)
+ any later version.
+ .
+ This program is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ more details.
+ .
+ On Debian systems, the complete text of the GNU General Public License
+ version 3 can be found in "/usr/share/common-licenses/GPL-3".
+
+License: CC0-1.0
+ To the extent possible under law, the author has dedicated all copyright
+ and related and neighboring rights to this software to the public domain
+ worldwide. This software is distributed without any warranty.
+ .
+ On Debian systems, the complete text of the CC0 1.0 Universal license can
+ be found in "/usr/share/common-licenses/CC0-1.0".
+
+License: BSD-3-Clause
+ All rights reserved.
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ .
+     * Redistributions of source code must retain the above copyright notice,
+       this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in the
+       documentation and/or other materials provided with the distribution.
+     * Neither the author nor the names of any contributors may be used to
+       endorse or promote products derived from this software without
+       specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ POSSIBILITY OF SUCH DAMAGE.

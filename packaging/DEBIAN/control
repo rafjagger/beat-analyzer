@@ -1,0 +1,19 @@
+Package: beat-analyzer
+Version: 0
+Architecture: amd64
+Maintainer: Rafjagger
+Section: sound
+Priority: optional
+Depends: ${shlibs:Depends}
+Suggests: jackd2 | pipewire-jack
+Description: real-time beat clock and VU meters over JACK, sent as OSC
+ Tracks the tempo of a JACK input (BTrack), follows an external clock or a
+ Pioneer Pro DJ Link master, and meters up to 56 JACK inputs; sends /beat
+ and /vu bundles as OSC to the targets in its config. Works with any JACK
+ server, PipeWire's included, and needs nothing else of the A3 system.
+ .
+ Runs as the systemd user unit beat-analyzer.service, which is not enabled
+ on install: systemctl --user enable --now beat-analyzer. The config is
+ ~/.config/beat-analyzer/beat-analyzer.env, made from the shipped example
+ on the first start and never written over; files in its conf.d/ follow
+ it, a later one winning. It stays when the package is removed or purged.
