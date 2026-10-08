@@ -111,3 +111,7 @@ target_include_directories(config_files_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
 )
 add_test(NAME ConfigFilesTests COMMAND config_files_test)
+
+# The Debian package's recipe: the BTrack pin, the unit, the seed, the layout
+add_test(NAME PackagingTests
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/packaging_test.sh ${CMAKE_CURRENT_SOURCE_DIR}/..)

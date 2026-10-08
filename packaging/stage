@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# beat-analyzer's recipe for its Debian package, called by a3-system's
+# installer/package.py from an exported tree (git archive), never the checkout:
+#
+#   packaging/stage build <src> <build> <juce-prefix> <jobs> [--test]
+#   packaging/stage files <src> <build> <stage>
+#
+# `build` compiles in <build>; `files` lays out the package tree under <stage>
+# (the builder adds DEBIAN/). Neither writes anywhere else. <juce-prefix> is
+# part of the builder's call and not used: no JUCE here.
+set -euo pipefail
+
+usage() {
+    echo "usage: $0 build <src> <build> <juce> <jobs> [--test] | files <src> <build> <stage>" >&2
+    exit 2
+}
+
+lock() { sed -n "s/^$2=//p" "$1/packaging/btrack.lock"; }
+
+verified() {
+    (cd "$1" && sha256sum --quiet -c "$2/packaging/btrack.sha256") >/dev/null 2>&1
+}
+
+# BTrack's tree, checked file by file against the manifest: the submodule when
+# the tree has it, else the pinned commit fetched once into <build>.
+btrack_tree() {
+    local src=$1 build=$2 commit url fetched tarball
+    if [[ -f "$src/external/BTrack/src/BTrack.cpp" ]]; then
+        verified "$src/external/BTrack" "$src" \
+            || { echo "external/BTrack differs from packaging/btrack.sha256" >&2; return 1; }
+        echo "$src/external/BTrack"
+        return
+    fi
+    commit=$(lock "$src" commit) url=$(lock "$src" url)
+    fetched="$build/btrack-$commit"
+    if ! verified "$fetched" "$src"; then
+        rm -rf "$fetched" && mkdir -p "$fetched"
+        tarball="$build/btrack-$commit.tar.gz"
+        curl -fsSL --retry 3 -o "$tarball" "$url/$commit.tar.gz"
+        tar -xzf "$tarball" -C "$fetched" --strip-components=1
+        rm -f "$tarball"
+        verified "$fetched" "$src" \
+            || { echo "BTrack $commit from $url differs from packaging/btrack.sha256" >&2; return 1; }
+    fi
+    echo "$fetched"
+}
+
+build() {
+    [[ $# -eq 4 || ( $# -eq 5 && "$5" == --test ) ]] || usage
+    local src=$1 build=$2 jobs=$4 test=${5:-} btrack tests=OFF
+    [[ "$test" == --test ]] && tests=ON
+    mkdir -p "$build"
+    btrack=$(btrack_tree "$src" "$build")
+    echo "$btrack" > "$build/btrack-dir"
+    # Not -march=native: the package is built on one machine and run on others.
+    cmake -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS="$tests" \
+        -DBEAT_ANALYZER_NATIVE=OFF -DBTRACK_DIR="$btrack"
+    cmake --build "$build" -j "$jobs"
+    if [[ "$tests" == ON ]]; then
+        ctest --test-dir "$build" --output-on-failure
+    fi
+}
+
+files() {
+    [[ $# -eq 3 ]] || usage
+    local src=$1 build=$2 stage=$3 btrack doc
+    btrack=$(cat "$build/btrack-dir")
+    doc="$stage/usr/share/doc/beat-analyzer"
+    install -D -m 755 "$build/beat-analyzer" "$stage/usr/bin/beat-analyzer"
+    install -D -m 755 "$src/tools/beat-analyzer-seed" "$stage/usr/lib/beat-analyzer/beat-analyzer-seed"
+    install -D -m 644 "$src/beat-analyzer.service" "$stage/usr/lib/systemd/user/beat-analyzer.service"
+    install -D -m 644 "$src/.env.example" "$stage/usr/share/beat-analyzer/beat-analyzer.env.example"
+    # .reuse/dep5 is already in Debian's machine-readable copyright format.
+    install -D -m 644 "$src/.reuse/dep5" "$doc/copyright"
+    # Compiled in: BTrack (GPL-3.0-or-later) and kiss_fft, whose BSD licence
+    # wants its notice beside the binary.
+    install -D -m 644 "$btrack/LICENSE.txt" "$doc/BTrack-LICENSE.txt"
+    install -D -m 644 "$btrack/libs/kiss_fft130/COPYING" "$doc/kiss_fft-COPYING"
+}
+
+case "${1:-}" in
+    build) shift; build "$@" ;;
+    files) shift; files "$@" ;;
+    *) usage ;;
+esac

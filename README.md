@@ -22,21 +22,41 @@ git submodule update --init
 cd build && ctest
 ```
 
-The binary is `build/beat-analyzer`. On the A³ Core machine the a3-core package builds it and
-installs `beat-analyzer.service`, see
-[the user-side installer](https://a3-audio.github.io/a3-doc/configuration/core.html#core-user-install).
+The binary is `build/beat-analyzer`.
+
+## Debian package
+
+`beat-analyzer` is its own package and needs nothing else of A³: any amd64 Debian with a JACK
+server (PipeWire's included).
+
+```bash
+systemctl --user enable --now beat-analyzer   # the package enables nothing by itself
+```
+
+It is built from `packaging/` (`packaging/stage`, called by a3-system's `installer/package.py`,
+version `03.0+N` from the newest `v*` tag). `git archive` carries no submodule, so the recipe
+fetches BTrack at the commit in `packaging/btrack.lock` and checks every file it compiles against
+`packaging/btrack.sha256`; `tests/packaging_test.sh` keeps both equal to the submodule. On an A³
+Core the a3-core package adds a drop-in to the unit (ordering, CPU pinning) and its OSC targets.
 
 ## Configuration
 
-Settings are read from `build/.env`. Start from the template, which lists every key with its
-default:
+Read in this order, a later file winning key by key:
+
+1. `--config FILE`, else the first that exists of `~/.config/beat-analyzer/beat-analyzer.env`,
+   `./.env`, `../.env`, `./.env.example` (a checkout runs from `build/.env` as before);
+2. every `~/.config/beat-analyzer/conf.d/*.env`, sorted by name.
+
+The package's unit makes `beat-analyzer.env` from the template (`.env.example`, every key with its
+default) on the first start and never writes over it. In a checkout:
 
 ```bash
 cp .env.example build/.env
 ```
 
-OSC targets, ports and addresses are not written by hand: the a3-core package renders them into
-a block at the end of `build/.env`.
+Without an `OSC_HOST_<name>=host:port` the analyzer runs and sends nothing. On an A³ Core the
+targets, ports and addresses are not written by hand: the a3-core package renders them into
+`~/.config/beat-analyzer/conf.d/50-a3-osc.env`.
 
 ## Design rule
 

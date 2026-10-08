@@ -1,0 +1,6 @@
+# BTrack for package builds. git archive leaves the submodule external/BTrack
+# out, so packaging/stage fetches this commit (url/<commit>.tar.gz) and checks
+# every file it compiles against btrack.sha256. Keep commit equal to the
+# submodule's: tests/packaging_test.sh says when they part.
+url=https://github.com/adamstark/BTrack/archive
+commit=9d6127618a5679e9caa74c594b88f1d74f0e035f

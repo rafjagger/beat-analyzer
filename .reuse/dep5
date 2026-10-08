@@ -11,7 +11,7 @@ Files: README.md beat-counterplan.txt
 Copyright: 2026 Raphael Eismann
 License: CC-BY-SA-4.0
 
-Files: .gitignore .gitmodules .env.example config/* beat-analyzer.service
+Files: .gitignore .gitmodules .env.example config/* beat-analyzer.service packaging/btrack.lock packaging/btrack.sha256 packaging/DEBIAN/control
 Copyright: 2026 Raphael Eismann
 License: CC0-1.0
 
@@ -20,3 +20,10 @@ Copyright: 2008-2014 Queen Mary University of London
            2026 Raphael Eismann
 License: GPL-3.0-or-later
 Comment: Patch against BTrack by Adam Stark (https://github.com/adamstark/BTrack), applied to the external/BTrack submodule at build time.
+
+Files: external/BTrack/*
+Copyright: 2008-2014 Queen Mary University of London
+License: GPL-3.0-or-later
+Comment: BTrack by Adam Stark (https://github.com/adamstark/BTrack), compiled in.
+ Its FFT, kiss_fft (Copyright 2003-2010 Mark Borgerding, BSD-3-Clause), ships
+ its notice as kiss_fft-COPYING beside this file in the package.

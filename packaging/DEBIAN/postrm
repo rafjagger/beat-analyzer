@@ -1,0 +1,6 @@
+#!/bin/sh
+# Nothing to do: the config in ~/.config/beat-analyzer is the user's, not the
+# package's, and stays on remove and on purge.
+set -e
+
+exit 0

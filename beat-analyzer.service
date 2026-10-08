@@ -1,17 +1,23 @@
-[Unit]                                                                                     
-Description=beat-analyzer (bpm & vu-meters)
-PartOf=a3-main.service
-After=a3-jack.service
+[Unit]
+Description=beat-analyzer: beat clock and VU meters from JACK, sent as OSC
+Documentation=https://github.com/rafjagger/beat-analyzer
 
 [Service]
-Type=idle
-#PrivateTmp=true
-WorkingDirectory=/home/aaa/beat-analyzer/build
-ExecStartPre=/bin/sleep 2
-ExecStart=/home/aaa/beat-analyzer/build/beat-analyzer
-CPUAffinity=1 2 3
-# No real-time for the whole process: it put the OSC and BTrack threads above
-# JACK's and made JACK report late clients. JACK raises its process thread.
+# The user's config, ~/.config/beat-analyzer/beat-analyzer.env, from the
+# shipped example on the first start; never written over. '-': a seed that
+# fails must not keep the meters dark, the defaults run instead.
+ExecStartPre=-/usr/lib/beat-analyzer/beat-analyzer-seed %E/beat-analyzer
+# Not the home folder: the analyzer also reads ./.env, and a ~/.env belongs to
+# some other program.
+WorkingDirectory=-%E/beat-analyzer
+ExecStart=/usr/bin/beat-analyzer
+# No JACK server yet is a failed start; it comes back once there is one.
+Restart=on-failure
+RestartSec=5
+# No CPUScheduling here: raising the whole process put all its threads, OSC
+# and analysis included, above JACK's process threads (late clients on
+# a3nuc1, 2026-10-06). The audio threads get their priority from JACK
+# (server -P minus 5).
 
 [Install]
 WantedBy=default.target
