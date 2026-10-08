@@ -248,6 +248,10 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
     // BPM-Limits
     m_bpmMin = env.getFloat("BPM_MIN", 60.0f);
     m_bpmMax = env.getFloat("BPM_MAX", 200.0f);
+    int tapLockBars = std::max(0, env.getInt("TAP_LOCK_BARS", 16));
+    m_tapLock = TapTempoLock(tapLockBars);
+    LOG_INFO("Tap lock: " + (tapLockBars > 0 ? std::to_string(tapLockBars) + " bars"
+                                              : std::string("until restart")));
     
     LOG_INFO("Features: Beatclock=" + std::string(m_enableBeatclock ? "ON" : "OFF") +
              " VU=" + std::string(m_enableVu ? "ON" : "OFF") +

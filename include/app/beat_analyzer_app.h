@@ -16,6 +16,7 @@
 #include "audio/vu_ports.h"
 #include "analysis/beat_clock_follower.h"
 #include "analysis/btrack_wrapper.h"
+#include "analysis/tap_tempo_lock.h"
 #include "analysis/vu_meter.h"
 #include "osc/osc_sender.h"
 #include "osc/osc_receiver.h"
@@ -150,6 +151,7 @@ private:
     
     /// Beat-Clock per OSC senden (Modus 1: intern)
     void sendBeatClockForChannel(int ch, bool isRealBeat = false);
+    void releaseTappedTempo();
     
     /// VU-Meter per OSC senden
     void sendVuMeterOsc();
@@ -213,6 +215,8 @@ private:
     double m_tapIntervals[8] = {0};
     int m_tapIntervalIndex = 0;
     int m_tapIntervalCount = 0;
+    // A tapped tempo holds BTrack for TAP_LOCK_BARS bars, then detection takes over
+    TapTempoLock m_tapLock{16};
     
     // Status
     std::mutex m_mutex;

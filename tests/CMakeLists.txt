@@ -115,3 +115,10 @@ add_test(NAME ConfigFilesTests COMMAND config_files_test)
 # The Debian package's recipe: the BTrack pin, the unit, the seed, the layout
 add_test(NAME PackagingTests
     COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/packaging_test.sh ${CMAKE_CURRENT_SOURCE_DIR}/..)
+
+# A tap fixes the tempo for TAP_LOCK_BARS bars, then detection takes over
+add_executable(tap_tempo_lock_test tap_tempo_lock_test.cpp)
+target_include_directories(tap_tempo_lock_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+add_test(NAME TapTempoLockTests COMMAND tap_tempo_lock_test)

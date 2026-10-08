@@ -167,6 +167,7 @@ void BeatAnalyzerApp::processBeatThread() {
                             m_btrackDetectors[ch]->fixTempo(m_tapBpm);
                             m_bpmTrackStates[ch].currentBpm = m_tapBpm;
                         }
+                        m_tapLock.lock();
                         
                         // TAP = Tempo und Phase-Reset auf 1
                         if (m_tapIntervalCount >= 2) {
@@ -205,11 +206,26 @@ void BeatAnalyzerApp::processBeatThread() {
                 m_bpmTrackStates[ch].beatNumber = clock.beatNumber();
                 m_bpmTrackStates[ch].currentBpm = clock.bpm();
                 sendBeatClockForChannel(ch, false);
+                if (ch == 0 && m_tapLock.beat())
+                    releaseTappedTempo();
             }
         }
         
         std::this_thread::sleep_until(nextWakeTime += interval);
     }
+}
+
+// ============================================================================
+// releaseTappedTempo()
+// ============================================================================
+
+// The tapped tempo has held for TAP_LOCK_BARS bars: BTrack estimates again,
+// starting from the tapped tempo, and the clock follows its beats as before.
+void BeatAnalyzerApp::releaseTappedTempo() {
+    for (int ch = 0; ch < m_numBpmChannels; ++ch)
+        m_btrackDetectors[ch]->unfixTempo();
+    printf("TAP lock released | detection follows the music again\n");
+    fflush(stdout);
 }
 
 // ============================================================================
