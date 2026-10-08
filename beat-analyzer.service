@@ -7,9 +7,10 @@ Documentation=https://github.com/rafjagger/beat-analyzer
 # shipped example on the first start; never written over. '-': a seed that
 # fails must not keep the meters dark, the defaults run instead.
 ExecStartPre=-/usr/lib/beat-analyzer/beat-analyzer-seed %E/beat-analyzer
-# Not the home folder: the analyzer also reads ./.env, and a ~/.env belongs to
-# some other program.
-WorkingDirectory=-%E/beat-analyzer
+# A folder only this package writes: the analyzer also reads ./.env and
+# ../.env (a checkout's build/ folder) before the user's file, and a ~/.env or
+# ~/.config/.env belongs to some other program.
+WorkingDirectory=/usr/share/beat-analyzer
 ExecStart=/usr/bin/beat-analyzer
 # No JACK server yet is a failed start; it comes back once there is one.
 Restart=on-failure

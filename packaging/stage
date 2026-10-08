@@ -34,10 +34,13 @@ btrack_tree() {
     commit=$(lock "$src" commit) url=$(lock "$src" url)
     fetched="$build/btrack-$commit"
     if ! verified "$fetched" "$src"; then
-        rm -rf "$fetched" && mkdir -p "$fetched"
+        # set -e does not reach into $(btrack_tree ...): each step says so itself.
+        rm -rf "$fetched" && mkdir -p "$fetched" || return 1
         tarball="$build/btrack-$commit.tar.gz"
-        curl -fsSL --retry 3 -o "$tarball" "$url/$commit.tar.gz"
-        tar -xzf "$tarball" -C "$fetched" --strip-components=1
+        curl -fsSL --retry 3 -o "$tarball" "$url/$commit.tar.gz" \
+            || { echo "could not fetch BTrack $commit from $url" >&2; return 1; }
+        tar -xzf "$tarball" -C "$fetched" --strip-components=1 \
+            || { echo "could not unpack BTrack $commit from $url" >&2; return 1; }
         rm -f "$tarball"
         verified "$fetched" "$src" \
             || { echo "BTrack $commit from $url differs from packaging/btrack.sha256" >&2; return 1; }
@@ -50,7 +53,7 @@ build() {
     local src=$1 build=$2 jobs=$4 test=${5:-} btrack tests=OFF
     [[ "$test" == --test ]] && tests=ON
     mkdir -p "$build"
-    btrack=$(btrack_tree "$src" "$build")
+    btrack=$(btrack_tree "$src" "$build") || exit 1
     echo "$btrack" > "$build/btrack-dir"
     # Not -march=native: the package is built on one machine and run on others.
     cmake -S "$src" -B "$build" -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS="$tests" \
@@ -70,8 +73,7 @@ files() {
     install -D -m 755 "$src/tools/beat-analyzer-seed" "$stage/usr/lib/beat-analyzer/beat-analyzer-seed"
     install -D -m 644 "$src/beat-analyzer.service" "$stage/usr/lib/systemd/user/beat-analyzer.service"
     install -D -m 644 "$src/.env.example" "$stage/usr/share/beat-analyzer/beat-analyzer.env.example"
-    # .reuse/dep5 is already in Debian's machine-readable copyright format.
-    install -D -m 644 "$src/.reuse/dep5" "$doc/copyright"
+    install -D -m 644 "$src/packaging/copyright" "$doc/copyright"
     # Compiled in: BTrack (GPL-3.0-or-later) and kiss_fft, whose BSD licence
     # wants its notice beside the binary.
     install -D -m 644 "$btrack/LICENSE.txt" "$doc/BTrack-LICENSE.txt"

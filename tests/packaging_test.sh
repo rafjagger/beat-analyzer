@@ -44,6 +44,11 @@ UNIT="$SRC/beat-analyzer.service"
 check "the unit starts /usr/bin/beat-analyzer" grep -qx 'ExecStart=/usr/bin/beat-analyzer' "$UNIT"
 check "the unit seeds the user's config first, and a failed seed does not stop it" \
     grep -qx 'ExecStartPre=-/usr/lib/beat-analyzer/beat-analyzer-seed %E/beat-analyzer' "$UNIT"
+# The analyzer also reads ./.env and ../.env (a checkout's build/ folder), and
+# those win over the user's file: the unit runs in a folder only the package
+# writes, so no stray ~/.env or ~/.config/.env is ever taken for its config.
+check "the unit runs in /usr/share/beat-analyzer, which holds no .env" \
+    grep -qx 'WorkingDirectory=/usr/share/beat-analyzer' "$UNIT"
 check "the unit names no A3 unit, user or checkout (a3-core adds its drop-in)" \
     bash -c "! grep -Ev '^#' '$UNIT' | grep -Eq 'a3-|/home/|CPUAffinity'"
 
@@ -59,6 +64,12 @@ printf 'BPM_MIN=90\n' > "$SCRATCH/cfg/beat-analyzer.env"
 check "the seed never writes over the user's file" \
     grep -qx 'BPM_MIN=90' "$SCRATCH/cfg/beat-analyzer.env"
 check "the seed makes conf.d/ for other packages' files" test -d "$SCRATCH/cfg/conf.d"
+mkdir -p "$SCRATCH/dangling"
+ln -s "$SCRATCH/elsewhere.env" "$SCRATCH/dangling/beat-analyzer.env"
+"$SEED" "$SCRATCH/dangling" "$SCRATCH/example" >/dev/null 2>&1
+check "the seed never writes through a dangling symlink" test ! -e "$SCRATCH/elsewhere.env"
+check "the seed leaves no temporary file behind" \
+    test "$(cd "$SCRATCH/cfg" && ls -A | sort | tr '\n' ' ')" = "beat-analyzer.env conf.d "
 
 # --- The control file --------------------------------------------------------
 
@@ -92,6 +103,29 @@ for path in usr/lib/systemd/user/beat-analyzer.service \
 done
 check "stage files: nothing outside /usr" \
     test "$(cd "$SCRATCH/stage" 2>/dev/null && ls)" = "usr"
+
+check "the package's copyright names kiss_fft's BSD-3-Clause, with its text" \
+    bash -c "grep -q '^Files: .*kiss_fft130' '$SCRATCH/stage/usr/share/doc/beat-analyzer/copyright' \
+             && grep -qx 'License: BSD-3-Clause' '$SCRATCH/stage/usr/share/doc/beat-analyzer/copyright'"
+check "every licence the package's copyright names has its own License: paragraph" \
+    bash -c "c='$SCRATCH/stage/usr/share/doc/beat-analyzer/copyright'
+             for l in \$(sed -n 's/^License: //p' \"\$c\" | sort -u); do
+                 awk -v l=\"\$l\" 'BEGIN{p=1} /^\$/{p=1; next} p && \$0==\"License: \" l {getline n; if (n ~ /^ /) f=1} {p=0} END{exit !f}' \"\$c\" || exit 1
+             done"
+check "REUSE: kiss_fft has its own BSD-3-Clause stanza and licence text" \
+    bash -c "grep -q '^Files: external/BTrack/libs/kiss_fft130/\\*' '$SRC/.reuse/dep5' && test -f '$SRC/LICENSES/BSD-3-Clause.txt'"
+
+# --- packaging/stage build: a BTrack it cannot fetch is a network error ------
+
+mkdir -p "$SCRATCH/nobtrack/packaging"
+cp "$SRC/packaging/btrack.sha256" "$SCRATCH/nobtrack/packaging/"
+printf 'commit=%s\nurl=file://%s/no-such-place\n' "$(lock_value commit)" "$SCRATCH" \
+    > "$SCRATCH/nobtrack/packaging/btrack.lock"
+"$SRC/packaging/stage" build "$SCRATCH/nobtrack" "$SCRATCH/nobuild" none 1 >"$SCRATCH/out" 2>&1
+code=$?
+check "stage build: an unreachable BTrack stops the build" test "$code" -ne 0
+check "stage build: and says it could not fetch it, not that it differs" \
+    bash -c "grep -q 'could not fetch' '$SCRATCH/out' && ! grep -q 'differs' '$SCRATCH/out'"
 
 # The example the package ships carries no address: that would be a second
 # truth on a Core, and a guess anywhere else.
