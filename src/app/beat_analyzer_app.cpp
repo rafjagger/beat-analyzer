@@ -9,6 +9,9 @@
 #include <algorithm>
 #include <cmath>
 #include "app/beat_analyzer_app.h"
+#include "config/config_files.h"
+
+#include <cstdlib>
 
 #include <map>
 
@@ -36,19 +39,36 @@ BeatAnalyzerApp::BeatAnalyzerApp()
 }
 
 // ============================================================================
+// Config files
+// ============================================================================
+
+// The user's file (or --config FILE), then conf.d/*.env; a later file wins
+// key by key. No file at all is allowed: the built-in defaults run.
+bool BeatAnalyzerApp::loadConfigFiles(EnvConfig& env, const std::optional<std::string>& configFile) {
+    const auto dir = Config::configDir(std::getenv("XDG_CONFIG_HOME"), std::getenv("HOME"));
+    const auto files = Config::configFiles(configFile, dir, Config::realDisk());
+    if (files.empty())
+        LOG_INFO("No config file (" + dir + "/beat-analyzer.env): built-in defaults");
+    return Config::loadEach(files, configFile,
+        [&env](const std::string& file) { return env.load(file); },
+        [](const std::string& file, bool loaded) {
+            if (loaded)
+                LOG_INFO("Config loaded: " + file);
+            else
+                LOG_ERROR("Config file cannot be read, skipped unless it is --config: " + file);
+        });
+}
+
+// ============================================================================
 // initialize()
 // ============================================================================
 
-bool BeatAnalyzerApp::initialize() {
+bool BeatAnalyzerApp::initialize(const std::optional<std::string>& configFile) {
     LOG_INFO("Beat Analyzer wird initialisiert...");
     
-    // .env Konfiguration laden
     auto& env = EnvConfig::instance();
-    if (env.load(".env") || env.load("../.env")) {
-        LOG_INFO(".env Konfiguration geladen");
-    } else if (env.load(".env.example")) {
-        LOG_INFO(".env.example als Fallback geladen");
-    }
+    if (!loadConfigFiles(env, configFile))
+        return false;
     
     loadConfig(env);
     initVuMeters();
@@ -189,8 +209,8 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
         m_numVuChannels = sent;
     }
 
-    // Die OSC-Woerter und Ports: aus dem a3-osc-Block der .env, den das
-    // a3-core-Paket aus der einen Wahrheit (a3-osc.json) schreibt.
+    // The OSC words and ports: on an A3 Core from conf.d/50-a3-osc.env, which
+    // a3-core renders from its one truth (a3-osc.json).
     std::map<std::string, std::string> words;
     for (const auto& key : Config::oscWordKeys()) {
         const auto value = env.getString(key, "");
@@ -308,9 +328,10 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
             }
         }
     } else {
-        // Keine Ziele in der .env: der a3-osc-Block fehlt. Kein Ersatzziel --
-        // eine erfundene Adresse waere eine zweite Wahrheit.
-        LOG_WARN("Keine OSC_HOST_-Ziele in der .env -- fehlt der a3-osc-Block?");
+        // No target anywhere. No made-up fallback: an invented address would
+        // be a second truth on a Core and a guess everywhere else.
+        LOG_WARN("No OSC_HOST_ target: set one in beat-analyzer.env, or on an A3 Core "
+                 "check conf.d/50-a3-osc.env (written by a3-osc-render)");
     }
     
     // Separate VU-Ports: OSC_VU_Name=host:port

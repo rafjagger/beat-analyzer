@@ -1,5 +1,7 @@
 #pragma once
 
+#include <optional>
+
 /**
  * BeatAnalyzerApp — Zentrale Anwendungsklasse
  *
@@ -42,7 +44,8 @@ class BeatAnalyzerApp {
 public:
     BeatAnalyzerApp();
     
-    bool initialize();
+    // configFile: --config FILE, else the search of Config::configFiles().
+    bool initialize(const std::optional<std::string>& configFile = std::nullopt);
     bool run();
     void shutdown();
     
@@ -125,6 +128,7 @@ private:
     // Methoden (implementiert in beat_analyzer_app.cpp)
     // ================================================================
     
+    bool loadConfigFiles(EnvConfig& env, const std::optional<std::string>& configFile);
     void loadConfig(EnvConfig& env);
     void initVuMeters();
     void initBeatTrackers(int hopSize, int frameSize);
