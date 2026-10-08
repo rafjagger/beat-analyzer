@@ -209,8 +209,8 @@ void BeatAnalyzerApp::loadConfig(EnvConfig& env) {
         m_numVuChannels = sent;
     }
 
-    // Die OSC-Woerter und Ports: aus dem a3-osc-Block der .env, den das
-    // a3-core-Paket aus der einen Wahrheit (a3-osc.json) schreibt.
+    // The OSC words and ports: on an A3 Core from conf.d/50-a3-osc.env, which
+    // a3-core renders from its one truth (a3-osc.json).
     std::map<std::string, std::string> words;
     for (const auto& key : Config::oscWordKeys()) {
         const auto value = env.getString(key, "");
@@ -328,9 +328,10 @@ void BeatAnalyzerApp::initOscSender(EnvConfig& env) {
             }
         }
     } else {
-        // Keine Ziele in der .env: der a3-osc-Block fehlt. Kein Ersatzziel --
-        // eine erfundene Adresse waere eine zweite Wahrheit.
-        LOG_WARN("Keine OSC_HOST_-Ziele in der .env -- fehlt der a3-osc-Block?");
+        // No target anywhere. No made-up fallback: an invented address would
+        // be a second truth on a Core and a guess everywhere else.
+        LOG_WARN("No OSC_HOST_ target: set one in beat-analyzer.env, or on an A3 Core "
+                 "check conf.d/50-a3-osc.env (written by a3-osc-render)");
     }
     
     // Separate VU-Ports: OSC_VU_Name=host:port
