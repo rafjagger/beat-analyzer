@@ -47,16 +47,16 @@ BeatAnalyzerApp::BeatAnalyzerApp()
 bool BeatAnalyzerApp::loadConfigFiles(EnvConfig& env, const std::optional<std::string>& configFile) {
     const auto dir = Config::configDir(std::getenv("XDG_CONFIG_HOME"), std::getenv("HOME"));
     const auto files = Config::configFiles(configFile, dir, Config::realDisk());
-    for (const auto& file : files) {
-        if (!env.load(file)) {
-            LOG_ERROR("Config file cannot be read: " + file);
-            return false;
-        }
-        LOG_INFO("Config loaded: " + file);
-    }
     if (files.empty())
         LOG_INFO("No config file (" + dir + "/beat-analyzer.env): built-in defaults");
-    return true;
+    return Config::loadEach(files, configFile,
+        [&env](const std::string& file) { return env.load(file); },
+        [](const std::string& file, bool loaded) {
+            if (loaded)
+                LOG_INFO("Config loaded: " + file);
+            else
+                LOG_ERROR("Config file cannot be read, skipped unless it is --config: " + file);
+        });
 }
 
 // ============================================================================

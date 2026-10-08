@@ -14,8 +14,10 @@ const char* const kUserFile = "beat-analyzer.env";
 const char* const kConfD = "conf.d";
 const char* const kOptionName = "--config";
 
-// The places a checkout's build/ folder has always been read from.
-const std::vector<std::string> kCheckoutFiles {".env", "../.env", ".env.example"};
+// A checkout's build/ folder keeps running on its own .env, even once the
+// package has seeded the user's file; the example only when nothing else is.
+const std::vector<std::string> kCheckoutFiles {".env", "../.env"};
+const char* const kExampleFile = ".env.example";
 
 bool isEnvName(const std::string& name)
 {
@@ -28,15 +30,17 @@ bool isEnvName(const std::string& name)
 
 std::optional<std::string> baseFile(const std::string& dir, const ConfigDisk& disk)
 {
+    for (const auto& file : kCheckoutFiles) {
+        if (disk.isFile(file))
+            return file;
+    }
     if (!dir.empty()) {
         const std::string user = dir + "/" + kUserFile;
         if (disk.isFile(user))
             return user;
     }
-    for (const auto& file : kCheckoutFiles) {
-        if (disk.isFile(file))
-            return file;
-    }
+    if (disk.isFile(kExampleFile))
+        return std::string(kExampleFile);
     return std::nullopt;
 }
 
@@ -99,6 +103,19 @@ std::vector<std::string> configFiles(const std::optional<std::string>& explicitF
     return files;
 }
 
+bool loadEach(const std::vector<std::string>& files, const std::optional<std::string>& explicitFile,
+              const std::function<bool(const std::string&)>& load,
+              const std::function<void(const std::string&, bool)>& report)
+{
+    for (const auto& file : files) {
+        const bool loaded = load(file);
+        report(file, loaded);
+        if (!loaded && explicitFile && file == *explicitFile)
+            return false;
+    }
+    return true;
+}
+
 std::optional<std::string> configArgument(int argc, char* argv[])
 {
     const std::string withValue = std::string(kOptionName) + "=";
@@ -107,7 +124,7 @@ std::optional<std::string> configArgument(int argc, char* argv[])
         if (arg.rfind(withValue, 0) == 0)
             return arg.substr(withValue.size());
         if (arg == kOptionName) {
-            if (i + 1 >= argc)
+            if (i + 1 >= argc || std::string(argv[i + 1]).rfind("--", 0) == 0)
                 throw std::invalid_argument("--config needs a file");
             return std::string(argv[i + 1]);
         }

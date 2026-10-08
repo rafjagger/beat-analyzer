@@ -24,15 +24,24 @@ std::string configDir(const char* xdgConfigHome, const char* home);
 
 // The files to load, in order; a later file wins key by key.
 //   1. `explicitFile` if given, else the first that exists of
-//      <dir>/beat-analyzer.env, ./.env, ../.env, ./.env.example
-//      (the last three: a checkout's build/ folder runs as before);
+//      ./.env, ../.env, <dir>/beat-analyzer.env, ./.env.example
+//      (a checkout's build/ folder runs on its own .env as before, even once
+//      the package has seeded the user's file);
 //   2. every <dir>/conf.d/*.env, sorted by name -- a file another package
-//      owns whole, like a3-core's rendered a3-osc block.
+//      owns whole, like a3-core's rendered targets. Read for a checkout run
+//      too: a3-core writes its targets only there.
 std::vector<std::string> configFiles(const std::optional<std::string>& explicitFile,
                                      const std::string& dir, const ConfigDisk& disk);
 
+// Loads `files` in order and reports each. An unreadable `explicitFile`
+// (--config FILE) stops the start; any other unreadable file is skipped, so
+// one bad file in conf.d never keeps the meters and the clock dark.
+bool loadEach(const std::vector<std::string>& files, const std::optional<std::string>& explicitFile,
+              const std::function<bool(const std::string&)>& load,
+              const std::function<void(const std::string&, bool)>& report);
+
 // FILE from `--config FILE` or `--config=FILE`; std::invalid_argument for a
-// --config with nothing after it.
+// --config with nothing after it, or with another option after it.
 std::optional<std::string> configArgument(int argc, char* argv[]);
 
 }

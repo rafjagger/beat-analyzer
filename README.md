@@ -43,9 +43,12 @@ Core the a3-core package adds a drop-in to the unit (ordering, CPU pinning) and 
 
 Read in this order, a later file winning key by key:
 
-1. `--config FILE`, else the first that exists of `~/.config/beat-analyzer/beat-analyzer.env`,
-   `./.env`, `../.env`, `./.env.example` (a checkout runs from `build/.env` as before);
-2. every `~/.config/beat-analyzer/conf.d/*.env`, sorted by name.
+1. `--config FILE`, else the first that exists of `./.env`, `../.env`,
+   `~/.config/beat-analyzer/beat-analyzer.env`, `./.env.example` (a checkout runs from
+   `build/.env` as before, even once the package has made the user's file; the package's unit
+   runs in `/usr/share/beat-analyzer`, where there is no `.env`);
+2. every `~/.config/beat-analyzer/conf.d/*.env`, sorted by name, for a checkout run too. A file
+   there that cannot be read is logged and skipped; an unreadable `--config FILE` stops the start.
 
 The package's unit makes `beat-analyzer.env` from the template (`.env.example`, every key with its
 default) on the first start and never writes over it. In a checkout:
