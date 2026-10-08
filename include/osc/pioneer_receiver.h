@@ -40,6 +40,7 @@
 #include <thread>
 #include <cstdint>
 #include <array>
+#include "osc/pro_link_keep_alive.h"
 
 namespace BeatAnalyzer {
 namespace OSC {
@@ -140,7 +141,7 @@ private:
     static constexpr int STATUS_MIN_SIZE     = 0xA0;   // Minimum für relevante Felder
     
     // Virtual CDJ Keep-Alive
-    static constexpr int KEEPALIVE_SIZE      = 0x36;   // 54 bytes
+    static constexpr int KEEPALIVE_SIZE      = kKeepAliveSize;
     static constexpr int KEEPALIVE_INTERVAL_MS = 1500;
     
     // Device-Tracker: welche Player sind online und wer ist Master?

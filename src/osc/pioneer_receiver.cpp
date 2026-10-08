@@ -263,48 +263,8 @@ void PioneerReceiver::stop() {
 // ============================================================================
 
 int PioneerReceiver::buildKeepAlivePacket(uint8_t* buf) {
-    // CDJ Keep-Alive Paket: 54 Bytes (0x36)
-    // Struktur gemäß dysentery Protokoll-Analyse:
-    //   0x00-0x09: Magic Header
-    //   0x0a:      Packet Type = 0x06 (Keep-Alive)
-    //   0x0b-0x1e: Device Name (20 Bytes, null-padded)
-    //   0x1f:      0x01
-    //   0x20:      Subtype = 0x02
-    //   0x21-0x22: 0x00 + length
-    //   0x24:      Device Number
-    //   0x25:      0x00
-    //   0x26-0x2b: MAC Address (6 Bytes)
-    //   0x2c-0x2f: IP Address (4 Bytes)
-    //   0x30-0x35: Padding
-    
-    std::memset(buf, 0, KEEPALIVE_SIZE);
-    
-    // Magic Header
-    std::memcpy(buf, MAGIC_HEADER, 10);
-    
-    // Packet Type: Keep-Alive
-    buf[0x0a] = PKT_TYPE_KEEPALIVE;
-    
-    // Device Name (20 Bytes)
-    std::memcpy(buf + OFF_DEVICE_NAME, m_deviceName, 20);
-    
-    // Required structure bytes
-    buf[0x1f] = 0x01;
-    buf[0x20] = 0x02;  // Subtype for keep-alive
-    buf[0x21] = 0x00;
-    buf[0x22] = 0x00;
-    buf[0x23] = 0x11;  // Length remaining = 0x11 (17 bytes)
-    
-    // Device Number
-    buf[0x24] = m_deviceNumber;
-    
-    // MAC Address
-    std::memcpy(buf + 0x26, m_localMac, 6);
-    
-    // IP Address
-    std::memcpy(buf + 0x2c, &m_localIp, 4);
-    
-    return KEEPALIVE_SIZE;
+    // Layout and sources: osc/pro_link_keep_alive.h (beat-analyzer#4).
+    return buildKeepAlive(buf, m_deviceName, m_deviceNumber, m_localMac, m_localIp);
 }
 
 void PioneerReceiver::sendKeepAlive() {
@@ -486,15 +446,11 @@ void PioneerReceiver::handleStatusPacket(const uint8_t* data, int len) {
 void PioneerReceiver::handleKeepAlivePacket(const uint8_t* data, int len) {
     if (len < KEEPALIVE_SIZE) return;
     
-    uint8_t deviceNum = data[0x24];
+    uint8_t deviceNum = keepAliveDeviceNumber(data);
     if (deviceNum == 0 || deviceNum == m_deviceNumber) return;  // Eigene Pakete ignorieren
     
-    char name[21];
-    std::memcpy(name, data + OFF_DEVICE_NAME, 20);
-    name[20] = '\0';
-    
     // Device registrieren (ohne Master-Info, nur Presence)
-    updateDevice(deviceNum, name, false, 0.0);
+    updateDevice(deviceNum, keepAliveDeviceName(data).c_str(), false, 0.0);
 }
 
 void PioneerReceiver::updateDevice(uint8_t number, const char* name, bool isMaster, double bpm) {

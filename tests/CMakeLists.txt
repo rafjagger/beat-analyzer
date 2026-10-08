@@ -101,3 +101,13 @@ target_include_directories(vu_meter_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
 )
 add_test(NAME VuMeterTests COMMAND vu_meter_test)
+
+# The keep-alive on the DJ network, byte by byte (beat-analyzer#4)
+add_executable(pro_link_keep_alive_test
+    pro_link_keep_alive_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/osc/pro_link_keep_alive.cpp
+)
+target_include_directories(pro_link_keep_alive_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+add_test(NAME ProLinkKeepAliveTests COMMAND pro_link_keep_alive_test)
