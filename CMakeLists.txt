@@ -80,11 +80,9 @@ set(BEAT_ANALYZER_SOURCES
     src/audio/audio_buffer.cpp
     src/audio/vu_ports.cpp
     src/config/osc_words.cpp
-    src/analysis/beat_detection.cpp
     src/analysis/beat_tracker.cpp
     src/analysis/beat_clock_follower.cpp
     src/analysis/vu_meter.cpp
-    src/analysis/grid_calculator.cpp
     src/osc/osc_sender.cpp
     src/osc/osc_receiver.cpp
     src/osc/osc_messages.cpp
@@ -102,11 +100,9 @@ set(BEAT_ANALYZER_HEADERS
     include/audio/audio_buffer.h
     include/audio/vu_ports.h
     include/audio/audio_types.h
-    include/analysis/beat_detection.h
     include/analysis/beat_tracker.h
     include/analysis/beat_info.h
     include/analysis/vu_meter.h
-    include/analysis/grid_calculator.h
     include/osc/osc_sender.h
     include/osc/osc_receiver.h
     include/osc/osc_messages.h

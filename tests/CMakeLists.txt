@@ -5,24 +5,6 @@ cmake_minimum_required(VERSION 3.16)
 # these passed without checking anything. Keep them on for the tests.
 add_compile_options(-UNDEBUG)
 
-# Beat Detection Test
-add_executable(beat_detection_test
-    beat_detection_test.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/analysis/beat_detection.cpp
-)
-
-target_include_directories(beat_detection_test PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
-)
-
-target_link_libraries(beat_detection_test PRIVATE
-    pthread
-    m
-)
-
-# Add test
-add_test(NAME BeatDetectionTests COMMAND beat_detection_test)
-
 # BeatClockFollower: die Clock folgt BTracks Beats
 add_executable(beat_clock_follower_test
     beat_clock_follower_test.cpp
