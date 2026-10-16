@@ -12,6 +12,7 @@
  *   VU-Meter → OSC Output
  */
 
+#include "audio/block_ring.h"
 #include "audio/jack_client.h"
 #include "audio/vu_ports.h"
 #include "analysis/beat_clock_follower.h"
@@ -107,23 +108,10 @@ private:
         std::chrono::steady_clock::time_point timestamp;
     };
     
-    // Lock-free Audio Ringbuffer: JACK-Callback → BTrack-Thread
-    static constexpr int AUDIO_RING_SIZE = 64;
-    static constexpr int AUDIO_RING_MASK = AUDIO_RING_SIZE - 1;
-    static constexpr int MAX_FRAME_SIZE = 1024;
-    
-    struct AudioSlot {
-        float data[MAX_FRAME_SIZE];
-        int frameCount = 0;
-        /** Audio-Frame am Ende dieses Puffers: wo ein Beat darin liegt. */
-        int64_t endFrame = 0;
-    };
-    
-    struct AudioRing {
-        AudioSlot slots[AUDIO_RING_SIZE];
-        alignas(64) std::atomic<int> wpos{0};
-        alignas(64) std::atomic<int> rpos{0};
-    };
+    // BTrack's hop, independent of JACK's period: PipeWire's quantum can
+    // change while running, and what it reports at start-up is no promise.
+    // 128 is the quantum a3nuc1 runs at, so the rig keeps the tracking it had.
+    static constexpr int BTRACK_HOP_SIZE = 128;
     
     // ================================================================
     // Methoden (implementiert in beat_analyzer_app.cpp)
@@ -179,7 +167,7 @@ private:
     std::atomic<double> m_btrackBpmValue[MAX_BPM_CHANNELS] = {};
     
     // Audio Ringbuffer (SPSC pro Kanal)
-    AudioRing m_audioRing[MAX_BPM_CHANNELS];
+    Audio::BlockRing m_audioRing[MAX_BPM_CHANNELS];
     
     // Beat Detection
     std::vector<std::unique_ptr<::BTrackWrapper>> m_btrackDetectors;

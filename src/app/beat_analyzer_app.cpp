@@ -82,8 +82,9 @@ bool BeatAnalyzerApp::initialize(const std::optional<std::string>& configFile) {
         return false;
     }
     
-    // Beat Tracker: HopSize = JACK Buffer Size (wie Max External)
-    int btHopSize = m_jackClient->getBufferSize();
+    // Beat Tracker: a fixed hop; the wrapper collects JACK's blocks of any
+    // size into it (BTRACK_HOP_SIZE, beat_analyzer_app.h).
+    int btHopSize = BTRACK_HOP_SIZE;
     int btFrameSize = btHopSize * 2;
     int sampleRate = m_jackClient->getSampleRate().value;
     

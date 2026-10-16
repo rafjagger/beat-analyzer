@@ -35,21 +35,12 @@ void BeatAnalyzerApp::processAudio(const std::vector<const CSAMPLE*>& bpmBuffers
         m_vuMeters[ch]->processMono(buffer, frameCount);
     }
     
-    // BPM Kanäle: Audio nur in Ringbuffer kopieren (billig: ~512 bytes memcpy)
+    // BPM Kanäle: Audio nur in Ringbuffer kopieren (memcpy, any block size)
     // BTrack läuft NICHT im JACK-Callback — zu teuer (FFT + Transzendente)!
-    for (int ch = 0; ch < m_numBpmChannels && ch < static_cast<int>(bpmBuffers.size()); ++ch) {
-        auto& ring = m_audioRing[ch];
-        int w = ring.wpos.load(std::memory_order_relaxed);
-        int next = (w + 1) & AUDIO_RING_MASK;
-        if (next != ring.rpos.load(std::memory_order_acquire)) {
-            auto& slot = ring.slots[w];
-            std::memcpy(slot.data, bpmBuffers[ch], frameCount * sizeof(float));
-            slot.frameCount = frameCount;
-            slot.endFrame = m_frameCount.load(std::memory_order_relaxed) + frameCount;
-            ring.wpos.store(next, std::memory_order_release);
-        }
-        // Bei Ringbuffer-Overflow: Frame droppen (besser als XRun)
-    }
+    // A full ring drops the block (besser als XRun).
+    int64_t const endFrame = m_frameCount.load(std::memory_order_relaxed) + frameCount;
+    for (int ch = 0; ch < m_numBpmChannels && ch < static_cast<int>(bpmBuffers.size()); ++ch)
+        m_audioRing[ch].push(bpmBuffers[ch], frameCount, endFrame);
     
     m_frameCount.fetch_add(frameCount, std::memory_order_relaxed);
 }
@@ -74,20 +65,18 @@ void BeatAnalyzerApp::processBeatThread() {
         for (int ch = 0; ch < m_numBpmChannels; ++ch) {
             auto& ring = m_audioRing[ch];
             // Alle verfügbaren Frames verarbeiten
-            while (true) {
-                int r = ring.rpos.load(std::memory_order_relaxed);
-                if (r == ring.wpos.load(std::memory_order_acquire)) break;
-                
-                auto& slot = ring.slots[r];
-                bool beat = m_btrackDetectors[ch]->processSamples(slot.data, slot.frameCount);
-                ring.rpos.store((r + 1) & AUDIO_RING_MASK, std::memory_order_release);
+            while (const Audio::BlockRing::Slot* slot = ring.front()) {
+                std::optional<int> const samplesAfterBeat =
+                    m_btrackDetectors[ch]->processSamples(slot->data, slot->frameCount);
+                int64_t const beatFrame = slot->endFrame - samplesAfterBeat.value_or(0);
+                ring.pop();
                 
                 // BTracks Beat mit seiner Position im Audio, nicht mit dem
                 // Zeitpunkt, zu dem dieser Thread ihn abholt. Gemessen
                 // 2026-09-17: diese Beats liegen auf ±3 ms, seine Tempo-Zahl
                 // 1-4 BPM zu niedrig. Die Clock nimmt deshalb die Beats.
-                if (beat) {
-                    m_beatClocks[ch].trackerBeat(slot.endFrame);
+                if (samplesAfterBeat) {
+                    m_beatClocks[ch].trackerBeat(beatFrame);
                     // Und die gemessene Periode zurück an BTrack: seine
                     // Vorhersage mit der 2-BPM-Stufe lag je nach Tempo 4-17 ms
                     // hinter dem Beat (patches/btrack-measured-beat-period.patch).
@@ -95,7 +84,7 @@ void BeatAnalyzerApp::processBeatThread() {
                         m_beatClocks[ch].trackerPeriodSamples());
                     if (m_debugBtrackConsole && ch == 0) {
                         printf("BTRACK_BEAT: frame=%lld bpm_btrack=%.1f bpm_clock=%.3f\n",
-                               static_cast<long long>(slot.endFrame),
+                               static_cast<long long>(beatFrame),
                                m_btrackDetectors[ch]->getBpm(), m_beatClocks[ch].bpm());
                         fflush(stdout);
                     }

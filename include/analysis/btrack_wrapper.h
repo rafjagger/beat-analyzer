@@ -2,29 +2,25 @@
 
 #include "BTrack.h"
 #include <atomic>
+#include <optional>
 #include <vector>
 
 /**
  * BTrackWrapper - Minimaler Wrapper um BTrack
- * 
- * Exakt wie die Max External implementiert:
- *   hopSize = JACK Buffer Size (z.B. 128)
- *   frameSize = hopSize * 2 (z.B. 256)
- *   Jeder JACK-Callback = genau ein processAudioFrame() Aufruf
- * 
- * KEIN manuelles Frame-Sammeln, KEIN Overlap-Handling!
- * BTrack's ODF macht das Overlap intern.
- * 
+ *
+ * BTrack runs on a fixed hop (frameSize = hopSize * 2, as in the Max
+ * external). JACK's period is not fixed: PipeWire delivers whatever quantum
+ * the graph runs at and can change it while running. The wrapper therefore
+ * collects any block size into whole hops and hands BTrack one hop at a time.
+ *
+ * Until 2026-10-16 every block went to BTrack as one hop, sized at start-up:
+ * a quantum of 256 against a hop of 128 wrote past the frame buffer and
+ * crashed the analyzer on a3nuc1.
+ *
  * Referenz: external/BTrack/plugins/max-external/btrack~/btrack~.cpp
- *   btrack_dsp64: hopSize = maxvectorsize; frameSize = hopSize * 2;
- *   btrack_perform64: processAudioFrame(audioFrame) pro Callback
  */
 class BTrackWrapper {
 public:
-    /**
-     * hopSize MUSS gleich JACK Buffer Size sein!
-     * frameSize = hopSize * 2 (BTrack Standard)
-     */
     BTrackWrapper(int hopSize, int frameSize = 0)
         : m_hopSize(hopSize)
         , m_frameSize(frameSize > 0 ? frameSize : hopSize * 2)
@@ -36,29 +32,22 @@ public:
     }
 
     /**
-     * Einen JACK-Buffer verarbeiten.
-     * numSamples MUSS == hopSize sein (= JACK Buffer Size).
-     * Genau ein processAudioFrame() pro Aufruf, wie in der Max External.
+     * One JACK block of any size.
+     *
+     * Returns, if a beat fell in this block, how many samples before the
+     * block's end the hop that carried it ended; nothing otherwise. The
+     * caller's beat frame is then blockEndFrame - that number.
      */
-    bool processSamples(const float* samples, int numSamples) {
-        // Float→Double Konversion (JACK liefert float, BTrack braucht double)
+    std::optional<int> processSamples(const float* samples, int numSamples) {
+        std::optional<int> samplesAfterBeat;
         for (int i = 0; i < numSamples; ++i) {
-            m_audioFrame[i] = static_cast<double>(samples[i]);
+            m_audioFrame[static_cast<size_t>(m_filled++)] = static_cast<double>(samples[i]);
+            if (m_filled < m_hopSize) continue;
+            m_filled = 0;
+            if (processHop())
+                samplesAfterBeat = numSamples - 1 - i;
         }
-        
-        // BTrack verarbeitet den Frame
-        m_btrack.processAudioFrame(m_audioFrame.data());
-        
-        // Beat-Detection
-        bool beatNow = m_btrack.beatDueInCurrentFrame();
-        if (beatNow) {
-            m_beatDetected.store(true, std::memory_order_release);
-        }
-        
-        // BPM immer updaten
-        m_bpm.store(m_btrack.getCurrentTempoEstimate(), std::memory_order_release);
-        
-        return beatNow;
+        return samplesAfterBeat;
     }
 
     /** Beat abholen (Flag wird zurückgesetzt) */
@@ -97,6 +86,15 @@ public:
     int getFrameSize() const { return m_frameSize; }
 
 private:
+    bool processHop() {
+        m_btrack.processAudioFrame(m_audioFrame.data());
+        bool const beatNow = m_btrack.beatDueInCurrentFrame();
+        if (beatNow)
+            m_beatDetected.store(true, std::memory_order_release);
+        m_bpm.store(m_btrack.getCurrentTempoEstimate(), std::memory_order_release);
+        return beatNow;
+    }
+
     int m_hopSize;
     int m_frameSize;
     BTrack m_btrack;
@@ -104,5 +102,6 @@ private:
     std::atomic<bool> m_beatDetected;
     std::atomic<double> m_bpm;
     
-    std::vector<double> m_audioFrame;  // Nur float→double Buffer, Größe = hopSize
+    std::vector<double> m_audioFrame;  // one hop, filled across blocks
+    int m_filled = 0;                  // samples of the current hop so far
 };

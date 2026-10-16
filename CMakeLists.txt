@@ -98,6 +98,7 @@ set(BEAT_ANALYZER_HEADERS
     include/app/beat_analyzer_app.h
     include/audio/jack_client.h
     include/audio/audio_buffer.h
+    include/audio/block_ring.h
     include/audio/vu_ports.h
     include/audio/audio_types.h
     include/analysis/beat_tracker.h

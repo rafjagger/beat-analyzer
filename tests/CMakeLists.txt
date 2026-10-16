@@ -114,3 +114,24 @@ target_include_directories(tap_tempo_lock_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
 )
 add_test(NAME TapTempoLockTests COMMAND tap_tempo_lock_test)
+
+# BTrack at any JACK period size, and a size that changes while running
+add_executable(any_buffer_size_test
+    any_buffer_size_test.cpp
+    ${BTRACK_SOURCES}
+)
+target_include_directories(any_buffer_size_test BEFORE PRIVATE
+    ${BTRACK_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${SAMPLERATE_INCLUDE_DIRS}
+)
+target_compile_definitions(any_buffer_size_test PRIVATE USE_KISS_FFT)
+target_link_libraries(any_buffer_size_test PRIVATE ${SAMPLERATE_LIBRARIES} m)
+add_test(NAME AnyBufferSizeTests COMMAND any_buffer_size_test)
+
+# JACK's blocks reach the beat thread whole, at any period size
+add_executable(block_ring_test block_ring_test.cpp)
+target_include_directories(block_ring_test PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+)
+add_test(NAME BlockRingTests COMMAND block_ring_test)
